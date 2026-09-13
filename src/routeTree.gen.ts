@@ -16,6 +16,7 @@ import { Route as ExploreRouteImport } from './routes/explore'
 import { Route as FeedRouteImport } from './routes/feed'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as IdSotIdRouteImport } from './routes/id.$sotId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -52,6 +53,11 @@ const ProfileRoute = ProfileRouteImport.update({
   path: '/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
+const IdSotIdRoute = IdSotIdRouteImport.update({
+  id: '/id/$sotId',
+  path: '/id/$sotId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -61,6 +67,7 @@ export interface FileRoutesByFullPath {
   '/feed': typeof FeedRoute
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
+  '/id/$sotId': typeof IdSotIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -70,6 +77,7 @@ export interface FileRoutesByTo {
   '/feed': typeof FeedRoute
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
+  '/id/$sotId': typeof IdSotIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -80,14 +88,29 @@ export interface FileRoutesById {
   '/feed': typeof FeedRoute
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
+  '/id/$sotId': typeof IdSotIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/activity' | '/create' | '/explore' | '/feed' | '/login' | '/profile'
+    | '/'
+    | '/activity'
+    | '/create'
+    | '/explore'
+    | '/feed'
+    | '/login'
+    | '/profile'
+    | '/id/$sotId'
   fileRoutesByTo: FileRoutesByTo
   to:
-    '/' | '/activity' | '/create' | '/explore' | '/feed' | '/login' | '/profile'
+    | '/'
+    | '/activity'
+    | '/create'
+    | '/explore'
+    | '/feed'
+    | '/login'
+    | '/profile'
+    | '/id/$sotId'
   id:
     | '__root__'
     | '/'
@@ -97,6 +120,7 @@ export interface FileRouteTypes {
     | '/feed'
     | '/login'
     | '/profile'
+    | '/id/$sotId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -107,6 +131,7 @@ export interface RootRouteChildren {
   FeedRoute: typeof FeedRoute
   LoginRoute: typeof LoginRoute
   ProfileRoute: typeof ProfileRoute
+  IdSotIdRoute: typeof IdSotIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -160,6 +185,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/id/$sotId': {
+      id: '/id/$sotId'
+      path: '/id/$sotId'
+      fullPath: '/id/$sotId'
+      preLoaderRoute: typeof IdSotIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -171,6 +203,7 @@ const rootRouteChildren: RootRouteChildren = {
   FeedRoute: FeedRoute,
   LoginRoute: LoginRoute,
   ProfileRoute: ProfileRoute,
+  IdSotIdRoute: IdSotIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
