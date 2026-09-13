@@ -1,6 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Search, Flame } from "lucide-react";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { BottomNav } from "@/components/BottomNav";
 import { PhoneShell } from "@/components/PhoneShell";
 
@@ -18,25 +21,62 @@ export const Route = createFileRoute("/explore")({
 
 const tabs = ["Trending", "Comedy", "Food", "Dance|Sing", "Family", "Beauty"];
 
-const users = [
-  { name: "রান্নাঘর", handle: "@rannaghor", img: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&q=60" },
-  { name: "Bangla Kitchen", handle: "@bangla_kitchen", img: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&q=60" },
-  { name: "Street Food BD", handle: "@streetfoodbd", img: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400&q=60" },
-  { name: "মায়ের হাতের", handle: "@mayer_hater", img: "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=400&q=60" },
+const fallbackUsers = [
+  { name: "রান্নাঘর", handle: "@rannaghor", sot: "", img: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&q=60" },
+  { name: "India Kitchen", handle: "@india_kitchen", sot: "", img: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&q=60" },
+  { name: "Street Food India", handle: "@streetfoodindia", sot: "", img: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400&q=60" },
+  { name: "মায়ের হাতের", handle: "@mayer_hater", sot: "", img: "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=400&q=60" },
 ];
+
+function useTopCreators() {
+  return useQuery({
+    queryKey: ["top-creators"],
+    staleTime: 5 * 60_000,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("sottok_id, username, full_name, avatar_url, followers_count")
+        .order("followers_count", { ascending: false })
+        .limit(6);
+      return data ?? [];
+    },
+  });
+}
 
 function ExplorePage() {
   const navigate = useNavigate();
   const [active, setActive] = useState("Trending");
   const [query, setQuery] = useState("");
+  const { data: creators } = useTopCreators();
 
-  const submitSearch = (e: React.FormEvent) => {
+  const submitSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    const q = query.trim();
+    const q = query.trim().replace(/^@/, "");
+    if (!q) return;
     if (/^[0-9]{8}$/.test(q)) {
       navigate({ to: "/id/$sotId", params: { sotId: q } });
+      return;
     }
+    const { data } = await supabase
+      .from("profiles")
+      .select("sottok_id")
+      .ilike("username", `%${q}%`)
+      .limit(1)
+      .maybeSingle();
+    if (data?.sottok_id) navigate({ to: "/id/$sotId", params: { sotId: data.sottok_id } });
+    else toast.error("কোনো ইউজার পাওয়া যায়নি");
   };
+
+  const cards =
+    creators && creators.length
+      ? creators.map((c) => ({
+          name: c.full_name || c.username,
+          handle: "@" + c.username,
+          sot: c.sottok_id,
+          img: c.avatar_url && c.avatar_url.startsWith("http") ? c.avatar_url : fallbackUsers[0]!.img,
+        }))
+      : fallbackUsers;
+
 
   return (
     <PhoneShell className="bg-white">
@@ -88,18 +128,22 @@ function ExplorePage() {
         </div>
 
         <div className="mt-3 grid grid-cols-2 gap-3">
-          {users.map((u) => (
+          {cards.map((u) => (
             <div key={u.handle} className="overflow-hidden rounded-2xl border border-neutral-200">
-              <img src={u.img} alt={`${u.name} food video cover`} className="h-28 w-full object-cover" loading="lazy" />
+              <img src={u.img} alt={`${u.name} video cover`} className="h-28 w-full object-cover" loading="lazy" />
               <div className="p-3">
                 <p className="text-[13px] font-semibold text-neutral-900">{u.name}</p>
                 <p className="text-[11px] text-neutral-500">{u.handle}</p>
-                <button className="mt-2 w-full rounded-lg bg-pink py-1.5 text-[12px] font-semibold text-white">
+                <button
+                  onClick={() => u.sot && navigate({ to: "/id/$sotId", params: { sotId: u.sot } })}
+                  className="mt-2 w-full rounded-lg bg-pink py-1.5 text-[12px] font-semibold text-white"
+                >
                   Follow
                 </button>
               </div>
             </div>
           ))}
+
         </div>
       </div>
       <BottomNav />

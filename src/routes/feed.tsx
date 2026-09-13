@@ -1,17 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { Heart, MessageCircle, Share2, Bookmark, Plus, Music2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { BottomNav } from "@/components/BottomNav";
+
+const DESC = "ভারতের শর্ট ভিডিও ফিড — ড্যান্স, কমেডি, রান্না আর ফ্যামিলি ভিডিও।";
 
 export const Route = createFileRoute("/feed")({
   head: () => ({
     meta: [
       { title: "For You — SOT TOK" },
-      { name: "description", content: "বাংলা শর্ট ভিডিও ফিড — রান্না, কমেডি, ড্যান্স আর ফ্যামিলি ভিডিও।" },
+      { name: "description", content: DESC },
       { property: "og:title", content: "For You — SOT TOK" },
-      { property: "og:description", content: "বাংলা শর্ট ভিডিও ফিড — রান্না, কমেডি, ড্যান্স আর ফ্যামিলি ভিডিও।" },
+      { property: "og:description", content: DESC },
     ],
   }),
   component: FeedPage,
@@ -27,11 +29,13 @@ type FeedItem = {
   likes: string;
 };
 
+const PAGE_SIZE = 6;
+
 const demoVideos: FeedItem[] = [
   {
     id: "demo-1",
-    username: "@bangla_kitchen",
-    caption: "আজকের রেসিপি: ঘরোয়া ইলিশ ভুনা 🔥",
+    username: "@india_kitchen",
+    caption: "আজকের রেসিপি: ঘরোয়া পনির বাটার মশলা 🔥",
     url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4",
     sound: "Original sound - SOT TOK Artist",
     views: "1.0M",
@@ -57,77 +61,100 @@ const demoVideos: FeedItem[] = [
   },
 ];
 
-async function resolveUrl(path: string) {
-  if (path.startsWith("http")) return path;
-  const { data } = await supabase.storage.from("videos").createSignedUrl(path, 60 * 60 * 8);
-  return data?.signedUrl ?? "";
+/** One batched signing call for the whole page instead of one request per video. */
+async function signBatch(paths: string[]): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  const storagePaths = paths.filter((p) => !p.startsWith("http"));
+  paths.filter((p) => p.startsWith("http")).forEach((p) => map.set(p, p));
+  if (storagePaths.length) {
+    const { data } = await supabase.storage.from("videos").createSignedUrls(storagePaths, 60 * 60 * 8);
+    (data ?? []).forEach((d) => {
+      if (d.path && d.signedUrl) map.set(d.path, d.signedUrl);
+    });
+  }
+  return map;
 }
 
 function useFeed() {
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: ["feed"],
-    queryFn: async (): Promise<FeedItem[]> => {
+    initialPageParam: 0,
+    staleTime: 60_000,
+    gcTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+    getNextPageParam: (last: FeedItem[], pages) => (last.length < PAGE_SIZE ? undefined : pages.length),
+    queryFn: async ({ pageParam }): Promise<FeedItem[]> => {
+      const from = (pageParam as number) * PAGE_SIZE;
       const { data } = await supabase
         .from("videos")
         .select("id, caption, video_url, sound_name, views, likes, user_id")
         .order("created_at", { ascending: false })
-        .limit(20);
+        .range(from, from + PAGE_SIZE - 1);
 
-      const ids = [...new Set((data ?? []).map((v) => v.user_id))];
-      const { data: profiles } = ids.length
-        ? await supabase.from("profiles").select("id, username").in("id", ids)
-        : { data: [] };
+      const rows = data ?? [];
+      if (!rows.length) return [];
+
+      const ids = [...new Set(rows.map((v) => v.user_id))];
+      const [{ data: profiles }, urls] = await Promise.all([
+        supabase.from("profiles").select("id, username").in("id", ids),
+        signBatch(rows.map((v) => v.video_url)),
+      ]);
       const nameById = new Map((profiles ?? []).map((p) => [p.id, p.username]));
 
-      const rows = await Promise.all(
-        (data ?? []).map(async (v) => ({
+      return rows
+        .map((v) => ({
           id: v.id,
           username: "@" + (nameById.get(v.user_id) || "sottok"),
           caption: v.caption,
-          url: await resolveUrl(v.video_url),
+          url: urls.get(v.video_url) ?? "",
           sound: v.sound_name,
           views: String(v.views ?? 0),
           likes: String(v.likes ?? 0),
-        })),
-      );
-
-      return [...rows.filter((r) => r.url), ...demoVideos];
+        }))
+        .filter((r) => r.url);
     },
   });
 }
 
-function VideoCard({ item, muted, onToggleMute }: { item: FeedItem; muted: boolean; onToggleMute: () => void }) {
+
+function VideoCard({
+  item,
+  muted,
+  onToggleMute,
+  active,
+}: {
+  item: FeedItem;
+  muted: boolean;
+  onToggleMute: () => void;
+  active: boolean;
+}) {
   const ref = useRef<HTMLVideoElement>(null);
   const [liked, setLiked] = useState(false);
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const obs = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[0];
-        if (!entry) return;
-        if (entry.isIntersecting) void el.play().catch(() => {});
-        else el.pause();
-      },
-      { threshold: 0.6 },
-    );
-
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, []);
+    if (active) void el.play().catch(() => {});
+    else {
+      el.pause();
+      el.currentTime = 0;
+    }
+  }, [active]);
 
   return (
     <section className="snap-item relative h-screen w-full">
       <video
         ref={ref}
-        src={item.url}
+        src={active ? item.url : undefined}
+        data-src={item.url}
         loop
         muted={muted}
         playsInline
+        preload="none"
         onClick={onToggleMute}
-        className="h-full w-full object-cover"
+        className="h-full w-full bg-black object-cover"
       />
+
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-black/40" />
 
       {muted && (
@@ -175,9 +202,24 @@ function VideoCard({ item, muted, onToggleMute }: { item: FeedItem; muted: boole
 }
 
 function FeedPage() {
-  const { data, isLoading } = useFeed();
+  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useFeed();
   const [muted, setMuted] = useState(true);
   const [tab, setTab] = useState<"following" | "foryou">("foryou");
+  const [activeIndex, setActiveIndex] = useState(0);
+  const scrollerRef = useRef<HTMLDivElement>(null);
+
+  const items = useMemo(() => {
+    const rows = (data?.pages ?? []).flat();
+    return rows.length ? rows : demoVideos;
+  }, [data]);
+
+  const onScroll = useCallback(() => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    const index = Math.round(el.scrollTop / el.clientHeight);
+    setActiveIndex((prev) => (prev === index ? prev : index));
+    if (hasNextPage && !isFetchingNextPage && index >= items.length - 2) void fetchNextPage();
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage, items.length]);
 
   return (
     <div className="mx-auto w-full max-w-[420px] bg-black">
@@ -196,12 +238,18 @@ function FeedPage() {
         </button>
       </div>
 
-      <div className="snap-feed no-scrollbar h-screen overflow-y-scroll">
+      <div ref={scrollerRef} onScroll={onScroll} className="snap-feed no-scrollbar h-screen overflow-y-scroll">
         {isLoading ? (
           <div className="flex h-screen items-center justify-center text-white/50">লোড হচ্ছে…</div>
         ) : (
-          (data ?? []).map((item) => (
-            <VideoCard key={item.id} item={item} muted={muted} onToggleMute={() => setMuted((m) => !m)} />
+          items.map((item, i) => (
+            <VideoCard
+              key={item.id}
+              item={item}
+              active={Math.abs(i - activeIndex) === 0}
+              muted={muted}
+              onToggleMute={() => setMuted((m) => !m)}
+            />
           ))
         )}
       </div>
@@ -209,3 +257,4 @@ function FeedPage() {
     </div>
   );
 }
+

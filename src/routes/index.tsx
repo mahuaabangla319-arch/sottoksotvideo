@@ -8,10 +8,10 @@ export const Route = createFileRoute("/")({
       { title: "SOT TOK — নিজের পরিচয় নিজেই তৈরি করো" },
       {
         name: "description",
-        content: "SOT TOK — বাংলা শর্ট ভিডিও অ্যাপ। ভিডিও বানাও, শেয়ার করো, নিজের পরিচয় তৈরি করো।",
+        content: "SOT TOK — ভারতের নাম্বার ওয়ান শর্ট ভিডিও অ্যাপ। ভিডিও বানাও, শেয়ার করো, নিজের পরিচয় তৈরি করো।",
       },
       { property: "og:title", content: "SOT TOK — নিজের পরিচয় নিজেই তৈরি করো" },
-      { property: "og:description", content: "বাংলা শর্ট ভিডিও অ্যাপ — রেকর্ড করো, শেয়ার করো, ট্রেন্ড করো।" },
+      { property: "og:description", content: "ভারতের নাম্বার ওয়ান শর্ট ভিডিও অ্যাপ — রেকর্ড করো, শেয়ার করো, ট্রেন্ড করো।" },
     ],
   }),
   component: Splash,

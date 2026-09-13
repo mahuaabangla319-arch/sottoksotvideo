@@ -147,7 +147,7 @@ function PublicProfilePage() {
           <p className="mt-3 max-w-[300px] text-center text-[13px] text-white/75">{profile.bio}</p>
         )}
         <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-white/10 px-3 py-1 text-[11px] text-white/80">
-          <MapPin className="h-3 w-3" /> {profile.location || "বাংলাদেশ"} থেকে 🇧🇩
+          <MapPin className="h-3 w-3" /> {profile.location || "ভারত"} থেকে 🇮🇳
         </span>
 
         <div className="mt-5 flex w-full items-center rounded-2xl border border-white/10 bg-white/5 py-3">
