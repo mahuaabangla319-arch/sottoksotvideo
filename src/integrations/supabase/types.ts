@@ -14,30 +14,81 @@ export type Database = {
   }
   public: {
     Tables: {
+      follows: {
+        Row: {
+          created_at: string
+          follower_id: string
+          following_id: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          follower_id: string
+          following_id: string
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          follower_id?: string
+          following_id?: string
+          id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
+          bio: string
+          birth_date: string | null
           created_at: string
+          followers_count: number
+          following_count: number
           full_name: string
+          gender: string | null
           id: string
+          level: number
+          likes_count: number
+          location: string
           sottok_id: string
+          updated_at: string
           username: string
+          verified: boolean
         }
         Insert: {
           avatar_url?: string | null
+          bio?: string
+          birth_date?: string | null
           created_at?: string
+          followers_count?: number
+          following_count?: number
           full_name?: string
+          gender?: string | null
           id: string
+          level?: number
+          likes_count?: number
+          location?: string
           sottok_id?: string
+          updated_at?: string
           username?: string
+          verified?: boolean
         }
         Update: {
           avatar_url?: string | null
+          bio?: string
+          birth_date?: string | null
           created_at?: string
+          followers_count?: number
+          following_count?: number
           full_name?: string
+          gender?: string | null
           id?: string
+          level?: number
+          likes_count?: number
+          location?: string
           sottok_id?: string
+          updated_at?: string
           username?: string
+          verified?: boolean
         }
         Relationships: []
       }
@@ -82,7 +133,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      generate_sot_id: { Args: never; Returns: string }
     }
     Enums: {
       [_ in never]: never
