@@ -117,38 +117,44 @@ function useFeed() {
 }
 
 
-function VideoCard({ item, muted, onToggleMute }: { item: FeedItem; muted: boolean; onToggleMute: () => void }) {
+function VideoCard({
+  item,
+  muted,
+  onToggleMute,
+  active,
+}: {
+  item: FeedItem;
+  muted: boolean;
+  onToggleMute: () => void;
+  active: boolean;
+}) {
   const ref = useRef<HTMLVideoElement>(null);
   const [liked, setLiked] = useState(false);
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const obs = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[0];
-        if (!entry) return;
-        if (entry.isIntersecting) void el.play().catch(() => {});
-        else el.pause();
-      },
-      { threshold: 0.6 },
-    );
-
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, []);
+    if (active) void el.play().catch(() => {});
+    else {
+      el.pause();
+      el.currentTime = 0;
+    }
+  }, [active]);
 
   return (
     <section className="snap-item relative h-screen w-full">
       <video
         ref={ref}
-        src={item.url}
+        src={active ? item.url : undefined}
+        data-src={item.url}
         loop
         muted={muted}
         playsInline
+        preload="none"
         onClick={onToggleMute}
-        className="h-full w-full object-cover"
+        className="h-full w-full bg-black object-cover"
       />
+
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-black/40" />
 
       {muted && (
