@@ -202,9 +202,24 @@ function VideoCard({
 }
 
 function FeedPage() {
-  const { data, isLoading } = useFeed();
+  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useFeed();
   const [muted, setMuted] = useState(true);
   const [tab, setTab] = useState<"following" | "foryou">("foryou");
+  const [activeIndex, setActiveIndex] = useState(0);
+  const scrollerRef = useRef<HTMLDivElement>(null);
+
+  const items = useMemo(() => {
+    const rows = (data?.pages ?? []).flat();
+    return rows.length ? rows : demoVideos;
+  }, [data]);
+
+  const onScroll = useCallback(() => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    const index = Math.round(el.scrollTop / el.clientHeight);
+    setActiveIndex((prev) => (prev === index ? prev : index));
+    if (hasNextPage && !isFetchingNextPage && index >= items.length - 2) void fetchNextPage();
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage, items.length]);
 
   return (
     <div className="mx-auto w-full max-w-[420px] bg-black">
@@ -223,12 +238,18 @@ function FeedPage() {
         </button>
       </div>
 
-      <div className="snap-feed no-scrollbar h-screen overflow-y-scroll">
+      <div ref={scrollerRef} onScroll={onScroll} className="snap-feed no-scrollbar h-screen overflow-y-scroll">
         {isLoading ? (
           <div className="flex h-screen items-center justify-center text-white/50">লোড হচ্ছে…</div>
         ) : (
-          (data ?? []).map((item) => (
-            <VideoCard key={item.id} item={item} muted={muted} onToggleMute={() => setMuted((m) => !m)} />
+          items.map((item, i) => (
+            <VideoCard
+              key={item.id}
+              item={item}
+              active={Math.abs(i - activeIndex) === 0}
+              muted={muted}
+              onToggleMute={() => setMuted((m) => !m)}
+            />
           ))
         )}
       </div>
@@ -236,3 +257,4 @@ function FeedPage() {
     </div>
   );
 }
+
