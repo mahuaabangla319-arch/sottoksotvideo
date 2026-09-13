@@ -1,24 +1,59 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { SotTokLogo } from "@/components/SotTokLogo";
 
-// No head() here: the home route inherits title/description/og/twitter from
-// __root.tsx, and ships no og:image so serve-time hosting can inject the
-// project's social preview (explicit og:image or latest screenshot).
 export const Route = createFileRoute("/")({
-  component: Index,
+  head: () => ({
+    meta: [
+      { title: "SOT TOK — নিজের পরিচয় নিজেই তৈরি করো" },
+      {
+        name: "description",
+        content: "SOT TOK — বাংলা শর্ট ভিডিও অ্যাপ। ভিডিও বানাও, শেয়ার করো, নিজের পরিচয় তৈরি করো।",
+      },
+      { property: "og:title", content: "SOT TOK — নিজের পরিচয় নিজেই তৈরি করো" },
+      { property: "og:description", content: "বাংলা শর্ট ভিডিও অ্যাপ — রেকর্ড করো, শেয়ার করো, ট্রেন্ড করো।" },
+    ],
+  }),
+  component: Splash,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
-function Index() {
+function Splash() {
+  const navigate = useNavigate();
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    const start = Date.now();
+    const id = window.setInterval(() => {
+      const pct = Math.min(100, ((Date.now() - start) / 2000) * 100);
+      setProgress(pct);
+    }, 40);
+    const timeout = window.setTimeout(() => navigate({ to: "/login" }), 2050);
+    return () => {
+      window.clearInterval(id);
+      window.clearTimeout(timeout);
+    };
+  }, [navigate]);
+
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
+    <div className="bg-splash flex min-h-screen w-full flex-col items-center justify-center">
+      <div className="mx-auto flex w-full max-w-[420px] flex-1 flex-col items-center justify-center px-8">
+        <SotTokLogo size={120} />
+        <h1
+          className="mt-8 font-display text-[36px] font-bold text-white"
+          style={{ letterSpacing: "2px" }}
+        >
+          SOT TOK
+        </h1>
+        <p className="mt-3 text-center text-[15px] text-gold">নিজের পরিচয় নিজেই তৈরি করো</p>
+      </div>
+      <div className="mb-16 w-full max-w-[420px] px-10">
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/15">
+          <div
+            className="h-full rounded-full bg-gold transition-[width] duration-100 ease-linear"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+      </div>
     </div>
   );
 }
