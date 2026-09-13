@@ -26,21 +26,34 @@ const users = [
 ];
 
 function ExplorePage() {
+  const navigate = useNavigate();
   const [active, setActive] = useState("Trending");
   const [query, setQuery] = useState("");
+
+  const submitSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    const q = query.trim();
+    if (/^[0-9]{8}$/.test(q)) {
+      navigate({ to: "/id/$sotId", params: { sotId: q } });
+    }
+  };
 
   return (
     <PhoneShell className="bg-white">
       <div className="px-4 pt-5">
-        <div className="flex items-center gap-2 rounded-full bg-neutral-100 px-4 py-2.5">
+        <form
+          onSubmit={submitSearch}
+          className="flex items-center gap-2 rounded-full bg-neutral-100 px-4 py-2.5"
+        >
           <Search className="h-4 w-4 text-neutral-500" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search"
+            placeholder="SOT ID বা নাম দিয়ে খুঁজুন"
             className="w-full bg-transparent text-sm text-neutral-900 outline-none placeholder:text-neutral-400"
           />
-        </div>
+        </form>
+
 
         <div className="mt-4 rounded-[24px] bg-pink-soft p-5">
           <span className="inline-flex items-center gap-1 rounded-full bg-red-600 px-2.5 py-1 text-[11px] font-semibold text-white">
