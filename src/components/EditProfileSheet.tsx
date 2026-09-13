@@ -6,7 +6,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { FireRingAvatar } from "@/components/FireRingAvatar";
 import type { Profile } from "@/lib/profile";
 
-const chips = ["ড্যান্স", "ফান", "কমেডি", "রান্না", "লাইফস্টাইল", "বাংলাদেশ"];
+const chips = ["ড্যান্স", "ফান", "কমেডি", "রান্না", "লাইফস্টাইল", "ভারত"];
 
 export function EditProfileSheet({
   open,
