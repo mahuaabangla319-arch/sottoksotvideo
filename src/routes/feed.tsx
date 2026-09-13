@@ -69,24 +69,28 @@ function useFeed() {
     queryFn: async (): Promise<FeedItem[]> => {
       const { data } = await supabase
         .from("videos")
-        .select("id, caption, video_url, sound_name, views, likes, user_id, profiles(username)")
+        .select("id, caption, video_url, sound_name, views, likes, user_id")
         .order("created_at", { ascending: false })
         .limit(20);
 
+      const ids = [...new Set((data ?? []).map((v) => v.user_id))];
+      const { data: profiles } = ids.length
+        ? await supabase.from("profiles").select("id, username").in("id", ids)
+        : { data: [] };
+      const nameById = new Map((profiles ?? []).map((p) => [p.id, p.username]));
+
       const rows = await Promise.all(
-        (data ?? []).map(async (v) => {
-          const profile = v.profiles as { username?: string } | null;
-          return {
-            id: v.id,
-            username: "@" + (profile?.username || "sottok"),
-            caption: v.caption,
-            url: await resolveUrl(v.video_url),
-            sound: v.sound_name,
-            views: String(v.views ?? 0),
-            likes: String(v.likes ?? 0),
-          };
-        }),
+        (data ?? []).map(async (v) => ({
+          id: v.id,
+          username: "@" + (nameById.get(v.user_id) || "sottok"),
+          caption: v.caption,
+          url: await resolveUrl(v.video_url),
+          sound: v.sound_name,
+          views: String(v.views ?? 0),
+          likes: String(v.likes ?? 0),
+        })),
       );
+
       return [...rows.filter((r) => r.url), ...demoVideos];
     },
   });
