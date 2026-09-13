@@ -92,7 +92,10 @@ function CreatePage() {
       return;
     }
     try {
-      await track.applyConstraints({ advanced: [{ torch: !torch }] } as MediaTrackConstraints);
+      await track.applyConstraints({
+        advanced: [{ torch: !torch }],
+      } as unknown as MediaTrackConstraints);
+
       setTorch((t) => !t);
     } catch {
       toast.error("ফ্ল্যাশ চালু করা যায়নি।");
