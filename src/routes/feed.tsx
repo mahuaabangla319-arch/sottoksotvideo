@@ -100,12 +100,15 @@ function VideoCard({ item, muted, onToggleMute }: { item: FeedItem; muted: boole
     const el = ref.current;
     if (!el) return;
     const obs = new IntersectionObserver(
-      ([entry]) => {
+      (entries) => {
+        const entry = entries[0];
+        if (!entry) return;
         if (entry.isIntersecting) void el.play().catch(() => {});
         else el.pause();
       },
       { threshold: 0.6 },
     );
+
     obs.observe(el);
     return () => obs.disconnect();
   }, []);

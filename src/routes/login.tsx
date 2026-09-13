@@ -49,9 +49,19 @@ function LoginPage() {
   const createId = async (e: React.FormEvent) => {
     e.preventDefault();
     const id = gmailId.trim().toLowerCase().replace(/[^a-z0-9._-]/g, "");
-    if (!fullName.trim()) return toast.error("পুরো নাম লিখুন।");
-    if (id.length < 3) return toast.error("অন্তত ৩ অক্ষরের আইডি লিখুন।");
-    if (password.length < 6) return toast.error("পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে।");
+    if (!fullName.trim()) {
+      toast.error("পুরো নাম লিখুন।");
+      return;
+    }
+    if (id.length < 3) {
+      toast.error("অন্তত ৩ অক্ষরের আইডি লিখুন।");
+      return;
+    }
+    if (password.length < 6) {
+      toast.error("পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে।");
+      return;
+    }
+
 
     setCreating(true);
     const email = `${id}@sottok.com`;
