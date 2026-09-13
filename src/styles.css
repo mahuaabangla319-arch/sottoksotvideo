@@ -59,11 +59,23 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-brand: var(--brand);
+  --color-gold: var(--gold);
+  --color-pink: var(--pink);
+  --color-pink-soft: var(--pink-soft);
+  --font-display: "Inter", system-ui, sans-serif;
+  --font-bn: "Noto Sans Bengali", "Inter", system-ui, sans-serif;
 }
+
 
 :root {
   --radius: 0.625rem;
+  --brand: oklch(0.504 0.283 267.5);
+  --gold: oklch(0.855 0.169 91.6);
+  --pink: oklch(0.63 0.244 4.5);
+  --pink-soft: oklch(0.933 0.041 348);
   --background: oklch(1 0 0);
+
   --foreground: oklch(0.129 0.042 264.695);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.129 0.042 264.695);
@@ -141,4 +153,41 @@
     background-color: var(--color-background);
     color: var(--color-foreground);
   }
+}
+
+@utility bg-flame {
+  background-image: linear-gradient(145deg, #ff9a00 0%, #ff5a00 45%, #ffd21f 100%);
+}
+
+@utility shadow-flame {
+  box-shadow:
+    0 10px 40px -8px rgba(255, 122, 0, 0.65),
+    0 0 0 1px rgba(255, 210, 31, 0.25);
+}
+
+@utility bg-splash {
+  background-image: radial-gradient(circle at 50% 42%, #1e2a8a 0%, #0a1030 45%, #000000 100%);
+}
+
+@utility snap-feed {
+  scroll-snap-type: y mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+
+@utility snap-item {
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+html,
+body {
+  font-family: var(--font-bn);
+  background: #000;
 }
