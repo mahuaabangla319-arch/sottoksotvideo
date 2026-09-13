@@ -128,18 +128,22 @@ function ExplorePage() {
         </div>
 
         <div className="mt-3 grid grid-cols-2 gap-3">
-          {users.map((u) => (
+          {cards.map((u) => (
             <div key={u.handle} className="overflow-hidden rounded-2xl border border-neutral-200">
-              <img src={u.img} alt={`${u.name} food video cover`} className="h-28 w-full object-cover" loading="lazy" />
+              <img src={u.img} alt={`${u.name} video cover`} className="h-28 w-full object-cover" loading="lazy" />
               <div className="p-3">
                 <p className="text-[13px] font-semibold text-neutral-900">{u.name}</p>
                 <p className="text-[11px] text-neutral-500">{u.handle}</p>
-                <button className="mt-2 w-full rounded-lg bg-pink py-1.5 text-[12px] font-semibold text-white">
+                <button
+                  onClick={() => u.sot && navigate({ to: "/id/$sotId", params: { sotId: u.sot } })}
+                  className="mt-2 w-full rounded-lg bg-pink py-1.5 text-[12px] font-semibold text-white"
+                >
                   Follow
                 </button>
               </div>
             </div>
           ))}
+
         </div>
       </div>
       <BottomNav />
