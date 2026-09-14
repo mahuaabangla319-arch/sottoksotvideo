@@ -44,8 +44,14 @@ export function CommentsSheet({
     e.preventDefault();
     const content = text.trim();
     if (!content) return;
-    if (!user) return toast.error("কমেন্ট করতে লগইন করুন");
-    if (videoId.startsWith("demo-")) return toast.error("ডেমো ভিডিওতে কমেন্ট করা যাবে না");
+    if (!user) {
+      toast.error("কমেন্ট করতে লগইন করুন");
+      return;
+    }
+    if (videoId.startsWith("demo-")) {
+      toast.error("ডেমো ভিডিওতে কমেন্ট করা যাবে না");
+      return;
+    }
     setSending(true);
     try {
       await addComment(videoId, user.id, content);
