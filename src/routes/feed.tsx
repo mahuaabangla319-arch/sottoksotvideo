@@ -2,8 +2,18 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { Heart, MessageCircle, Share2, Bookmark, Plus, Music2 } from "lucide-react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { BottomNav } from "@/components/BottomNav";
+import { CommentsSheet } from "@/components/CommentsSheet";
+import { useAuth } from "@/lib/auth";
+import {
+  countView,
+  fetchMyLikes,
+  formatCompact,
+  likeVideo,
+  unlikeVideo,
+} from "@/lib/engagement";
 
 const DESC = "ভারতের শর্ট ভিডিও ফিড — ড্যান্স, কমেডি, রান্না আর ফ্যামিলি ভিডিও।";
 
@@ -14,6 +24,8 @@ export const Route = createFileRoute("/feed")({
       { name: "description", content: DESC },
       { property: "og:title", content: "For You — SOT TOK" },
       { property: "og:description", content: DESC },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: FeedPage,
@@ -25,8 +37,9 @@ type FeedItem = {
   caption: string;
   url: string;
   sound: string;
-  views: string;
-  likes: string;
+  views: number;
+  likes: number;
+  comments: number;
 };
 
 const PAGE_SIZE = 6;
@@ -38,8 +51,9 @@ const demoVideos: FeedItem[] = [
     caption: "আজকের রেসিপি: ঘরোয়া পনির বাটার মশলা 🔥",
     url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4",
     sound: "Original sound - SOT TOK Artist",
-    views: "1.0M",
-    likes: "4.0K",
+    views: 1_000_000,
+    likes: 4000,
+    comments: 0,
   },
   {
     id: "demo-2",
@@ -47,8 +61,9 @@ const demoVideos: FeedItem[] = [
     caption: "৫ মিনিটে চিকেন কারি 🍛",
     url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4",
     sound: "Original sound - SOT TOK Artist",
-    views: "820K",
-    likes: "3.2K",
+    views: 820_000,
+    likes: 3200,
+    comments: 0,
   },
   {
     id: "demo-3",
@@ -56,8 +71,9 @@ const demoVideos: FeedItem[] = [
     caption: "গরম গরম পিঠা 😍",
     url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
     sound: "Original sound - SOT TOK Artist",
-    views: "610K",
-    likes: "2.7K",
+    views: 610_000,
+    likes: 2700,
+    comments: 0,
   },
 ];
 
@@ -87,7 +103,7 @@ function useFeed() {
       const from = (pageParam as number) * PAGE_SIZE;
       const { data } = await supabase
         .from("videos")
-        .select("id, caption, video_url, sound_name, views, likes, user_id")
+        .select("id, caption, video_url, sound_name, views, likes, comments_count, user_id")
         .order("created_at", { ascending: false })
         .range(from, from + PAGE_SIZE - 1);
 
@@ -108,38 +124,60 @@ function useFeed() {
           caption: v.caption,
           url: urls.get(v.video_url) ?? "",
           sound: v.sound_name,
-          views: String(v.views ?? 0),
-          likes: String(v.likes ?? 0),
+          views: v.views ?? 0,
+          likes: v.likes ?? 0,
+          comments: v.comments_count ?? 0,
         }))
         .filter((r) => r.url);
     },
   });
 }
 
-
 function VideoCard({
   item,
   muted,
   onToggleMute,
   active,
+  liked,
+  onToggleLike,
+  commentCount,
+  onOpenComments,
 }: {
   item: FeedItem;
   muted: boolean;
   onToggleMute: () => void;
   active: boolean;
+  liked: boolean;
+  onToggleLike: () => void;
+  commentCount: number;
+  onOpenComments: () => void;
 }) {
   const ref = useRef<HTMLVideoElement>(null);
-  const [liked, setLiked] = useState(false);
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    if (active) void el.play().catch(() => {});
-    else {
+    if (active) {
+      void el.play().catch(() => {});
+      void countView(item.id);
+    } else {
       el.pause();
       el.currentTime = 0;
     }
-  }, [active]);
+  }, [active, item.id]);
+
+  async function share() {
+    const url = `${window.location.origin}/feed`;
+    try {
+      if (navigator.share) await navigator.share({ title: "SOT TOK", text: item.caption, url });
+      else {
+        await navigator.clipboard.writeText(url);
+        toast.success("লিঙ্ক কপি হয়েছে");
+      }
+    } catch {
+      /* user cancelled */
+    }
+  }
 
   return (
     <section className="snap-item relative h-screen w-full">
@@ -170,19 +208,19 @@ function VideoCard({
             <Plus className="h-3.5 w-3.5 text-white" strokeWidth={3} />
           </span>
         </div>
-        <button onClick={() => setLiked((v) => !v)} className="flex flex-col items-center gap-1">
+        <button onClick={onToggleLike} className="flex flex-col items-center gap-1" aria-label="লাইক">
           <Heart className={`h-8 w-8 ${liked ? "fill-red-500 text-red-500" : "text-white"}`} />
-          <span className="text-[11px] text-white">{item.likes}</span>
+          <span className="text-[11px] text-white">{formatCompact(item.likes)}</span>
         </button>
-        <button className="flex flex-col items-center gap-1">
+        <button onClick={onOpenComments} className="flex flex-col items-center gap-1" aria-label="কমেন্ট">
           <MessageCircle className="h-8 w-8 text-white" />
-          <span className="text-[11px] text-white">0</span>
+          <span className="text-[11px] text-white">{formatCompact(commentCount)}</span>
         </button>
-        <button className="flex flex-col items-center gap-1">
+        <button onClick={share} className="flex flex-col items-center gap-1" aria-label="শেয়ার">
           <Share2 className="h-8 w-8 text-white" />
-          <span className="text-[11px] text-white">0</span>
+          <span className="text-[11px] text-white">Share</span>
         </button>
-        <button className="flex flex-col items-center gap-1">
+        <button className="flex flex-col items-center gap-1" aria-label="সেভ">
           <Bookmark className="h-8 w-8 text-white" />
           <span className="text-[11px] text-white">Save</span>
         </button>
@@ -190,7 +228,7 @@ function VideoCard({
 
       <div className="absolute bottom-24 left-4 right-24">
         <p className="text-[15px] font-semibold text-white">{item.username}</p>
-        <p className="text-[12px] text-white/70">{item.views} views</p>
+        <p className="text-[12px] text-white/70">{formatCompact(item.views)} views</p>
         <p className="mt-1 text-[13px] text-white">{item.caption}</p>
         <p className="mt-1 text-[12px] text-white/80">{item.sound}</p>
         <button className="mt-2 inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1.5 text-[12px] text-white backdrop-blur">
@@ -202,16 +240,66 @@ function VideoCard({
 }
 
 function FeedPage() {
+  const { user } = useAuth();
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useFeed();
   const [muted, setMuted] = useState(true);
   const [tab, setTab] = useState<"following" | "foryou">("foryou");
   const [activeIndex, setActiveIndex] = useState(0);
+  const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
+  const [likeDelta, setLikeDelta] = useState<Record<string, number>>({});
+  const [commentDelta, setCommentDelta] = useState<Record<string, number>>({});
+  const [openComments, setOpenComments] = useState<string | null>(null);
   const scrollerRef = useRef<HTMLDivElement>(null);
 
-  const items = useMemo(() => {
+  const baseItems = useMemo(() => {
     const rows = (data?.pages ?? []).flat();
     return rows.length ? rows : demoVideos;
   }, [data]);
+
+  const items = useMemo(
+    () =>
+      baseItems.map((i) => ({
+        ...i,
+        likes: Math.max(0, i.likes + (likeDelta[i.id] ?? 0)),
+      })),
+    [baseItems, likeDelta],
+  );
+
+  useEffect(() => {
+    const ids = baseItems.map((i) => i.id).filter((id) => !id.startsWith("demo-"));
+    if (!user || !ids.length) return;
+    let alive = true;
+    void fetchMyLikes(ids, user.id).then((s) => alive && setLikedIds(s));
+    return () => {
+      alive = false;
+    };
+  }, [baseItems, user]);
+
+  async function toggleLike(id: string) {
+    if (!user) return toast.error("লাইক করতে লগইন করুন");
+    if (id.startsWith("demo-")) return toast.error("ডেমো ভিডিওতে লাইক করা যাবে না");
+    const wasLiked = likedIds.has(id);
+    setLikedIds((prev) => {
+      const next = new Set(prev);
+      if (wasLiked) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+    setLikeDelta((d) => ({ ...d, [id]: (d[id] ?? 0) + (wasLiked ? -1 : 1) }));
+    try {
+      if (wasLiked) await unlikeVideo(id, user.id);
+      else await likeVideo(id, user.id);
+    } catch {
+      setLikedIds((prev) => {
+        const next = new Set(prev);
+        if (wasLiked) next.add(id);
+        else next.delete(id);
+        return next;
+      });
+      setLikeDelta((d) => ({ ...d, [id]: (d[id] ?? 0) + (wasLiked ? 1 : -1) }));
+      toast.error("আবার চেষ্টা করুন");
+    }
+  }
 
   const onScroll = useCallback(() => {
     const el = scrollerRef.current;
@@ -246,15 +334,30 @@ function FeedPage() {
             <VideoCard
               key={item.id}
               item={item}
-              active={Math.abs(i - activeIndex) === 0}
+              active={i === activeIndex}
               muted={muted}
               onToggleMute={() => setMuted((m) => !m)}
+              liked={likedIds.has(item.id)}
+              onToggleLike={() => void toggleLike(item.id)}
+              commentCount={Math.max(0, item.comments + (commentDelta[item.id] ?? 0))}
+              onOpenComments={() => setOpenComments(item.id)}
             />
           ))
         )}
       </div>
+
+      {openComments && (
+        <CommentsSheet
+          videoId={openComments}
+          open
+          onClose={() => setOpenComments(null)}
+          onCountChange={(delta) =>
+            setCommentDelta((d) => ({ ...d, [openComments]: (d[openComments] ?? 0) + delta }))
+          }
+        />
+      )}
+
       <BottomNav />
     </div>
   );
 }
-
