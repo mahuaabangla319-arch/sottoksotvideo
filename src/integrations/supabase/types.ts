@@ -14,6 +14,41 @@ export type Database = {
   }
   public: {
     Tables: {
+      comments: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string
+          video_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+          video_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+          video_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comments_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       follows: {
         Row: {
           created_at: string
@@ -92,9 +127,39 @@ export type Database = {
         }
         Relationships: []
       }
+      video_likes: {
+        Row: {
+          created_at: string
+          id: string
+          user_id: string
+          video_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          user_id: string
+          video_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          user_id?: string
+          video_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_likes_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       videos: {
         Row: {
           caption: string
+          comments_count: number
           created_at: string
           id: string
           likes: number
@@ -106,6 +171,7 @@ export type Database = {
         }
         Insert: {
           caption?: string
+          comments_count?: number
           created_at?: string
           id?: string
           likes?: number
@@ -117,6 +183,7 @@ export type Database = {
         }
         Update: {
           caption?: string
+          comments_count?: number
           created_at?: string
           id?: string
           likes?: number
@@ -134,6 +201,7 @@ export type Database = {
     }
     Functions: {
       generate_sot_id: { Args: never; Returns: string }
+      increment_video_view: { Args: { _video_id: string }; Returns: undefined }
     }
     Enums: {
       [_ in never]: never
