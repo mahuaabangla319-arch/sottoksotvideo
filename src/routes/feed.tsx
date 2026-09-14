@@ -276,8 +276,14 @@ function FeedPage() {
   }, [baseItems, user]);
 
   async function toggleLike(id: string) {
-    if (!user) return toast.error("লাইক করতে লগইন করুন");
-    if (id.startsWith("demo-")) return toast.error("ডেমো ভিডিওতে লাইক করা যাবে না");
+    if (!user) {
+      toast.error("লাইক করতে লগইন করুন");
+      return;
+    }
+    if (id.startsWith("demo-")) {
+      toast.error("ডেমো ভিডিওতে লাইক করা যাবে না");
+      return;
+    }
     const wasLiked = likedIds.has(id);
     setLikedIds((prev) => {
       const next = new Set(prev);
