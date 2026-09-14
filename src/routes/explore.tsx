@@ -1,7 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Search, Flame } from "lucide-react";
+import { Search } from "lucide-react";
+import ganeshContest from "@/assets/ganesh-contest.jpg.asset.json";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { BottomNav } from "@/components/BottomNav";
@@ -95,13 +96,13 @@ function ExplorePage() {
         </form>
 
 
-        <div className="mt-4 rounded-[24px] bg-pink-soft p-5">
-          <span className="inline-flex items-center gap-1 rounded-full bg-red-600 px-2.5 py-1 text-[11px] font-semibold text-white">
-            <Flame className="h-3 w-3" /> SotTok
-          </span>
-          <h2 className="mt-3 text-[22px] font-bold text-neutral-900">নিজের সাথে ভুয়েট</h2>
-          <p className="mt-1 text-[12px] text-pink">প্রতি সপ্তাহে নতুন চ্যালেঞ্জ</p>
-          <p className="mt-1 text-[12px] text-neutral-900">সেরা ১০ জন ক্রিয়েটর পাবেন বিশেষ পুরস্কার</p>
+        <div className="mt-4 overflow-hidden rounded-[24px]">
+          <img
+            src={ganeshContest.url}
+            alt="গণেশ চতুর্থী স্পেশাল কনটেস্ট — নিজের ক্যামেরায় ভিডিও বানাও"
+            className="w-full object-cover"
+            loading="lazy"
+          />
         </div>
 
         <div className="no-scrollbar mt-4 flex gap-5 overflow-x-auto border-b border-neutral-200">
