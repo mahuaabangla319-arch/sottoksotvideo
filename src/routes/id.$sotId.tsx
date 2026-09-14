@@ -7,7 +7,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { PhoneShell } from "@/components/PhoneShell";
 import { FireRingAvatar } from "@/components/FireRingAvatar";
 import { useAuth } from "@/lib/auth";
-import { avatarSrc, formatCount, isVerified, levelFromLikes, shareText } from "@/lib/profile";
+import { avatarSrc, formatCount, isVerified, levelFromLikes, shareProfile } from "@/lib/profile";
 
 export const Route = createFileRoute("/id/$sotId")({
   head: () => ({
@@ -112,8 +112,9 @@ function PublicProfilePage() {
         <button
           aria-label="শেয়ার"
           onClick={() => {
-            void navigator.clipboard.writeText(shareText(profile.sottok_id));
-            toast.success("প্রোফাইল লিঙ্ক কপি হয়েছে");
+            void shareProfile(profile.sottok_id).then((r) => {
+              if (r === "copied") toast.success("প্রোফাইল লিঙ্ক কপি হয়েছে");
+            });
           }}
           className="flex h-9 w-9 items-center justify-center"
         >

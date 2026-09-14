@@ -17,8 +17,37 @@ export function isVerified(followers: number): boolean {
   return followers >= 10_000;
 }
 
+export function shareUrl(sotId: string): string {
+  return `${window.location.origin}/id/${sotId}`;
+}
+
 export function shareText(sotId: string): string {
-  return `আমাকে SOT TOK এ ফলো করুন! SOT ID: ${sotId} - sottok.app/id/${sotId}`;
+  return `আমাকে SOT TOK এ ফলো করুন! SOT ID: ${sotId}\n${shareUrl(sotId)}`;
+}
+
+/** Shares via the native sheet when available, else copies the link. */
+export async function shareProfile(sotId: string): Promise<"shared" | "copied"> {
+  const url = shareUrl(sotId);
+  const text = shareText(sotId);
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: "SOT TOK", text, url });
+      return "shared";
+    } catch {
+      /* user cancelled — fall through to copy */
+    }
+  }
+  try {
+    await navigator.clipboard.writeText(url);
+  } catch {
+    const ta = document.createElement("textarea");
+    ta.value = url;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    ta.remove();
+  }
+  return "copied";
 }
 
 /** Loads the signed-in user's profile, creating a row (with a permanent SOT ID) if missing. */

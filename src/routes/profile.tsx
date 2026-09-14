@@ -16,7 +16,7 @@ import {
   isVerified,
   levelFromLikes,
   loadOwnProfile,
-  shareText,
+  shareProfile,
 } from "@/lib/profile";
 
 export const Route = createFileRoute("/profile")({
@@ -88,17 +88,8 @@ function ProfilePage() {
   };
 
   const share = async () => {
-    const text = shareText(sotId);
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: "SOT TOK", text });
-        return;
-      } catch {
-        /* user cancelled */
-      }
-    }
-    void navigator.clipboard.writeText(text);
-    toast.success("প্রোফাইল লিঙ্ক কপি হয়েছে");
+    const result = await shareProfile(sotId);
+    if (result === "copied") toast.success("প্রোফাইল লিঙ্ক কপি হয়েছে");
   };
 
   const grid =
