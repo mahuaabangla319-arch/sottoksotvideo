@@ -112,8 +112,9 @@ function PublicProfilePage() {
         <button
           aria-label="শেয়ার"
           onClick={() => {
-            void navigator.clipboard.writeText(shareText(profile.sottok_id));
-            toast.success("প্রোফাইল লিঙ্ক কপি হয়েছে");
+            void shareProfile(profile.sottok_id).then((r) => {
+              if (r === "copied") toast.success("প্রোফাইল লিঙ্ক কপি হয়েছে");
+            });
           }}
           className="flex h-9 w-9 items-center justify-center"
         >
