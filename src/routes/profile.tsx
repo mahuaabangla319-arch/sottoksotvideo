@@ -16,7 +16,7 @@ import {
   isVerified,
   levelFromLikes,
   loadOwnProfile,
-  shareText,
+  shareProfile,
 } from "@/lib/profile";
 
 export const Route = createFileRoute("/profile")({
