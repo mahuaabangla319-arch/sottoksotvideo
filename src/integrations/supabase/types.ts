@@ -14,6 +14,41 @@ export type Database = {
   }
   public: {
     Tables: {
+      coin_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          reason: string
+          user_id: string
+          video_id: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          reason?: string
+          user_id: string
+          video_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          reason?: string
+          user_id?: string
+          video_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coin_transactions_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       comments: {
         Row: {
           content: string
@@ -75,6 +110,7 @@ export type Database = {
           avatar_url: string | null
           bio: string
           birth_date: string | null
+          coins: number
           created_at: string
           followers_count: number
           following_count: number
@@ -93,6 +129,7 @@ export type Database = {
           avatar_url?: string | null
           bio?: string
           birth_date?: string | null
+          coins?: number
           created_at?: string
           followers_count?: number
           following_count?: number
@@ -111,6 +148,7 @@ export type Database = {
           avatar_url?: string | null
           bio?: string
           birth_date?: string | null
+          coins?: number
           created_at?: string
           followers_count?: number
           following_count?: number
@@ -200,6 +238,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      award_video_coins: { Args: { _video_id: string }; Returns: number }
       generate_sot_id: { Args: never; Returns: string }
       increment_video_view: { Args: { _video_id: string }; Returns: undefined }
     }
