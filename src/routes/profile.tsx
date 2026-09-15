@@ -9,6 +9,7 @@ import { PhoneShell } from "@/components/PhoneShell";
 import { SotTokLogo } from "@/components/SotTokLogo";
 import { FireRingAvatar } from "@/components/FireRingAvatar";
 import { EditProfileSheet } from "@/components/EditProfileSheet";
+import { WalletCard } from "@/components/WalletCard";
 import { useAuth } from "@/lib/auth";
 import {
   avatarSrc,
@@ -155,6 +156,8 @@ function ProfilePage() {
             </div>
           ))}
         </div>
+
+        <WalletCard userId={user?.id ?? null} coins={profile?.coins ?? 0} />
 
         <div className="mt-4 flex w-full gap-2">
           <button
