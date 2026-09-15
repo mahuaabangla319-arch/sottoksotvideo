@@ -16,6 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { PhoneShell } from "@/components/PhoneShell";
 import { BottomNav } from "@/components/BottomNav";
 import { useAuth } from "@/lib/auth";
+import { awardVideoCoins } from "@/lib/coins";
 
 export const Route = createFileRoute("/create")({
   head: () => ({
