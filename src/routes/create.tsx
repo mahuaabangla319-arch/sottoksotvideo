@@ -166,17 +166,26 @@ function CreatePage() {
       toast.error("আপলোড ব্যর্থ হয়েছে: " + upErr.message);
       return;
     }
-    const { error } = await supabase.from("videos").insert({
-      user_id: user.id,
-      caption,
-      video_url: path,
-    });
+    const { data: inserted, error } = await supabase
+      .from("videos")
+      .insert({
+        user_id: user.id,
+        caption,
+        video_url: path,
+      })
+      .select("id")
+      .single();
     setUploading(false);
     if (error) {
       toast.error("পোস্ট করা যায়নি: " + error.message);
       return;
     }
     toast.success("ভিডিও পোস্ট হয়েছে!");
+    if (inserted?.id) {
+      const coins = await awardVideoCoins(inserted.id);
+      if (coins > 0) toast.success(`🪙 ${coins} কয়েন পেয়েছেন! ওয়ালেটে জমা হয়েছে।`);
+      else toast("আজকের ৫০ কয়েন পাওয়া শেষ — ২৪ ঘণ্টা পর আবার পাবেন।");
+    }
     navigate({ to: "/feed" });
   };
 

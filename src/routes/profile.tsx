@@ -9,6 +9,7 @@ import { PhoneShell } from "@/components/PhoneShell";
 import { SotTokLogo } from "@/components/SotTokLogo";
 import { FireRingAvatar } from "@/components/FireRingAvatar";
 import { EditProfileSheet } from "@/components/EditProfileSheet";
+import { WalletCard } from "@/components/WalletCard";
 import { useAuth } from "@/lib/auth";
 import {
   avatarSrc,
