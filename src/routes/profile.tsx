@@ -232,16 +232,38 @@ function ProfilePage() {
         </div>
 
         <div className="mt-3 grid w-full grid-cols-3 gap-2 pb-6">
-          {grid.length > 0 ? (
-            grid.map((v, i) => (
+          {tabVideos.length > 0 ? (
+            tabVideos.map((v) => (
               <div
-                key={i}
+                key={v.id}
                 className="relative aspect-[9/16] overflow-hidden rounded-[12px] bg-white/10"
               >
-                {v.img && <img src={v.img} alt="ভিডিও থাম্বনেইল" className="h-full w-full object-cover" loading="lazy" />}
+                {v.thumbnail_url && (
+                  <img src={v.thumbnail_url} alt="ভিডিও থাম্বনেইল" className="h-full w-full object-cover" loading="lazy" />
+                )}
                 <span className="absolute bottom-1.5 left-1.5 flex items-center gap-1 text-[11px] font-medium text-white drop-shadow">
-                  <Play className="h-3 w-3 fill-white" /> {v.views}
+                  <Play className="h-3 w-3 fill-white" /> {formatCount(v.views ?? 0)}
                 </span>
+                <div className="absolute right-1 top-1 flex flex-col gap-1">
+                  <button
+                    onClick={() => void toggleVisibility(v.id, v.visibility ?? "public")}
+                    aria-label={v.visibility === "private" ? "পাবলিক করুন" : "প্রাইভেট করুন"}
+                    className="rounded-full bg-black/60 p-1.5"
+                  >
+                    {v.visibility === "private" ? (
+                      <Lock className="h-3.5 w-3.5 text-gold" />
+                    ) : (
+                      <Globe className="h-3.5 w-3.5 text-white" />
+                    )}
+                  </button>
+                  <button
+                    onClick={() => void deleteVideo(v.id)}
+                    aria-label="ভিডিও ডিলিট করুন"
+                    className="rounded-full bg-black/60 p-1.5"
+                  >
+                    <Trash2 className="h-3.5 w-3.5 text-white" />
+                  </button>
+                </div>
               </div>
             ))
           ) : (
@@ -250,6 +272,7 @@ function ProfilePage() {
             </p>
           )}
         </div>
+
       </div>
 
       {profile && (
