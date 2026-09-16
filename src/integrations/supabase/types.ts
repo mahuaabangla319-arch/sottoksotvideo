@@ -105,6 +105,27 @@ export type Database = {
         }
         Relationships: []
       }
+      profile_rings: {
+        Row: {
+          created_at: string
+          ring_key: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          ring_key: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          ring_key?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -165,6 +186,54 @@ export type Database = {
         }
         Relationships: []
       }
+      user_coins: {
+        Row: {
+          balance: number
+          created_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          balance?: number
+          created_at?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          balance?: number
+          created_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_rings: {
+        Row: {
+          created_at: string
+          id: string
+          price: number
+          ring_key: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          price?: number
+          ring_key: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          price?: number
+          ring_key?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       video_likes: {
         Row: {
           created_at: string
@@ -194,42 +263,89 @@ export type Database = {
           },
         ]
       }
+      video_reports: {
+        Row: {
+          created_at: string
+          details: string
+          id: string
+          reason: string
+          reporter_id: string
+          status: string
+          updated_at: string
+          video_id: string
+        }
+        Insert: {
+          created_at?: string
+          details?: string
+          id?: string
+          reason?: string
+          reporter_id: string
+          status?: string
+          updated_at?: string
+          video_id: string
+        }
+        Update: {
+          created_at?: string
+          details?: string
+          id?: string
+          reason?: string
+          reporter_id?: string
+          status?: string
+          updated_at?: string
+          video_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_reports_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       videos: {
         Row: {
           caption: string
           comments_count: number
           created_at: string
           id: string
+          is_deleted: boolean
           likes: number
           sound_name: string
           thumbnail_url: string | null
           user_id: string
           video_url: string
           views: number
+          visibility: string
         }
         Insert: {
           caption?: string
           comments_count?: number
           created_at?: string
           id?: string
+          is_deleted?: boolean
           likes?: number
           sound_name?: string
           thumbnail_url?: string | null
           user_id: string
           video_url: string
           views?: number
+          visibility?: string
         }
         Update: {
           caption?: string
           comments_count?: number
           created_at?: string
           id?: string
+          is_deleted?: boolean
           likes?: number
           sound_name?: string
           thumbnail_url?: string | null
           user_id?: string
           video_url?: string
           views?: number
+          visibility?: string
         }
         Relationships: []
       }

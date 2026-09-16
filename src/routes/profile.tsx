@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
-import { Copy, Flame, LogOut, MapPin, Play, Share2, BadgeCheck } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Copy, Flame, Globe, Lock, LogOut, MapPin, Play, Share2, Trash2, BadgeCheck } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { BottomNav } from "@/components/BottomNav";
@@ -34,15 +34,6 @@ export const Route = createFileRoute("/profile")({
   component: ProfilePage,
 });
 
-const demoThumbs = [
-  { views: "1.2M", img: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&q=60" },
-  { views: "890K", img: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&q=60" },
-  { views: "543K", img: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400&q=60" },
-  { views: "320K", img: "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=400&q=60" },
-  { views: "768K", img: "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=400&q=60" },
-  { views: "215K", img: "https://images.unsplash.com/photo-1476224203421-9ac39bcb3327?w=400&q=60" },
-];
-
 const tabs = ["Videos", "Liked", "Private"] as const;
 
 function ProfilePage() {
@@ -50,6 +41,15 @@ function ProfilePage() {
   const navigate = useNavigate();
   const [tab, setTab] = useState<(typeof tabs)[number]>("Videos");
   const [editing, setEditing] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    if (sessionStorage.getItem("sottok-all-users-toast")) return;
+    sessionStorage.setItem("sottok-all-users-toast", "1");
+    toast.success("সকল ইউজারের জন্য চালু করা হয়েছে");
+  }, [user]);
+
+
 
   const { data: profile, refetch } = useQuery({
     queryKey: ["profile", user?.id],
@@ -63,18 +63,40 @@ function ProfilePage() {
     queryFn: () => avatarSrc(profile?.avatar_url ?? null),
   });
 
-  const { data: videos } = useQuery({
+  const { data: videos, refetch: refetchVideos } = useQuery({
     queryKey: ["my-videos", user?.id],
     enabled: !!user,
     queryFn: async () => {
       const { data } = await supabase
         .from("videos")
-        .select("id, caption, views, thumbnail_url, created_at")
+        .select("id, caption, views, thumbnail_url, created_at, visibility, is_deleted")
         .eq("user_id", user!.id)
+        .eq("is_deleted", false)
         .order("created_at", { ascending: false });
       return data ?? [];
     },
   });
+
+  const toggleVisibility = async (id: string, current: string) => {
+    const next = current === "private" ? "public" : "private";
+    const { error } = await supabase.from("videos").update({ visibility: next }).eq("id", id);
+    if (error) {
+      toast.error("বদলানো যায়নি, আবার চেষ্টা করুন");
+      return;
+    }
+    toast.success(next === "private" ? "ভিডিও প্রাইভেট করা হয়েছে" : "ভিডিও পাবলিক করা হয়েছে");
+    void refetchVideos();
+  };
+
+  const deleteVideo = async (id: string) => {
+    const { error } = await supabase.from("videos").update({ is_deleted: true }).eq("id", id);
+    if (error) {
+      toast.error("ডিলিট করা যায়নি, আবার চেষ্টা করুন");
+      return;
+    }
+    toast.success("ভিডিও ডিলিট হয়েছে");
+    void refetchVideos();
+  };
 
   const sotId = profile?.sottok_id ?? "--------";
   const followers = profile?.followers_count ?? 15200;
@@ -93,12 +115,14 @@ function ProfilePage() {
     if (result === "copied") toast.success("প্রোফাইল লিঙ্ক কপি হয়েছে");
   };
 
-  const grid =
-    tab === "Videos" && videos && videos.length > 0
-      ? videos.map((v) => ({ views: formatCount(v.views ?? 0), img: v.thumbnail_url ?? null }))
-      : tab === "Videos"
-        ? demoThumbs
+  const myVideos = videos ?? [];
+  const tabVideos =
+    tab === "Videos"
+      ? myVideos.filter((v) => v.visibility !== "private")
+      : tab === "Private"
+        ? myVideos.filter((v) => v.visibility === "private")
         : [];
+
 
   return (
     <PhoneShell className="bg-black text-white">
@@ -208,16 +232,38 @@ function ProfilePage() {
         </div>
 
         <div className="mt-3 grid w-full grid-cols-3 gap-2 pb-6">
-          {grid.length > 0 ? (
-            grid.map((v, i) => (
+          {tabVideos.length > 0 ? (
+            tabVideos.map((v) => (
               <div
-                key={i}
+                key={v.id}
                 className="relative aspect-[9/16] overflow-hidden rounded-[12px] bg-white/10"
               >
-                {v.img && <img src={v.img} alt="ভিডিও থাম্বনেইল" className="h-full w-full object-cover" loading="lazy" />}
+                {v.thumbnail_url && (
+                  <img src={v.thumbnail_url} alt="ভিডিও থাম্বনেইল" className="h-full w-full object-cover" loading="lazy" />
+                )}
                 <span className="absolute bottom-1.5 left-1.5 flex items-center gap-1 text-[11px] font-medium text-white drop-shadow">
-                  <Play className="h-3 w-3 fill-white" /> {v.views}
+                  <Play className="h-3 w-3 fill-white" /> {formatCount(v.views ?? 0)}
                 </span>
+                <div className="absolute right-1 top-1 flex flex-col gap-1">
+                  <button
+                    onClick={() => void toggleVisibility(v.id, v.visibility ?? "public")}
+                    aria-label={v.visibility === "private" ? "পাবলিক করুন" : "প্রাইভেট করুন"}
+                    className="rounded-full bg-black/60 p-1.5"
+                  >
+                    {v.visibility === "private" ? (
+                      <Lock className="h-3.5 w-3.5 text-gold" />
+                    ) : (
+                      <Globe className="h-3.5 w-3.5 text-white" />
+                    )}
+                  </button>
+                  <button
+                    onClick={() => void deleteVideo(v.id)}
+                    aria-label="ভিডিও ডিলিট করুন"
+                    className="rounded-full bg-black/60 p-1.5"
+                  >
+                    <Trash2 className="h-3.5 w-3.5 text-white" />
+                  </button>
+                </div>
               </div>
             ))
           ) : (
@@ -226,6 +272,7 @@ function ProfilePage() {
             </p>
           )}
         </div>
+
       </div>
 
       {profile && (

@@ -104,8 +104,11 @@ function useFeed() {
       const { data } = await supabase
         .from("videos")
         .select("id, caption, video_url, sound_name, views, likes, comments_count, user_id")
+        .eq("visibility", "public")
+        .eq("is_deleted", false)
         .order("created_at", { ascending: false })
         .range(from, from + PAGE_SIZE - 1);
+
 
       const rows = data ?? [];
       if (!rows.length) return [];
