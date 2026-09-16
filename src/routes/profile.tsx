@@ -34,15 +34,6 @@ export const Route = createFileRoute("/profile")({
   component: ProfilePage,
 });
 
-const demoThumbs = [
-  { views: "1.2M", img: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&q=60" },
-  { views: "890K", img: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&q=60" },
-  { views: "543K", img: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400&q=60" },
-  { views: "320K", img: "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=400&q=60" },
-  { views: "768K", img: "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=400&q=60" },
-  { views: "215K", img: "https://images.unsplash.com/photo-1476224203421-9ac39bcb3327?w=400&q=60" },
-];
-
 const tabs = ["Videos", "Liked", "Private"] as const;
 
 function ProfilePage() {
@@ -50,6 +41,15 @@ function ProfilePage() {
   const navigate = useNavigate();
   const [tab, setTab] = useState<(typeof tabs)[number]>("Videos");
   const [editing, setEditing] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    if (sessionStorage.getItem("sottok-all-users-toast")) return;
+    sessionStorage.setItem("sottok-all-users-toast", "1");
+    toast.success("সকল ইউজারের জন্য চালু করা হয়েছে");
+  }, [user]);
+
+
 
   const { data: profile, refetch } = useQuery({
     queryKey: ["profile", user?.id],
