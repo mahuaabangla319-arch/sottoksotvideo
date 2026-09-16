@@ -357,6 +357,10 @@ export type Database = {
       award_video_coins: { Args: { _video_id: string }; Returns: number }
       generate_sot_id: { Args: never; Returns: string }
       increment_video_view: { Args: { _video_id: string }; Returns: undefined }
+      purchase_ring: {
+        Args: { _price: number; _ring_key: string }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never
