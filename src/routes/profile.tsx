@@ -63,18 +63,40 @@ function ProfilePage() {
     queryFn: () => avatarSrc(profile?.avatar_url ?? null),
   });
 
-  const { data: videos } = useQuery({
+  const { data: videos, refetch: refetchVideos } = useQuery({
     queryKey: ["my-videos", user?.id],
     enabled: !!user,
     queryFn: async () => {
       const { data } = await supabase
         .from("videos")
-        .select("id, caption, views, thumbnail_url, created_at")
+        .select("id, caption, views, thumbnail_url, created_at, visibility, is_deleted")
         .eq("user_id", user!.id)
+        .eq("is_deleted", false)
         .order("created_at", { ascending: false });
       return data ?? [];
     },
   });
+
+  const toggleVisibility = async (id: string, current: string) => {
+    const next = current === "private" ? "public" : "private";
+    const { error } = await supabase.from("videos").update({ visibility: next }).eq("id", id);
+    if (error) {
+      toast.error("বদলানো যায়নি, আবার চেষ্টা করুন");
+      return;
+    }
+    toast.success(next === "private" ? "ভিডিও প্রাইভেট করা হয়েছে" : "ভিডিও পাবলিক করা হয়েছে");
+    void refetchVideos();
+  };
+
+  const deleteVideo = async (id: string) => {
+    const { error } = await supabase.from("videos").update({ is_deleted: true }).eq("id", id);
+    if (error) {
+      toast.error("ডিলিট করা যায়নি, আবার চেষ্টা করুন");
+      return;
+    }
+    toast.success("ভিডিও ডিলিট হয়েছে");
+    void refetchVideos();
+  };
 
   const sotId = profile?.sottok_id ?? "--------";
   const followers = profile?.followers_count ?? 15200;
@@ -93,12 +115,14 @@ function ProfilePage() {
     if (result === "copied") toast.success("প্রোফাইল লিঙ্ক কপি হয়েছে");
   };
 
-  const grid =
-    tab === "Videos" && videos && videos.length > 0
-      ? videos.map((v) => ({ views: formatCount(v.views ?? 0), img: v.thumbnail_url ?? null }))
-      : tab === "Videos"
-        ? demoThumbs
+  const myVideos = videos ?? [];
+  const tabVideos =
+    tab === "Videos"
+      ? myVideos.filter((v) => v.visibility !== "private")
+      : tab === "Private"
+        ? myVideos.filter((v) => v.visibility === "private")
         : [];
+
 
   return (
     <PhoneShell className="bg-black text-white">
