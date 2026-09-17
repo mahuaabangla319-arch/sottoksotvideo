@@ -81,26 +81,6 @@ function ProfilePage() {
     },
   });
 
-  const toggleVisibility = async (id: string, current: string) => {
-    const next = current === "private" ? "public" : "private";
-    const { error } = await supabase.from("videos").update({ visibility: next }).eq("id", id);
-    if (error) {
-      toast.error("বদলানো যায়নি, আবার চেষ্টা করুন");
-      return;
-    }
-    toast.success(next === "private" ? "ভিডিও প্রাইভেট করা হয়েছে" : "ভিডিও পাবলিক করা হয়েছে");
-    void refetchVideos();
-  };
-
-  const deleteVideo = async (id: string) => {
-    const { error } = await supabase.from("videos").update({ is_deleted: true }).eq("id", id);
-    if (error) {
-      toast.error("ডিলিট করা যায়নি, আবার চেষ্টা করুন");
-      return;
-    }
-    toast.success("ভিডিও ডিলিট হয়েছে");
-    void refetchVideos();
-  };
 
   const sotId = profile?.sottok_id ?? "--------";
   const followers = profile?.followers_count ?? 15200;
