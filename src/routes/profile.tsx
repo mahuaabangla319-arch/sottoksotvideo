@@ -218,8 +218,17 @@ function ProfilePage() {
         <div className="mt-3 grid w-full grid-cols-3 gap-2 pb-6">
           {tabVideos.length > 0 ? (
             tabVideos.map((v) => (
-              <div
+              <button
                 key={v.id}
+                onClick={() =>
+                  setActiveVideo({
+                    id: v.id,
+                    caption: v.caption,
+                    video_url: v.video_url,
+                    visibility: v.visibility,
+                  })
+                }
+                aria-label="ভিডিও চালান ও সেটিং খুলুন"
                 className="relative aspect-[9/16] overflow-hidden rounded-[12px] bg-white/10"
               >
                 {v.thumbnail_url && (
@@ -228,27 +237,12 @@ function ProfilePage() {
                 <span className="absolute bottom-1.5 left-1.5 flex items-center gap-1 text-[11px] font-medium text-white drop-shadow">
                   <Play className="h-3 w-3 fill-white" /> {formatCount(v.views ?? 0)}
                 </span>
-                <div className="absolute right-1 top-1 flex flex-col gap-1">
-                  <button
-                    onClick={() => void toggleVisibility(v.id, v.visibility ?? "public")}
-                    aria-label={v.visibility === "private" ? "পাবলিক করুন" : "প্রাইভেট করুন"}
-                    className="rounded-full bg-black/60 p-1.5"
-                  >
-                    {v.visibility === "private" ? (
-                      <Lock className="h-3.5 w-3.5 text-gold" />
-                    ) : (
-                      <Globe className="h-3.5 w-3.5 text-white" />
-                    )}
-                  </button>
-                  <button
-                    onClick={() => void deleteVideo(v.id)}
-                    aria-label="ভিডিও ডিলিট করুন"
-                    className="rounded-full bg-black/60 p-1.5"
-                  >
-                    <Trash2 className="h-3.5 w-3.5 text-white" />
-                  </button>
-                </div>
-              </div>
+                {v.visibility === "private" && (
+                  <span className="absolute right-1 top-1 rounded-full bg-black/60 p-1.5">
+                    <Lock className="h-3.5 w-3.5 text-gold" />
+                  </span>
+                )}
+              </button>
             ))
           ) : (
             <p className="col-span-3 py-8 text-center text-[13px] text-white/40">
