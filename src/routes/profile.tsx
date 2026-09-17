@@ -111,7 +111,13 @@ function ProfilePage() {
   return (
     <PhoneShell className="bg-black text-white">
       <header className="flex items-center justify-between px-4 pt-4">
-        <div className="w-9" />
+        <button
+          onClick={() => setSettingsOpen(true)}
+          aria-label="সেটিং"
+          className="flex h-9 w-9 items-center justify-center"
+        >
+          <Settings className="h-5 w-5 text-white" />
+        </button>
         <div className="flex items-center gap-2">
           <SotTokLogo size={34} />
           <span className="font-display text-[16px] font-bold tracking-[2px] text-white">SOT TOK</span>
