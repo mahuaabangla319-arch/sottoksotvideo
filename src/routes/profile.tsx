@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { Copy, Flame, Globe, Lock, LogOut, MapPin, Play, Share2, Trash2, BadgeCheck } from "lucide-react";
+import { Copy, Flame, Lock, LogOut, MapPin, Play, Settings, Share2, BadgeCheck } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { BottomNav } from "@/components/BottomNav";
@@ -10,6 +10,8 @@ import { SotTokLogo } from "@/components/SotTokLogo";
 import { FireRingAvatar } from "@/components/FireRingAvatar";
 import { EditProfileSheet } from "@/components/EditProfileSheet";
 import { WalletCard } from "@/components/WalletCard";
+import { AccountSettingsSheet } from "@/components/AccountSettingsSheet";
+import { VideoSettingsSheet, type ProfileVideo } from "@/components/VideoSettingsSheet";
 import { useAuth } from "@/lib/auth";
 import {
   avatarSrc,
@@ -41,6 +43,8 @@ function ProfilePage() {
   const navigate = useNavigate();
   const [tab, setTab] = useState<(typeof tabs)[number]>("Videos");
   const [editing, setEditing] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [activeVideo, setActiveVideo] = useState<ProfileVideo | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -69,7 +73,7 @@ function ProfilePage() {
     queryFn: async () => {
       const { data } = await supabase
         .from("videos")
-        .select("id, caption, views, thumbnail_url, created_at, visibility, is_deleted")
+        .select("id, caption, views, thumbnail_url, video_url, created_at, visibility, is_deleted")
         .eq("user_id", user!.id)
         .eq("is_deleted", false)
         .order("created_at", { ascending: false });
@@ -77,26 +81,6 @@ function ProfilePage() {
     },
   });
 
-  const toggleVisibility = async (id: string, current: string) => {
-    const next = current === "private" ? "public" : "private";
-    const { error } = await supabase.from("videos").update({ visibility: next }).eq("id", id);
-    if (error) {
-      toast.error("বদলানো যায়নি, আবার চেষ্টা করুন");
-      return;
-    }
-    toast.success(next === "private" ? "ভিডিও প্রাইভেট করা হয়েছে" : "ভিডিও পাবলিক করা হয়েছে");
-    void refetchVideos();
-  };
-
-  const deleteVideo = async (id: string) => {
-    const { error } = await supabase.from("videos").update({ is_deleted: true }).eq("id", id);
-    if (error) {
-      toast.error("ডিলিট করা যায়নি, আবার চেষ্টা করুন");
-      return;
-    }
-    toast.success("ভিডিও ডিলিট হয়েছে");
-    void refetchVideos();
-  };
 
   const sotId = profile?.sottok_id ?? "--------";
   const followers = profile?.followers_count ?? 15200;
@@ -127,7 +111,13 @@ function ProfilePage() {
   return (
     <PhoneShell className="bg-black text-white">
       <header className="flex items-center justify-between px-4 pt-4">
-        <div className="w-9" />
+        <button
+          onClick={() => setSettingsOpen(true)}
+          aria-label="সেটিং"
+          className="flex h-9 w-9 items-center justify-center"
+        >
+          <Settings className="h-5 w-5 text-white" />
+        </button>
         <div className="flex items-center gap-2">
           <SotTokLogo size={34} />
           <span className="font-display text-[16px] font-bold tracking-[2px] text-white">SOT TOK</span>
@@ -234,8 +224,17 @@ function ProfilePage() {
         <div className="mt-3 grid w-full grid-cols-3 gap-2 pb-6">
           {tabVideos.length > 0 ? (
             tabVideos.map((v) => (
-              <div
+              <button
                 key={v.id}
+                onClick={() =>
+                  setActiveVideo({
+                    id: v.id,
+                    caption: v.caption,
+                    video_url: v.video_url,
+                    visibility: v.visibility,
+                  })
+                }
+                aria-label="ভিডিও চালান ও সেটিং খুলুন"
                 className="relative aspect-[9/16] overflow-hidden rounded-[12px] bg-white/10"
               >
                 {v.thumbnail_url && (
@@ -244,27 +243,12 @@ function ProfilePage() {
                 <span className="absolute bottom-1.5 left-1.5 flex items-center gap-1 text-[11px] font-medium text-white drop-shadow">
                   <Play className="h-3 w-3 fill-white" /> {formatCount(v.views ?? 0)}
                 </span>
-                <div className="absolute right-1 top-1 flex flex-col gap-1">
-                  <button
-                    onClick={() => void toggleVisibility(v.id, v.visibility ?? "public")}
-                    aria-label={v.visibility === "private" ? "পাবলিক করুন" : "প্রাইভেট করুন"}
-                    className="rounded-full bg-black/60 p-1.5"
-                  >
-                    {v.visibility === "private" ? (
-                      <Lock className="h-3.5 w-3.5 text-gold" />
-                    ) : (
-                      <Globe className="h-3.5 w-3.5 text-white" />
-                    )}
-                  </button>
-                  <button
-                    onClick={() => void deleteVideo(v.id)}
-                    aria-label="ভিডিও ডিলিট করুন"
-                    className="rounded-full bg-black/60 p-1.5"
-                  >
-                    <Trash2 className="h-3.5 w-3.5 text-white" />
-                  </button>
-                </div>
-              </div>
+                {v.visibility === "private" && (
+                  <span className="absolute right-1 top-1 rounded-full bg-black/60 p-1.5">
+                    <Lock className="h-3.5 w-3.5 text-gold" />
+                  </span>
+                )}
+              </button>
             ))
           ) : (
             <p className="col-span-3 py-8 text-center text-[13px] text-white/40">
