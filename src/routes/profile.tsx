@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { Copy, Flame, Globe, Lock, LogOut, MapPin, Play, Share2, Trash2, BadgeCheck } from "lucide-react";
+import { Copy, Flame, Lock, LogOut, MapPin, Play, Settings, Share2, BadgeCheck } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { BottomNav } from "@/components/BottomNav";
@@ -10,6 +10,8 @@ import { SotTokLogo } from "@/components/SotTokLogo";
 import { FireRingAvatar } from "@/components/FireRingAvatar";
 import { EditProfileSheet } from "@/components/EditProfileSheet";
 import { WalletCard } from "@/components/WalletCard";
+import { AccountSettingsSheet } from "@/components/AccountSettingsSheet";
+import { VideoSettingsSheet, type ProfileVideo } from "@/components/VideoSettingsSheet";
 import { useAuth } from "@/lib/auth";
 import {
   avatarSrc,
@@ -41,6 +43,8 @@ function ProfilePage() {
   const navigate = useNavigate();
   const [tab, setTab] = useState<(typeof tabs)[number]>("Videos");
   const [editing, setEditing] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [activeVideo, setActiveVideo] = useState<ProfileVideo | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -69,7 +73,7 @@ function ProfilePage() {
     queryFn: async () => {
       const { data } = await supabase
         .from("videos")
-        .select("id, caption, views, thumbnail_url, created_at, visibility, is_deleted")
+        .select("id, caption, views, thumbnail_url, video_url, created_at, visibility, is_deleted")
         .eq("user_id", user!.id)
         .eq("is_deleted", false)
         .order("created_at", { ascending: false });
