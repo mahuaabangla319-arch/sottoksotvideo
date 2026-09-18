@@ -268,6 +268,22 @@ function ProfilePage() {
           onSaved={() => void refetch()}
         />
       )}
+      <AccountSettingsSheet
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        userId={user?.id ?? null}
+        hidden={profile?.is_hidden ?? false}
+        onChanged={() => void refetch()}
+        onSignOut={() => {
+          void signOut().then(() => navigate({ to: "/login" }));
+        }}
+      />
+      <VideoSettingsSheet
+        video={activeVideo}
+        username={profile?.username || "sottok"}
+        onClose={() => setActiveVideo(null)}
+        onChanged={() => void refetchVideos()}
+      />
       <BottomNav />
     </PhoneShell>
   );
