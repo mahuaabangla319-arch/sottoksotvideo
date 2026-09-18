@@ -61,7 +61,7 @@ function CreatePage() {
     try {
       stopStream();
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: facing, width: { ideal: 1080 }, height: { ideal: 1920 } },
+        video: { facingMode: facing, width: { ideal: 720 }, height: { ideal: 1280 } },
         audio: true,
       });
       streamRef.current = stream;
