@@ -1,5 +1,7 @@
 # Roadmap
 
-- [ ] Finish profile wiring: settings + video sheets rendered (done), camera speed (done), typecheck + preview test
-- [ ] Security: mark 3 findings fixed (user_rings, videos storage, avatars storage — policies now authenticated-only)
-- [ ] Redesign profile page per user's screenshot: Club Room card, Gift & Wallet (Redeem/Recharge), Mini Games Hub, Chat with Users, Weekly Top Creator, stats row, footer line — for ALL users' profiles
+- [x] Profile wiring: settings + video sheets rendered, camera speed, typecheck + preview test
+- [x] Security: 3 findings fixed (user_rings, videos storage, avatars storage — authenticated-only reads)
+- [x] Profile redesign per screenshot: Club Room, Gift & Wallet, Mini Games Hub, Chat with Users, Weekly Top Creator, stats, footer
+
+Open (future): Mini Games, Open Chat, Redeem/Recharge, Club Join are placeholder toasts — real screens not yet requested.
