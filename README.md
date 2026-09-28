@@ -1,31 +1,4 @@
 
-Add a 'Divine Makeover & Video' section. Users can upload their photo and choose templates like 'Maa Durga', 'Maa Kali' for females, and 'Lord Shiva', 'Lord Narayan' for males. Include an AI processing button to transform their face into these legendary characters and generate a short festival video clip."
-Before completing the implementation:
-
-Test that:
-
-1. Primary Owner can access Admin.
-2. Secondary Admin can access permitted Admin features.
-3. Unauthorized Gmail cannot access Admin.
-4. Secondary Admin cannot remove Primary Owner.
-5. Secondary Admin cannot change ownership.
-6. Private videos cannot be accessed by unauthorized users.
-7. Private profiles respect follow approval.
-8. Download is disabled when creator disables downloads.
-9. Public profiles show their public videos.
-10. Report submissions reach Admin Reports.
-11. Follow button works correctly.
-12. Videos load quickly with pagination.
-
-Do not expose admin credentials, Firebase private keys, service-account credentials,
-or secret API keys in frontend code.
-
-3.  **FOR YOU FEED (Exact):**
-    - Vertical snap scroll, full screen videos, loop, mute/unmute on tap, Tap for sound text top right.
-    - Top tabs: Following | For You (For You active bold white)
-    - Right actions: Creator profile circle with red + button, heart with 4.0K, comment 0, share 0, Save bookmark below. All icons white.
-    - Bottom: @creator username, 1.0M views, Original sound - SOT TOK Artist, Button: Use this sound with music icon.
-    - Use sample videos from /videos folder, Bangla kitchen cooking videos if possible.
 
 4.  **EXPLORE PAGE (Exact):**
     - White bg. Top Search bar with search icon.
@@ -48,7 +21,7 @@ or secret API keys in frontend code.
     - Right side inside preview: Flash icon (toggle torch), Flip icon (switch front/back camera).
     - Bottom controls: 15s and 30s pill selector, 15s active blue. Big blue record button #2a4bff with white border ring. On press start MediaRecorder, timer counting, on second press stop and save video to Firebase Storage, show preview and Post button. Left bottom small gallery thumbnail (last image from device), Right bottom Speed icon.
     - After record: Add caption screen with Post button -> upload to Firestore feed.
-
+Add a 'Divine Makeover & Video' section. Users can upload their photo and choose templates like 'Maa Durga', 'Maa Kali' for females, and 'Lord Shiva', 'Lord Narayan' for males. Include an AI processing button to transform their face into these legendary characters and generate a short festival video clip."
 **BOTTOM NAVIGATION (Exact Bengali):**
 Fixed bottom, black bg white icons, 5 items: হোম (home), এক্সপ্লোরার (compass), + blue button big (#2a4bff rounded-xl), ইনবক্স (bell), প্রোফাইল (user). Active state blue/yellow.
 
