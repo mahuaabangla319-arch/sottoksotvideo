@@ -1,833 +1,401 @@
-SOT TOK — COMPLETE PRODUCTION UPGRADE MASTER PROMPT
+.====================================================
+21. OWNER ADMIN + SECOND ADMIN SYSTEM
+====================================================
 
-IMPORTANT:
-This is an EXISTING SOT TOK project.
-DO NOT rebuild the application from scratch.
-First inspect the complete existing codebase, routing, components, Firebase configuration, database structure, authentication flow, storage flow, UI components and existing features.
+Create a secure two-level administrator system.
 
-Preserve all working existing features unless they conflict with the requirements below.
+PRIMARY OWNER ADMIN:
+- Only my verified Gmail can be the PRIMARY OWNER.
+- The Owner has full control of the application.
+- Owner email must be stored securely through Firebase Authentication/custom claims.
+- Do NOT rely only on a frontend email check.
 
-Goal:
-Turn the existing SOT TOK app into a polished, secure, fast, production-ready short-video social platform suitable for Android/Web deployment and future Play Store release.
+SECONDARY ADMIN:
+- The Owner can add ONE additional verified Gmail as Secondary Admin.
+- The Secondary Admin can manage normal administrative tasks.
+- Secondary Admin must NOT be able to:
+  - Remove the Primary Owner
+  - Change the Primary Owner email
+  - Transfer ownership
+  - Disable the Primary Owner
+  - Change security rules
+  - Access private user data unnecessarily
+  - Delete the entire database
+  - Permanently destroy the application
 
-==================================================
-1. BRANDING + SPLASH SCREEN
-==================================================
+OWNER-ONLY ACTIONS:
+- Add/remove Secondary Admin
+- Change Owner security settings
+- Transfer ownership
+- Delete critical system data
+- Change payment configuration
+- Change Firebase/security configuration
 
-App name:
-SOT TOK
+When opening Admin:
+→ Firebase Authentication
+→ Verify Gmail
+→ Check secure admin role
+→ Open Admin Dashboard only if authorized.
 
-Use the existing SOT TOK branding.
+Unauthorized Gmail:
+→ Never show Admin Dashboard
+→ Show "Access denied".
 
-Create a professional splash screen using the provided SOT TOK logo/image asset.
+====================================================
+22. VIDEO DOWNLOAD
+====================================================
 
-Requirements:
-- Show splash screen immediately when app starts.
-- Splash duration: EXACTLY 5000 milliseconds.
-- After 5000ms automatically navigate to the existing Login/Home flow.
-- Do not show splash repeatedly during normal internal navigation.
-- Prevent layout flashing.
-- Preload the splash asset.
-- Optimize the image.
-- Keep the splash responsive for mobile screens.
-- Do not replace the existing app functionality.
+Add a Download button to videos where permitted.
 
-Create:
-src/assets/sottok-splash.png
+Video menu:
 
-If the exact asset is already available in the project, use it instead of creating a duplicate.
+Like
+Comment
+Share
+Save
+Download
+Report
 
-==================================================
-2. AUTHENTICATION
-==================================================
+Download requirements:
 
-Use Firebase Authentication.
+- Download the original/allowed video file.
+- Show download progress.
+- Save to the device using the appropriate browser/mobile mechanism.
+- Handle download failure.
+- Do not expose private videos through download links.
+- Respect the creator's download setting.
 
-Support:
-- Email/password
-- Google Sign-In if already configured
-- Secure session persistence
-- Logout
-- Password reset
-- Account deletion
+Creator can choose:
 
-Never trust frontend-only authentication checks.
-
-Protect private routes.
-
-==================================================
-3. USER PROFILE
-==================================================
-
-Profile must support:
-
-- Profile photo
-- Username
-- Display name
-- Bio
-- Followers
-- Following
-- Video count
-- Likes count
-- Public/private account
-- Follow button
-- Edit profile
-- Settings
-- Report profile
-- Block user
-
-Follow button states:
-
-FOLLOW
-FOLLOWING
-REQUESTED
-
-For private accounts:
-- Follow request required.
-- Creator can accept/reject requests.
-
-For public accounts:
-- Follow immediately.
-
-Do not discriminate against users based on identity.
-
-==================================================
-4. VIDEO FEED
-==================================================
-
-Create/maintain a full-screen vertical short-video feed.
-
-Requirements:
-- 9:16 video layout
-- Swipe vertically
-- Autoplay current video
-- Pause previous video
-- Mute/unmute
-- Like
-- Comment
-- Share
-- Follow
-- Download if creator allows
-- Report
-- Save/bookmark if existing architecture supports it
-- Video description
-- Hashtags
-- Creator profile link
-
-Performance:
-- Lazy load videos
-- Load thumbnail before video
-- Preload only current and next video
-- Do not preload the entire feed
-- Use pagination/infinite scrolling
-- Avoid duplicate Firebase reads
-- Cache thumbnails
-- Compress uploaded videos
-- Use proper loading skeletons
-- Handle slow networks
-- Handle low-end Android devices
-
-==================================================
-5. VIDEO UPLOAD
-==================================================
-
-Create a professional upload screen.
-
-Allow:
-- Video selection
-- Preview
-- Caption
-- Hashtags
-- Thumbnail
-- Allow Downloads ON/OFF
-- Public/private visibility where appropriate
-- Upload progress
-- Cancel upload
-- Retry failed upload
-
-Video validation:
-- File type validation
-- File size validation
-- Duration validation
-- Safe error messages
-
-Never expose Firebase secrets.
-
-==================================================
-6. DOWNLOAD SYSTEM
-==================================================
-
-Creator controls:
-
-Allow Downloads = ON/OFF
-
-If ON:
-Users can download public videos.
+Allow Downloads: ON/OFF
 
 If OFF:
-Hide/disable download option.
+→ Hide the Download button for that video.
 
-Private videos:
-Never allow public downloading.
+Do not allow downloading of private/restricted content.
 
-Respect creator settings.
+====================================================
+23. COMPLETE SETTINGS PAGE
+====================================================
 
-==================================================
-7. NOTIFICATION SYSTEM
-==================================================
-
-Create a complete notification system.
-
-Notifications for:
-
-- New follower
-- Follow request
-- Follow request accepted
-- Video like
-- Comment
-- Comment reply
-- Mention
-- Video share
-- Gift/ring received
-- Admin announcement
-- Wallet events
-- Coin purchase result
-- Security/account events
-
-Notification document structure should include:
-
-id
-recipientId
-actorId
-type
-title
-message
-videoId
-commentId
-createdAt
-read
-metadata
-
-Features:
-- Notification page
-- Unread badge
-- Mark as read
-- Mark all as read
-- Delete notification if appropriate
-- Notification preferences
-
-Use Firebase Cloud Messaging (FCM) for push notifications.
-
-Never send push notifications from untrusted client code.
-
-==================================================
-8. WALLET + COINS
-==================================================
-
-Create a secure wallet architecture.
-
-Each user can have:
-
-wallet balance
-coin balance
-transaction history
-
-Users can purchase coins through approved payment infrastructure.
-
-IMPORTANT:
-Never trust the frontend for payment success.
-
-Payment verification must happen server-side.
-
-Every transaction must have:
-
-transactionId
-userId
-packageId
-amount
-coins
-status
-provider
-createdAt
-verifiedAt
-
-Allowed states:
-
-PENDING
-SUCCESS
-FAILED
-REFUNDED
-
-Never directly increase coins simply because frontend says payment succeeded.
-
-Prevent:
-- duplicate transactions
-- replay attacks
-- fake success responses
-- negative balances
-- client-side balance manipulation
-
-==================================================
-9. RINGS / VIRTUAL GIFTS
-==================================================
-
-Create virtual gifts/rings.
-
-Users purchase gifts using coins.
-
-Example:
-Ring Gift
-Heart Gift
-Star Gift
-Special Gift
-
-Admin should be able to create/edit/disable gifts.
-
-Gift fields:
-
-id
-name
-icon
-animation
-coinPrice
-enabled
-
-Sending a gift:
-
-sender
-recipient
-giftId
-coinPrice
-createdAt
-status
-
-When sending:
-- Validate balance server-side
-- Deduct coins atomically
-- Create gift transaction
-- Notify recipient
-- Prevent duplicate processing
-
-==================================================
-10. ADMIN / OWNER SECURITY
-==================================================
-
-PRIMARY OWNER:
-
-digtorebangla@gmail.com
-
-ONLY this account is the Primary Owner/Admin.
-
-Do NOT implement admin access only by checking an email in frontend JavaScript.
-
-Use:
-
-Firebase Authentication
-+
-secure custom claims
-+
-Firestore Security Rules
-+
-server-side authorization
-
-Admin routes must be protected.
-
-If a normal user changes frontend code manually, they must NOT gain admin access.
-
-No secondary admin is required at this stage.
-
-==================================================
-11. ADMIN DASHBOARD
-==================================================
-
-Create a protected Admin Dashboard.
+Create a full Settings screen.
 
 Sections:
 
-Dashboard
-Users
-Videos
-Comments
-Reports
-Notifications
-Activity
-Wallets
-Coin Packages
-Rings/Gifts
-Transactions
-Payments
-Games
-Game Statistics
-Settings
-Security
-Audit Logs
+ACCOUNT
+- Edit Profile
+- Username
+- Email
+- Phone
+- Change Password
+- Login & Security
+- Logout
+- Delete Account
 
-Dashboard statistics:
+PRIVACY
+- Private Profile ON/OFF
+- Who can follow me
+- Who can comment
+- Who can message me
+- Who can mention me
+- Show liked videos
+- Allow video downloads
+- Blocked Users
 
-Total Users
-Active Users
-Total Videos
-Total Comments
-Total Likes
-Total Followers
-Coin Transactions
-Gift Transactions
-Pending Reports
-Failed Payments
+NOTIFICATIONS
+- Likes
+- Comments
+- Replies
+- Followers
+- Messages
+- Gifts/Rings
+- Admin announcements
+- Promotional notifications
 
-Use pagination for large datasets.
+VIDEO
+- Autoplay
+- Data Saver
+- Video Quality
+- Download permission
+- Upload quality
 
-==================================================
-12. ADMIN ACTIVITY CENTER
-==================================================
+APP
+- Language
+- Dark Mode
+- Light Mode
+- Cache management
+- Clear temporary cache
+- About SOT TOK
+- Terms
+- Privacy Policy
+- Community Guidelines
 
-Track:
+SECURITY
+- Login activity
+- Active sessions
+- Logout from other devices
+- Security alerts
 
-New user
-User login
-Video upload
-Video deletion
-Follow
-Unfollow
-Like
-Unlike
-Comment
-Reply
-Report
-Coin purchase
-Gift sent
-Gift received
-Payment success
-Payment failure
-Account changes
-Admin actions
-Game activity
+====================================================
+24. PRIVATE PROFILE
+====================================================
 
-Create audit logs for sensitive admin actions.
+Allow users to switch:
 
-Admin log fields:
+Public Profile
+Private Profile
 
-id
-adminId
-action
-targetType
-targetId
-metadata
-createdAt
-ip/device metadata only where legally appropriate
+PUBLIC:
+- Anyone can view public profile.
+- Anyone can view videos that are public.
+- Follow button visible.
 
-==================================================
-13. REPORTING + MODERATION
-==================================================
+PRIVATE:
+- Profile remains visible according to privacy rules.
+- Videos are only visible to approved followers where applicable.
+- Follow requests can be accepted/rejected.
+- Private videos must NEVER be exposed through direct URLs/API responses.
 
-Users can report:
+Respect privacy settings at the database/security-rule level, not only the UI.
 
-Profile
-Video
-Comment
-Reply
+====================================================
+25. REPORT SYSTEM
+====================================================
 
-Report categories:
+Add Report option to:
 
-Spam
-Harassment
-Impersonation
-Inappropriate content
-Scam/fraud
-Copyright concern
-Other
+- User profiles
+- Videos
+- Comments
+- Messages where applicable
+
+Report reasons:
+
+- Spam
+- Harassment
+- Hate or abusive content
+- Nudity/sexual content
+- Violence
+- Scam/fraud
+- Copyright issue
+- Impersonation
+- Other
+
+User can submit:
+
+- Reason
+- Optional description
+
+Create Admin → Reports section.
 
 Admin can:
 
-View
-Review
-Resolve
-Dismiss
-Take moderation action
-
-Never automatically delete content based only on a single client-side report.
-
-==================================================
-14. BLOCK SYSTEM
-==================================================
-
-Users can block/unblock users.
-
-When blocked:
-- Hide relevant interactions
-- Prevent unwanted direct interaction
-- Respect block relationship throughout feed/profile/comments
-
-Enforce important restrictions server-side.
-
-==================================================
-15. SETTINGS
-==================================================
-
-Create a complete Settings page.
-
-Sections:
-
-Account
-Profile
-Privacy
-Security
-Notifications
-Video
-Downloads
-Data
-Appearance
-Language
-Help
-About
-Logout
-Delete Account
-
-Privacy options:
-
-Public Account
-Private Account
-Allow Follow Requests
-Allow Comments
-Allow Mentions
-Allow Notifications
-
-Notification settings:
-
-Likes
-Comments
-Replies
-Followers
-Messages/events if implemented
-Gifts
-Admin announcements
-
-Video settings:
-
-Autoplay
-Data Saver
-Allow Downloads default
-Mute by default
-
-==================================================
-16. GAMES
-==================================================
-
-Create a Games section.
-
-Games must be FREE and non-gambling.
-
-Include lightweight games:
-
-Tic-Tac-Toe
-Rock Paper Scissors
-Memory Cards
-Tap Challenge
-Number Guess
-Snake
-Flappy-style game
-Puzzle
-
-Do NOT implement:
-- Betting
-- Gambling
-- Real-money wagering
-- Casino mechanics
-
-Track basic game statistics:
-
-gamesPlayed
-wins
-losses
-highScore
-lastPlayedAt
-
-==================================================
-17. SEARCH
-==================================================
-
-Implement search for:
-
-Users
-Usernames
-Videos
-Hashtags
-
-Add debounce.
-
-Do not execute a Firebase search request on every keystroke.
-
-Show:
-- Recent searches
-- Clear search history
-- Empty state
-- Loading state
-
-==================================================
-18. HOME NAVIGATION
-==================================================
-
-Create/maintain:
-
-Home
-Discover/Search
-Create/Upload
-Notifications
-Profile
-
-Use mobile-first navigation.
-
-Make navigation smooth.
-
-==================================================
-19. SECURITY
-==================================================
-
-Review ALL Firebase Security Rules.
-
-Important:
-
-Users can only edit their own profile.
-
-Users cannot modify another user's wallet.
-
-Users cannot create fake successful payment records.
-
-Users cannot increase their own coin balance.
-
-Users cannot modify gift transactions.
-
-Users cannot make themselves admin.
-
-Users cannot modify audit logs.
-
-Users cannot access another user's private content.
-
-Admin operations require proper authorization.
-
-Use server-side trusted operations for:
-
-Wallet changes
-Coin purchases
-Gift transactions
-Payment verification
-Admin operations
-Sensitive notifications
-
-==================================================
-20. DATABASE DESIGN
-==================================================
-
-Use a clean scalable Firestore structure.
-
-Suggested collections:
-
-users
-videos
-comments
-likes
-follows
-followRequests
-notifications
-wallets
-coinPackages
-transactions
-gifts
-giftTransactions
-reports
-blocks
-games
-gameStats
-adminLogs
-settings
-
-Use indexes where necessary.
-
-Avoid deeply nested structures that create expensive queries.
-
-==================================================
-21. PERFORMANCE
-==================================================
-
-Optimize aggressively for:
-
-Android
-low-end phones
-slow networks
-mobile Chrome
-PWA
-
-Implement:
-
-Lazy loading
-Code splitting
-Route splitting
-Image optimization
-Video thumbnails
-Pagination
-Infinite scroll
-Debounced search
-Firebase query optimization
-Caching
-Memoization
-Virtualization where useful
-Skeleton loaders
-Error boundaries
-
-Avoid:
-- unnecessary re-renders
-- repeated Firebase listeners
-- duplicate API requests
-- loading all videos at once
-- loading all users at once
-
-==================================================
-22. ERROR HANDLING
-==================================================
-
-Every important screen needs:
-
-Loading state
-Empty state
-Error state
-Retry action
-
-Never expose raw Firebase errors to normal users.
-
-Use friendly messages.
-
-==================================================
-23. RESPONSIVE UI
-==================================================
-
-Design for:
-
-360px Android
-390px Android/iPhone
-412px Android
-Tablet
-Desktop
-
-Do not break existing desktop layout.
-
-Maintain a consistent SOT TOK design system.
-
-Use accessible buttons and readable typography.
-
-==================================================
-24. PWA / APP PREPARATION
-==================================================
-
-Prepare the project for future Android/Play Store packaging.
-
-Check:
-
-App name
-Manifest
-Icons
-Splash
-Theme color
-Orientation
-Installability
-Offline fallback
-Safe-area support
-
-Do not claim Play Store compliance automatically.
-
-Create a production checklist.
-
-==================================================
-25. CODE QUALITY
-==================================================
-
-Before making changes:
-
-Inspect existing code.
-
-Reuse existing components where possible.
-
-Do not create duplicate components.
-
-Do not remove working functionality unnecessarily.
-
-Use TypeScript types.
-
-Remove obvious unused code.
-
-Fix console errors.
-
-Fix broken imports.
-
-Fix broken routes.
-
-Fix Firebase listener cleanup.
-
-==================================================
-26. FINAL VALIDATION
-==================================================
-
-After implementation:
-
-Run build.
-
-Run lint/type checks if configured.
-
-Fix TypeScript errors.
-
-Fix runtime errors.
-
-Test:
-
-Signup
-Login
-Logout
-Profile
-Follow
-Private account
-Video upload
-Video feed
-Like
-Comment
-Reply
-Share
-Download ON
-Download OFF
-Notifications
-FCM
-Wallet
-Coin transaction
-Gift
-Reports
-Block
-Settings
-Games
-Admin authentication
-Admin dashboard
-Firestore security
+- View report
+- Review reported content
+- Take appropriate moderation action
+- Mark report as resolved
+- Keep moderation history
+
+Do not automatically delete content only because it was reported.
+
+====================================================
+26. PUBLIC PROFILE + VIDEO VISIBILITY
+====================================================
+
+For every PUBLIC user profile:
+
+Profile page must clearly show:
+
+- Profile photo
+- Username
+- Bio
+- Followers
+- Following
+- Follow button
+- User's public videos
+- Saved/public content where applicable
+- Gift/Ring information where enabled
+
+Anyone should be able to open a public profile and see its public videos.
 
 IMPORTANT:
-Do not fake successful payments.
-Do not fake Firebase functionality.
-Do not expose secrets.
-Do not create insecure admin authentication.
+This should apply equally to ALL users, including transgender users and users from any other group.
 
-==================================================
-FINAL OUTPUT
-==================================================
+Do not create a separate visibility restriction based on gender, gender identity, caste, religion, or other personal characteristics.
 
-After completing the implementation, provide:
+Public videos should be discoverable through:
 
-1. Files changed
-2. New files created
-3. Firebase changes required
-4. Firestore indexes required
-5. Firestore Security Rules changes
-6. Cloud Functions/backend requirements
-7. Environment variables required
-8. FCM setup requirements
-9. Payment provider integration requirements
-10. Build/test result
-11. Remaining issues, if any
+- Profile
+- Home feed
+- Search
+- Appropriate discovery sections
 
-DO NOT rebuild the project from scratch.
-UPGRADE THE EXISTING SOT TOK PROJECT.
+Private videos must remain private.
+
+====================================================
+27. RED FOLLOW BUTTON
+====================================================
+
+Make the Follow button highly visible.
+
+Default:
+
+FOLLOW
+- Red background
+- White text
+- Rounded corners
+- Good touch size
+- Smooth animation
+
+After following:
+
+FOLLOWING
+- Use a clearly different visual state.
+
+If a private account requires approval:
+
+REQUESTED
+- Show appropriate state.
+
+When unfollowing:
+- Ask for confirmation where appropriate.
+
+The Follow button must work instantly with optimistic UI while keeping the Firebase state accurate.
+
+====================================================
+28. FAST PUBLIC VIDEO FEED
+====================================================
+
+Make public videos load quickly.
+
+Use:
+
+- Pagination
+- Infinite scrolling
+- Thumbnail-first loading
+- Lazy video loading
+- Preload only the next relevant video
+- Video caching where appropriate
+- Optimized video dimensions
+- CDN/storage delivery
+- Avoid loading every video at once
+
+Feed behavior:
+
+Current video
+→ Play
+
+Next video
+→ Preload efficiently
+
+Far-away videos
+→ Do not download unnecessarily
+
+This should reduce data usage and improve performance.
+
+====================================================
+29. PROFILE VIDEO LOADING
+====================================================
+
+When opening a public profile:
+
+Load profile information first.
+
+Then load videos using pagination.
+
+Show skeleton loading.
+
+Do not wait for every video to load before displaying the profile.
+
+Support:
+
+Pull to refresh
+Infinite scroll
+Empty state
+Network error
+Retry button
+
+====================================================
+30. FINAL SECURITY RULE
+====================================================
+
+Before completing the implementation:
+
+Test that:
+
+1. Primary Owner can access Admin.
+2. Secondary Admin can access permitted Admin features.
+3. Unauthorized Gmail cannot access Admin.
+4. Secondary Admin cannot remove Primary Owner.
+5. Secondary Admin cannot change ownership.
+6. Private videos cannot be accessed by unauthorized users.
+7. Private profiles respect follow approval.
+8. Download is disabled when creator disables downloads.
+9. Public profiles show their public videos.
+10. Report submissions reach Admin Reports.
+11. Follow button works correctly.
+12. Videos load quickly with pagination.
+
+Do not expose admin credentials, Firebase private keys, service-account credentials,
+or secret API keys in frontend code.
+
+3.  **FOR YOU FEED (Exact):**
+    - Vertical snap scroll, full screen videos, loop, mute/unmute on tap, Tap for sound text top right.
+    - Top tabs: Following | For You (For You active bold white)
+    - Right actions: Creator profile circle with red + button, heart with 4.0K, comment 0, share 0, Save bookmark below. All icons white.
+    - Bottom: @creator username, 1.0M views, Original sound - SOT TOK Artist, Button: Use this sound with music icon.
+    - Use sample videos from /videos folder, Bangla kitchen cooking videos if possible.
+
+4.  **EXPLORE PAGE (Exact):**
+    - White bg. Top Search bar with search icon.
+    - Pink banner #ffe3f0 rounded 24px: red badge SotTok with flame, big Bengali: নিজের সাথে ভুয়েট, pink small: প্রতি সপ্তাহে নতুন চ্যালেঞ্জ, black small: সেরা ১০ জন ক্রিয়েটর পাবেন বিশেষ পুরস্কার
+    - Tabs: Trending (active black bold with pink underline), Comedy, Food, Dance|Sing, Family, Beauty - horizontal scroll.
+    - Middle: gray text: এখনো কোনো ট্রেন্ডিং হ্যাশট্যাগ নেই।
+    - Bottom: Recommended Users + Show all pink right.
+    - Show 2-column user cards with Food category images.
+
+5.  **ACTIVITY PAGE (Exact):**
+    - Black bg. Header: back arrow + Activity title white.
+    - Tabs: All (active pink underline), Likes, Comments, Followers gray.
+    - Center: gray Bengali: এখনো কোনো অ্যাক্টিভিটি নেই।
+    - Bottom nav highlight on bell yellow.
+
+6.  **NEW VIDEO - CAMERA RECORDING FULLY WORKING (Nothing missing):**
+    - Header: back arrow + নতুন ভিডিও title Bengali, 3 dots right.
+    - Tabs: Record active blue #2a4bff with video icon, Gallery with image icon.
+    - **CAMERA MUST WORK:** Request getUserMedia, show live camera preview in center rounded 24px, mirrored. If permission denied show black screen with "Camera access needed" button.
+    - Right side inside preview: Flash icon (toggle torch), Flip icon (switch front/back camera).
+    - Bottom controls: 15s and 30s pill selector, 15s active blue. Big blue record button #2a4bff with white border ring. On press start MediaRecorder, timer counting, on second press stop and save video to Firebase Storage, show preview and Post button. Left bottom small gallery thumbnail (last image from device), Right bottom Speed icon.
+    - After record: Add caption screen with Post button -> upload to Firestore feed.
+
+**BOTTOM NAVIGATION (Exact Bengali):**
+Fixed bottom, black bg white icons, 5 items: হোম (home), এক্সপ্লোরার (compass), + blue button big (#2a4bff rounded-xl), ইনবক্স (bell), প্রোফাইল (user). Active state blue/yellow.
+
+**SETUP:**
+Use Firebase config placeholder. Use react-router. Mobile width 420px centered. All text Bengali exact as described. Production ready, deployable.
+
+DO NOT SKIP CAMERA, DO NOT SKIP NEW GMAIL FORM. Everything must work.
+
+This project was built with [Lovable](https://lovable.dev).
+
+**Live app**: https://sottoksotvideo.lovable.app
+
+## Build with Lovable
+
+Continue developing this project in the [Lovable editor](https://lovable.dev/projects/7bcd7f5b-07c3-4d21-815f-e59f44663b92).
+
+- **Ship faster**: describe what you want to build and Lovable handles the code.
+- **Stay in sync**: every change made in Lovable is committed straight to this repository.
+- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
+
+## Development
+
+Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+
+```sh
+git clone <this-repository-url>
+cd <repository-name>
+npm i
+npm run dev
+```
+
