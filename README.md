@@ -1,27 +1,343 @@
-# SOT TOK 
+.====================================================
+21. OWNER ADMIN + SECOND ADMIN SYSTEM
+====================================================
 
-Build EXACT clone of SOT TOK app from screenshots. No feature skip. Tech: React + Tailwind + Firebase + MediaRecorder API.
+Create a secure two-level administrator system.
 
-**CRITICAL REQUIREMENTS - MUST INCLUDE ALL:**
+PRIMARY OWNER ADMIN:
+- Only my verified Gmail can be the PRIMARY OWNER.
+- The Owner has full control of the application.
+- Owner email must be stored securely through Firebase Authentication/custom claims.
+- Do NOT rely only on a frontend email check.
 
-1.  **SPLASH SCREEN (Exact):**
-    - Full screen black to dark blue gradient radial-gradient(#1e2a8a to #000)
-    - Center: Fire logo orange-yellow gradient square with rounded 22px, white play icon inside, + big flame emoji behind. 
-    - Text: SOT TOK white 36px bold tracking 2px. 
-    - Slogan below yellow #facc15: নিজের পরিচয় নিজেই তৈরি করো
-    - Bottom: yellow progress bar animated 0-100% in 2 sec then auto navigate to login.
+SECONDARY ADMIN:
+- The Owner can add ONE additional verified Gmail as Secondary Admin.
+- The Secondary Admin can manage normal administrative tasks.
+- Secondary Admin must NOT be able to:
+  - Remove the Primary Owner
+  - Change the Primary Owner email
+  - Transfer ownership
+  - Disable the Primary Owner
+  - Change security rules
+  - Access private user data unnecessarily
+  - Delete the entire database
+  - Permanently destroy the application
 
-2.  **LOGIN + NEW GMAIL CREATION (Exact like screenshot):**
-    - Black background, back arrow top left.
-    - Center logo + SOT TOK blue #2a4bff + yellow slogan.
-    - Bengali paragraph: Gmail দিয়ে সাইন ইন করুন। নতুন অ্যাকাউন্টে একটি স্থায়ী SOT TOK আইডি তৈরি হবে এবং আপনার নাম সিস্টেমে সুরক্ষিত থাকবে।
-    - Badge: 100% Safe & Private green border.
-    - **Button 1:** Blue button #2a4bff, white G in circle, text: Gmail দিয়ে চালিয়ে যান -> on click use Firebase Google Auth (signInWithPopup). After login save user to Firestore.
-    - **Form 2 - Create New ID inside app (This is the NEW GMAIL system):**
-      Label: নতুন Gmail খুলতে চাই
-      3 inputs: পুরো নাম, নতুন gmail আইডি লিখুন (placeholder: sottok123 - this will become sottok123@sottok.com), পাসওয়ার্ড (min 6)
-      On submit: create user in Firebase Auth with email = input2 + '@sottok.com', save displayName. Show success. Then go to feed.
-    - Footer: Privacy Policy • Terms of Service.
+OWNER-ONLY ACTIONS:
+- Add/remove Secondary Admin
+- Change Owner security settings
+- Transfer ownership
+- Delete critical system data
+- Change payment configuration
+- Change Firebase/security configuration
+
+When opening Admin:
+→ Firebase Authentication
+→ Verify Gmail
+→ Check secure admin role
+→ Open Admin Dashboard only if authorized.
+
+Unauthorized Gmail:
+→ Never show Admin Dashboard
+→ Show "Access denied".
+
+====================================================
+22. VIDEO DOWNLOAD
+====================================================
+
+Add a Download button to videos where permitted.
+
+Video menu:
+
+Like
+Comment
+Share
+Save
+Download
+Report
+
+Download requirements:
+
+- Download the original/allowed video file.
+- Show download progress.
+- Save to the device using the appropriate browser/mobile mechanism.
+- Handle download failure.
+- Do not expose private videos through download links.
+- Respect the creator's download setting.
+
+Creator can choose:
+
+Allow Downloads: ON/OFF
+
+If OFF:
+→ Hide the Download button for that video.
+
+Do not allow downloading of private/restricted content.
+
+====================================================
+23. COMPLETE SETTINGS PAGE
+====================================================
+
+Create a full Settings screen.
+
+Sections:
+
+ACCOUNT
+- Edit Profile
+- Username
+- Email
+- Phone
+- Change Password
+- Login & Security
+- Logout
+- Delete Account
+
+PRIVACY
+- Private Profile ON/OFF
+- Who can follow me
+- Who can comment
+- Who can message me
+- Who can mention me
+- Show liked videos
+- Allow video downloads
+- Blocked Users
+
+NOTIFICATIONS
+- Likes
+- Comments
+- Replies
+- Followers
+- Messages
+- Gifts/Rings
+- Admin announcements
+- Promotional notifications
+
+VIDEO
+- Autoplay
+- Data Saver
+- Video Quality
+- Download permission
+- Upload quality
+
+APP
+- Language
+- Dark Mode
+- Light Mode
+- Cache management
+- Clear temporary cache
+- About SOT TOK
+- Terms
+- Privacy Policy
+- Community Guidelines
+
+SECURITY
+- Login activity
+- Active sessions
+- Logout from other devices
+- Security alerts
+
+====================================================
+24. PRIVATE PROFILE
+====================================================
+
+Allow users to switch:
+
+Public Profile
+Private Profile
+
+PUBLIC:
+- Anyone can view public profile.
+- Anyone can view videos that are public.
+- Follow button visible.
+
+PRIVATE:
+- Profile remains visible according to privacy rules.
+- Videos are only visible to approved followers where applicable.
+- Follow requests can be accepted/rejected.
+- Private videos must NEVER be exposed through direct URLs/API responses.
+
+Respect privacy settings at the database/security-rule level, not only the UI.
+
+====================================================
+25. REPORT SYSTEM
+====================================================
+
+Add Report option to:
+
+- User profiles
+- Videos
+- Comments
+- Messages where applicable
+
+Report reasons:
+
+- Spam
+- Harassment
+- Hate or abusive content
+- Nudity/sexual content
+- Violence
+- Scam/fraud
+- Copyright issue
+- Impersonation
+- Other
+
+User can submit:
+
+- Reason
+- Optional description
+
+Create Admin → Reports section.
+
+Admin can:
+
+- View report
+- Review reported content
+- Take appropriate moderation action
+- Mark report as resolved
+- Keep moderation history
+
+Do not automatically delete content only because it was reported.
+
+====================================================
+26. PUBLIC PROFILE + VIDEO VISIBILITY
+====================================================
+
+For every PUBLIC user profile:
+
+Profile page must clearly show:
+
+- Profile photo
+- Username
+- Bio
+- Followers
+- Following
+- Follow button
+- User's public videos
+- Saved/public content where applicable
+- Gift/Ring information where enabled
+
+Anyone should be able to open a public profile and see its public videos.
+
+IMPORTANT:
+This should apply equally to ALL users, including transgender users and users from any other group.
+
+Do not create a separate visibility restriction based on gender, gender identity, caste, religion, or other personal characteristics.
+
+Public videos should be discoverable through:
+
+- Profile
+- Home feed
+- Search
+- Appropriate discovery sections
+
+Private videos must remain private.
+
+====================================================
+27. RED FOLLOW BUTTON
+====================================================
+
+Make the Follow button highly visible.
+
+Default:
+
+FOLLOW
+- Red background
+- White text
+- Rounded corners
+- Good touch size
+- Smooth animation
+
+After following:
+
+FOLLOWING
+- Use a clearly different visual state.
+
+If a private account requires approval:
+
+REQUESTED
+- Show appropriate state.
+
+When unfollowing:
+- Ask for confirmation where appropriate.
+
+The Follow button must work instantly with optimistic UI while keeping the Firebase state accurate.
+
+====================================================
+28. FAST PUBLIC VIDEO FEED
+====================================================
+
+Make public videos load quickly.
+
+Use:
+
+- Pagination
+- Infinite scrolling
+- Thumbnail-first loading
+- Lazy video loading
+- Preload only the next relevant video
+- Video caching where appropriate
+- Optimized video dimensions
+- CDN/storage delivery
+- Avoid loading every video at once
+
+Feed behavior:
+
+Current video
+→ Play
+
+Next video
+→ Preload efficiently
+
+Far-away videos
+→ Do not download unnecessarily
+
+This should reduce data usage and improve performance.
+
+====================================================
+29. PROFILE VIDEO LOADING
+====================================================
+
+When opening a public profile:
+
+Load profile information first.
+
+Then load videos using pagination.
+
+Show skeleton loading.
+
+Do not wait for every video to load before displaying the profile.
+
+Support:
+
+Pull to refresh
+Infinite scroll
+Empty state
+Network error
+Retry button
+
+====================================================
+30. FINAL SECURITY RULE
+====================================================
+
+Before completing the implementation:
+
+Test that:
+
+1. Primary Owner can access Admin.
+2. Secondary Admin can access permitted Admin features.
+3. Unauthorized Gmail cannot access Admin.
+4. Secondary Admin cannot remove Primary Owner.
+5. Secondary Admin cannot change ownership.
+6. Private videos cannot be accessed by unauthorized users.
+7. Private profiles respect follow approval.
+8. Download is disabled when creator disables downloads.
+9. Public profiles show their public videos.
+10. Report submissions reach Admin Reports.
+11. Follow button works correctly.
+12. Videos load quickly with pagination.
+
+Do not expose admin credentials, Firebase private keys, service-account credentials,
+or secret API keys in frontend code.
 
 3.  **FOR YOU FEED (Exact):**
     - Vertical snap scroll, full screen videos, loop, mute/unmute on tap, Tap for sound text top right.
