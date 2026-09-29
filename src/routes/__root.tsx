@@ -1,55 +1,39 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
   Link,
   createRootRouteWithContext,
-  useRouter,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useState, useEffect, type ReactNode } from "react";
+import { useState, useEffect } from "react";
 import appCss from "../styles.css?url";
-import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AuthProvider } from "@/lib/auth";
 import { Toaster } from "@/components/ui/sonner";
+import { QueryClient } from "@tanstack/react-query";
 
 function NotFoundComponent() {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="max-w-md text-center">
-        <h1 className="text-7xl font-bold text-foreground">404</h1>
-        <p>Page not found</p>
-        <Link to="/" className="text-blue-500">Go Home</Link>
-      </div>
-    </div>
-  );
+  return <div style={{padding:"50px", textAlign:"center"}}>404 - Not Found <br/><Link to="/" style={{color:"blue"}}>Go Home</Link></div>;
 }
 
 function RootComponent() {
   const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowSplash(false);
-    }, 5000);
+    const timer = setTimeout(() => setShowSplash(false), 5000);
     return () => clearTimeout(timer);
   }, []);
 
   if (showSplash) {
     return (
-      <div style={{height:"100vh", width:"100vw", background:"#020617", display:"flex", alignItems:"center", justifyContent:"center", position:"relative"}}>
-        <img src="/613d49fd-735f-4105-b57a-38b75fb3fc02.png" alt="SOT TOK Splash" style={{width:"100%", height:"100%", objectFit:"contain", background:"#020617"}} />
+      <div style={{height:"100vh", width:"100vw", background:"white", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", position:"relative"}}>
+        <img src="/613d49fd-735f-4105-b57a-38b75fb3fc02.png" alt="SOT TOK Splash" style={{width:"85%", maxWidth:"400px", height:"auto", objectFit:"contain"}} />
         
         <button 
           onClick={() => setShowSplash(false)}
-          style={{position:"absolute", top:"20px", right:"20px", background:"rgba(255,255,255,0.2)", color:"white", border:"1px solid white", padding:"8px 16px", borderRadius:"20px", fontSize:"14px", cursor:"pointer", backdropFilter:"blur(5px)"}}
+          style={{position:"absolute", top:"20px", right:"20px", background:"rgba(0,0,0,0.08)", color:"#222", border:"1px solid #ccc", padding:"8px 18px", borderRadius:"20px", fontSize:"14px", fontWeight:"700", cursor:"pointer"}}
         >
-          Skip X
+          Skip ✕
         </button>
-
-        <div style={{position:"absolute", bottom:"30px", color:"#888", fontSize:"12px"}}>
-          5s loading...
-        </div>
       </div>
     );
   }
@@ -57,9 +41,7 @@ function RootComponent() {
   return (
     <div>
       <HeadContent />
-      <AuthProvider>
-        <Outlet />
-      </AuthProvider>
+      <AuthProvider><Outlet /></AuthProvider>
       <Toaster />
       <Scripts />
     </div>
