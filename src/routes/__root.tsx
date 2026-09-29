@@ -37,8 +37,19 @@ function RootComponent() {
 
   if (showSplash) {
     return (
-      <div style={{height:"100vh", width:"100vw", background:"#020617", display:"flex", alignItems:"center", justifyContent:"center"}}>
-        <img src="/613d49fd-735f-4105-b57a-38b75fb3fc02.png" style={{width:"100%", height:"100%", objectFit:"cover"}} />
+      <div style={{height:"100vh", width:"100vw", background:"#020617", display:"flex", alignItems:"center", justifyContent:"center", position:"relative"}}>
+        <img src="/613d49fd-735f-4105-b57a-38b75fb3fc02.png" alt="SOT TOK Splash" style={{width:"100%", height:"100%", objectFit:"contain", background:"#020617"}} />
+        
+        <button 
+          onClick={() => setShowSplash(false)}
+          style={{position:"absolute", top:"20px", right:"20px", background:"rgba(255,255,255,0.2)", color:"white", border:"1px solid white", padding:"8px 16px", borderRadius:"20px", fontSize:"14px", cursor:"pointer", backdropFilter:"blur(5px)"}}
+        >
+          Skip X
+        </button>
+
+        <div style={{position:"absolute", bottom:"30px", color:"#888", fontSize:"12px"}}>
+          5s loading...
+        </div>
       </div>
     );
   }
