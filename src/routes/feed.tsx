@@ -1,38 +1,77 @@
+import { useRef, useState } from "react";
+
 export default function FeedPage() {
-  const videos = [
-    { id: 1, url: "https://www.w3schools.com/html/mov_bbb.mp4", user: "@Ananya", likes: 364, caption: "My first SOT TOK ❤️" },
-    { id: 2, url: "https://www.w3schools.com/html/movie.mp4", user: "@Riya", likes: 1024, caption: "Dance challenge 💃" },
-  ];
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [followed, setFollowed] = useState(false);
+
+  const handleDownload = async () => {
+    if (!videoRef.current) return;
+    const videoUrl = videoRef.current.src;
+    try {
+      const res = await fetch(videoUrl);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "SOT-TOK-video.mp4";
+      a.click();
+    } catch {
+      alert("Download Started - Check Gallery!");
+      window.open(videoUrl, "_blank");
+    }
+  };
 
   return (
-    <div className="bg-black text-white h-screen w-screen relative overflow-hidden">
-      <div className="absolute top-3 w-full flex justify-center z-20">
-        <div className="bg-black/70 px-3 py-1 rounded-full text-xs border border-zinc-700">SOT TOK 🪙 100 | 50/50</div>
+    <div className="bg-black text-white h-screen w-screen relative overflow-hidden font-sans">
+      {/* Top Bar */}
+      <div className="absolute top-2 w-full flex justify-center z-20">
+        <div className="bg-black/60 px-4 py-1.5 rounded-full text-[11px] border border-zinc-700 backdrop-blur">SOT TOK 🪙 100 | ⚡ 50/50</div>
       </div>
-      <video src={videos[0].url} autoPlay loop muted playsInline className="h-full w-full object-cover" />
 
-      <div className="absolute right-3 bottom-32 flex flex-col gap-5 z-20 items-center">
+      {/* Video */}
+      <video
+        ref={videoRef}
+        src="https://www.w3schools.com/html/mov_bbb.mp4"
+        autoPlay loop muted playsInline
+        className="h-full w-full object-cover"
+      />
+
+      {/* Watermark */}
+      <div className="absolute top-1/2 left-3 -rotate-90 opacity-20 text-[10px] tracking-widest">SOT TOK @Ananya</div>
+
+      {/* Right Actions */}
+      <div className="absolute right-3 bottom-28 flex flex-col gap-6 z-20 items-center">
         <div className="relative">
-          <img src="https://i.pravatar.cc/100" className="w-12 h-12 rounded-full border-2 border-white" />
-          <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-orange-500 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold">+</div>
+          <img src="https://i.pravatar.cc/100?img=5" className="w-12 h-12 rounded-full border-2 border-white" />
+          <button onClick={() => setFollowed(!followed)} className={`absolute -bottom-2 left-1/2 -translate-x-1/2 w-6 h-6 rounded-full flex items-center justify-center text-[12px] font-bold ${followed? 'bg-zinc-600' : 'bg-orange-500'}`}>
+            {followed? '✓' : '+'}
+          </button>
         </div>
-        <div className="text-center"><span className="text-2xl">❤️</span><br/><span className="text-xs">364</span></div>
-        <div className="text-center"><span className="text-2xl">💬</span><br/><span className="text-xs">27</span></div>
-        <div className="text-center"><span className="text-xl">⬇️</span><br/><span className="text-[10px]">Save</span></div>
+        <div className="text-center"><div className="text-[26px]">❤️</div><div className="text-[11px]">364</div></div>
+        <div className="text-center"><div className="text-[22px]">💬</div><div className="text-[11px]">27</div></div>
+        <button onClick={handleDownload} className="text-center">
+          <div className="text-[20px]">⬇️</div><div className="text-[9px]">Save</div>
+        </button>
+        <div className="text-center"><div className="text-[20px]">↗️</div><div className="text-[9px]">Share</div></div>
       </div>
 
+      {/* Bottom Info */}
       <div className="absolute bottom-20 left-3 right-20 z-20">
-        <div className="flex gap-2 items-center">
-          <span className="font-bold">@Ananya</span>
-          <button className="border border-white px-3 py-1 rounded text-xs">Follow</button>
-          <button className="bg-orange-500 px-3 py-1 rounded text-xs font-bold">Send 10 ⚡</button>
-          <button className="bg-zinc-800 px-3 py-1 rounded text-xs border border-zinc-600">Message</button>
+        <div className="flex flex-wrap gap-2 items-center">
+          <span className="font-bold text-[15px]">@Ananya</span>
+          <button onClick={() => setFollowed(!followed)} className={`px-3 py-1 rounded text-[11px] font-bold border ${followed? 'bg-white text-black' : 'border-white bg-transparent'}`}>
+            {followed? 'Following' : 'Follow'}
+          </button>
+          <button className="bg-orange-500 px-3 py-1 rounded text-[11px] font-bold">Send 10 ⚡</button>
+          <button className="bg-zinc-800 px-3 py-1 rounded text-[11px] border border-zinc-600">Message</button>
         </div>
-        <p className="text-sm mt-2">My first SOT TOK ❤️ #viral</p>
+        <p className="text-[13px] mt-2 leading-tight">My first SOT TOK ❤️ #viral #sottok</p>
+        <p className="text-[12px] mt-1 opacity-80">🎵 Original Audio - SOT TOK</p>
       </div>
 
-      <div className="absolute bottom-0 w-full bg-black flex justify-around py-3 border-t border-zinc-800 text-xl">
-        <span>⌂</span><span>🔍</span><span className="bg-white text-black px-5 rounded">+</span><span>✉️</span><span>👤</span>
+      {/* Bottom Nav */}
+      <div className="absolute bottom-0 w-full bg-black flex justify-around py-3 border-t border-zinc-800 text-[20px]">
+        <span>⌂</span><span>🔍</span><span className="bg-white text-black px-6 rounded-md">+</span><span>✉️</span><span>👤</span>
       </div>
     </div>
   );
