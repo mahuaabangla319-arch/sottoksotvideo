@@ -26,7 +26,8 @@ function RootComponent() {
   if (showSplash) {
     return (
       <div style={{height:"100vh", width:"100vw", background:"white", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", position:"relative"}}>
-        <img src="/613d49fd-735f-4105-b57a-38b75fb3fc02.png" alt="SOT TOK Splash" style={{width:"85%", maxWidth:"400px", height:"auto", objectFit:"contain"}} />
+        <img src="/613d49fd-735f-4105-b57a-38b75fb3fc02.png" />`
+" alt="SOT TOK Splash" style={{width:"85%", maxWidth:"400px", height:"auto", objectFit:"contain"}} />
         
         <button 
           onClick={() => setShowSplash(false)}
