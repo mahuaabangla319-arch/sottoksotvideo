@@ -1,0 +1,56 @@
+import { useEffect, useState } from "react"
+import { supabase } from "@/integrations/supabase/client"
+import { useNavigate } from "react-router-dom"
+
+export default function Music() {
+  const [sounds, setSounds] = useState<any[]>([])
+  const [tab, setTab] = useState("trending")
+  const [search, setSearch] = useState("")
+  const [playing, setPlaying] = useState<string | null>(null)
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    fetchSounds()
+  }, [tab])
+
+  const fetchSounds = async () => {
+    let query = supabase.from("sounds").select("*")
+    if (tab === "trending") query = query.order("use_count", { ascending: false })
+    else query = query.order("created_at", { ascending: false })
+    const { data } = await query
+    if (data) setSounds(data)
+  }
+
+  const filtered = sounds.filter(s => s.title.toLowerCase().includes(search.toLowerCase()))
+
+  return (
+    <div className="min-h-screen bg-white p-4">
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-2xl font-bold bg-gradient-to-r from-pink-500 via-purple-500 to-cyan-400 bg-clip-text text-transparent">SOT TOK SOUNDS</h1>
+        <button onClick={() => navigate("/upload-sound")} className="bg-gradient-to-r from-pink-500 to-purple-500 text-white w-10 h-10 rounded-full text-xl">+</button>
+      </div>
+
+      <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search sounds" className="w-full p-3 rounded-full border mb-4" />
+
+      <div className="flex gap-4 mb-4">
+        <button onClick={() => setTab("trending")} className={tab === "trending"? "font-bold border-b-2 border-pink-500" : ""}>Trending</button>
+        <button onClick={() => setTab("new")} className={tab === "new"? "font-bold border-b-2 border-pink-500" : ""}>New</button>
+      </div>
+
+      <div className="space-y-3">
+        {filtered.map(s => (
+          <div key={s.id} className="flex items-center gap-3 p-3 rounded-xl border">
+            <img src={s.cover_url || "https://via.placeholder.com/60"} className="w-14 h-14 rounded-lg object-cover" />
+            <div className="flex-1">
+              <p className="font-bold">{s.title}</p>
+              <p className="text-xs text-gray-500">{s.use_count || 0} videos • {s.duration}s</p>
+            </div>
+            <button onClick={() => setPlaying(playing === s.id? null : s.id)} className="w-8 h-8 rounded-full bg-black text-white">▶</button>
+            {playing === s.id && <audio src={s.file_url} autoPlay />}
+            <button onClick={() => navigate(`/upload?sound_id=${s.id}`)} className="bg-gradient-to-r from-pink-500 via-purple-500 to-cyan-400 text-white px-3 py-1 rounded-full text-xs font-bold">Use this sound</button>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
