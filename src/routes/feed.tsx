@@ -34,8 +34,8 @@ export const Route = createFileRoute("/feed")({
 
 type FeedItem = {
   id: string;
-  userId?: string;
-  sotId?: string;
+  userId?: string | undefined;
+  sotId?: string | undefined;
   username: string;
   caption: string;
   url: string;
@@ -323,8 +323,8 @@ function FeedPage() {
   }, [baseItems, user]);
 
   async function toggleFollow(other?: string) {
-    if (!other) return toast.error("ডেমো ভিডিও");
-    if (!user) return toast.error("ফলো করতে লগইন করুন");
+    if (!other) { toast.error("ডেমো ভিডিও"); return; }
+    if (!user) { toast.error("ফলো করতে লগইন করুন"); return; }
     const was = followSet.has(other);
     setFollowSet((s) => { const n = new Set(s); if (was) n.delete(other); else n.add(other); return n; });
     try {

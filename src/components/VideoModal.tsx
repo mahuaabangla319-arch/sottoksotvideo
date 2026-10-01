@@ -34,7 +34,7 @@ export function VideoModal({ video, onClose }: { video: ModalVideo; onClose: () 
   }, [video.id, user]);
 
   const toggleLike = async () => {
-    if (!user) return toast.error("লাইক করতে লগইন করুন");
+    if (!user) { toast.error("লাইক করতে লগইন করুন"); return; }
     const was = liked;
     setLiked(!was);
     setLikes((n) => n + (was ? -1 : 1));

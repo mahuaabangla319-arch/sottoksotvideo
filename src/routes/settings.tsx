@@ -24,7 +24,7 @@ export const Route = createFileRoute("/settings")({
   component: SettingsPage,
 });
 
-function Row({ icon, label, hint, onClick, right, danger }: { icon: ReactNode; label: string; hint?: string; onClick?: () => void; right?: ReactNode; danger?: boolean }) {
+function Row({ icon, label, hint, onClick, right, danger }: { icon: ReactNode; label: string; hint?: string | undefined; onClick?: () => void; right?: ReactNode; danger?: boolean }) {
   return (
     <button onClick={onClick} className="flex w-full items-center gap-3 px-4 py-3.5 text-left">
       <span className={danger ? "text-red-500" : "text-white/80"}>{icon}</span>
@@ -93,7 +93,7 @@ function SettingsPage() {
   const toggleHidden = async () => {
     if (!user || !profile) return;
     const { error } = await supabase.from("profiles").update({ is_hidden: !profile.is_hidden }).eq("id", user.id);
-    if (error) return toast.error("বদলানো যায়নি");
+    if (error) { toast.error("বদলানো যায়নি"); return; }
     toast.success(!profile.is_hidden ? "প্রোফাইল সার্চে লুকানো হয়েছে" : "প্রোফাইল সবার জন্য দৃশ্যমান");
     void refetch();
   };
