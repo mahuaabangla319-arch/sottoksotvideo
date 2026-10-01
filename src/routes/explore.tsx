@@ -3,8 +3,6 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Search } from "lucide-react";
 import ganeshContest from "@/assets/ganesh-contest.jpg.asset.json";
-import durgaInvite from "@/assets/durga-invite.jpg.asset.json";
-import ringChallenge from "@/assets/ring-challenge.jpg.asset.json";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { BottomNav } from "@/components/BottomNav";
@@ -39,7 +37,6 @@ function useTopCreators() {
       const { data } = await supabase
         .from("profiles")
         .select("sottok_id, username, full_name, avatar_url, followers_count")
-        .eq("is_hidden", false)
         .order("followers_count", { ascending: false })
         .limit(6);
       return data ?? [];
@@ -99,20 +96,13 @@ function ExplorePage() {
         </form>
 
 
-        <div className="no-scrollbar mt-4 flex snap-x snap-mandatory gap-3 overflow-x-auto">
-          {[
-            { src: ganeshContest.url, alt: "গণেশ চতুর্থী স্পেশাল কনটেস্ট — নিজের ক্যামেরায় ভিডিও বানাও" },
-            { src: durgaInvite.url, alt: "ওয়ার্ল্ড গ্রুপের পক্ষ থেকে শারদীয়ার সাদর আমন্ত্রণ" },
-            { src: ringChallenge.url, alt: "SOT TOK কয়েন টু রিং চ্যালেঞ্জ" },
-          ].map((b) => (
-            <img
-              key={b.src}
-              src={b.src}
-              alt={b.alt}
-              className="w-[86%] shrink-0 snap-center rounded-[24px] object-cover"
-              loading="lazy"
-            />
-          ))}
+        <div className="mt-4 overflow-hidden rounded-[24px]">
+          <img
+            src={ganeshContest.url}
+            alt="গণেশ চতুর্থী স্পেশাল কনটেস্ট — নিজের ক্যামেরায় ভিডিও বানাও"
+            className="w-full object-cover"
+            loading="lazy"
+          />
         </div>
 
         <div className="no-scrollbar mt-4 flex gap-5 overflow-x-auto border-b border-neutral-200">

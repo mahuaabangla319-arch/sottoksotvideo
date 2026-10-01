@@ -138,7 +138,6 @@ export type Database = {
           full_name: string
           gender: string | null
           id: string
-          is_hidden: boolean
           level: number
           likes_count: number
           location: string
@@ -158,7 +157,6 @@ export type Database = {
           full_name?: string
           gender?: string | null
           id: string
-          is_hidden?: boolean
           level?: number
           likes_count?: number
           location?: string
@@ -178,7 +176,6 @@ export type Database = {
           full_name?: string
           gender?: string | null
           id?: string
-          is_hidden?: boolean
           level?: number
           likes_count?: number
           location?: string

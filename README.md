@@ -1,219 +1,34 @@
+# SOT TOK 
 
-import React, { useState, useRef, useEffect } from 'react';
-import { Camera, RefreshCw, Zap, Sparkles, Video, Image as ImageIcon, Play, CheckCircle2, ArrowLeft } from 'lucide-react';
+Build EXACT clone of SOT TOK app from screenshots. No feature skip. Tech: React + Tailwind + Firebase + MediaRecorder API.
 
-export default function AICameraScreen() {
-  const [activeTab, setActiveTab] = useState<'record' | 'filters'>('record');
-  const [selectedTemplate, setSelectedTemplate] = useState('durga');
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingTime, setRecordingTime] = useState(0);
-  const [cameraError, setCameraError] = useState(false);
-  const [isProcessingAI, setIsProcessingAI] = useState(false);
-  const [processedVideoUrl, setProcessedVideoUrl] = useState<string | null>(null);
-  
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
+**CRITICAL REQUIREMENTS - MUST INCLUDE ALL:**
 
-  // Camera initialization
-  useEffect(() => {
-    let stream: MediaStream | null = null;
-    async function startCamera() {
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
-        setCameraError(false);
-      } catch (err) {
-        console.error("Camera access error:", err);
-        setCameraError(true);
-      }
-    }
-    startCamera();
+1.  **SPLASH SCREEN (Exact):**
+    - Full screen black to dark blue gradient radial-gradient(#1e2a8a to #000)
+    - Center: Fire logo orange-yellow gradient square with rounded 22px, white play icon inside, + big flame emoji behind. 
+    - Text: SOT TOK white 36px bold tracking 2px. 
+    - Slogan below yellow #facc15: নিজের পরিচয় নিজেই তৈরি করো
+    - Bottom: yellow progress bar animated 0-100% in 2 sec then auto navigate to login.
 
-    return () => {
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-      }
-    };
-  }, []);
+2.  **LOGIN + NEW GMAIL CREATION (Exact like screenshot):**
+    - Black background, back arrow top left.
+    - Center logo + SOT TOK blue #2a4bff + yellow slogan.
+    - Bengali paragraph: Gmail দিয়ে সাইন ইন করুন। নতুন অ্যাকাউন্টে একটি স্থায়ী SOT TOK আইডি তৈরি হবে এবং আপনার নাম সিস্টেমে সুরক্ষিত থাকবে।
+    - Badge: 100% Safe & Private green border.
+    - **Button 1:** Blue button #2a4bff, white G in circle, text: Gmail দিয়ে চালিয়ে যান -> on click use Firebase Google Auth (signInWithPopup). After login save user to Firestore.
+    - **Form 2 - Create New ID inside app (This is the NEW GMAIL system):**
+      Label: নতুন Gmail খুলতে চাই
+      3 inputs: পুরো নাম, নতুন gmail আইডি লিখুন (placeholder: sottok123 - this will become sottok123@sottok.com), পাসওয়ার্ড (min 6)
+      On submit: create user in Firebase Auth with email = input2 + '@sottok.com', save displayName. Show success. Then go to feed.
+    - Footer: Privacy Policy • Terms of Service.
 
-  // Timer for recording
-  useEffect(() => {
-    let interval: any;
-    if (isRecording) {
-      interval = setInterval(() => {
-        setRecordingTime(prev => prev + 1);
-      }, 1000);
-    } else {
-      clearInterval(interval);
-    }
-    return () => clearInterval(interval);
-  }, [isRecording]);
-
-  const handleStartRecording = () => {
-    chunksRef.current = [];
-    if (videoRef.current && videoRef.current.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream;
-      try {
-        const mediaRecorder = new MediaRecorder(stream);
-        mediaRecorderRef.current = mediaRecorder;
-        
-        mediaRecorder.ondataavailable = (e) => {
-          if (e.data.size > 0) chunksRef.current.push(e.data);
-        };
-
-        mediaRecorder.onstop = () => {
-          const blob = new Blob(chunksRef.current, { type: 'video/mp4' });
-          const url = URL.createObjectURL(blob);
-          setProcessedVideoUrl(url);
-        };
-
-        mediaRecorder.start();
-        setIsRecording(true);
-        setRecordingTime(0);
-      } catch (e) {
-        console.error("MediaRecorder error:", e);
-      }
-    }
-  };
-
-  const handleStopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
-    }
-  };
-
-  const applyAITransform = () => {
-    setIsProcessingAI(true);
-    setTimeout(() => {
-      setIsProcessingAI(false);
-      alert(`সফলভাবে আপনার ভিডিওতে '${selectedTemplate.toUpperCase()}' এআই ফিল্টার ও রূপ প্রয়োগ করা হয়েছে!`);
-    }, 2500);
-  };
-
-  return (
-    <div className="flex flex-col h-screen max-w-md mx-auto bg-black text-white relative shadow-2xl overflow-hidden font-sans">
-      
-      {/* Top Header */}
-      <div className="flex items-center justify-between px-4 py-3 bg-gray-900/80 backdrop-blur-md z-20 border-b border-gray-800">
-        <button className="p-1 text-white hover:text-pink-400">
-          <ArrowLeft className="w-6 h-6" />
-        </button>
-        <h1 className="text-base font-bold tracking-wide">নতুন ভিডিও ও এআই মেকওভার</h1>
-        <button className="text-xs bg-pink-600 px-3 py-1 rounded-full font-semibold">প্রো</button>
-      </div>
-
-      {/* Camera / Preview Viewport */}
-      <div className="relative flex-1 bg-gray-950 flex items-center justify-center overflow-hidden">
-        {cameraError ? (
-          <div className="text-center p-6">
-            <p className="text-red-400 mb-3 text-sm">ক্যামেরা অ্যাক্সেস পাওয়া যায়নি। দয়া করে পারমিশন দিন।</p>
-            <button 
-              onClick={() => window.location.reload()} 
-              className="bg-blue-600 px-4 py-2 rounded-xl text-sm font-bold shadow-lg"
-            >
-              পুনরায় চেষ্টা করুন
-            </button>
-          </div>
-        ) : (
-          <video 
-            ref={videoRef} 
-            autoPlay 
-            playsInline 
-            muted 
-            className="absolute inset-0 w-full h-full object-cover transform -scale-x-100"
-          />
-        )}
-
-        {/* AI Filter Overlay Effect Badge */}
-        <div className="absolute top-4 left-4 z-10 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-pink-500/50 flex items-center space-x-2">
-          <Sparkles className="w-4 h-4 text-pink-400 animate-pulse" />
-          <span className="text-xs font-medium text-pink-300 capitalize">থিম: {selectedTemplate} রূপ</span>
-        </div>
-
-        {/* Recording Timer */}
-        {isRecording && (
-          <div className="absolute top-4 right-4 z-10 bg-red-600 px-3 py-1 rounded-full text-xs font-bold flex items-center space-x-1.5 animate-pulse">
-            <span className="w-2 h-2 rounded-full bg-white"></span>
-            <span>00:{recordingTime < 10 ? `0${recordingTime}` : recordingTime}</span>
-          </div>
-        )}
-
-        {/* AI Processing Modal/Loader */}
-        {isProcessingAI && (
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-md z-30 flex flex-col items-center justify-center p-6">
-            <div className="w-16 h-16 border-4 border-pink-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-            <h3 className="text-lg font-bold text-pink-400">এআই রূপান্তর চলছে...</h3>
-            <p className="text-xs text-gray-300 mt-1 text-center">আপনার চেহারায় ঐশ্বরিক লুক ফুটিয়ে তোলা হচ্ছে।</p>
-          </div>
-        )}
-      </div>
-
-      {/* Bottom Controls & AI Templates Section */}
-      <div className="bg-gradient-to-t from-black via-black/90 to-transparent p-4 z-20 space-y-4">
-        
-        {/* Divine Templates Selection (Female & Male) */}
-        <div>
-          <p className="text-xs text-gray-400 mb-2 font-medium">✨ এআই ডিভাইন মেকওভার টেমপ্লেট:</p>
-          <div className="flex space-x-3 overflow-x-auto pb-2 scrollbar-none">
-            {[
-              { id: 'durga', label: 'মা দুর্গা (মহিলা)', icon: '🔱' },
-              { id: 'kali', label: 'মা কালী (মহিলা)', icon: '🔥' },
-              { id: 'shiva', label: 'শিব বাবা (পুরুষ)', icon: '🐍' },
-              { id: 'narayan', label: 'নারায়ণ (পুরুষ)', icon: '🦚' }
-            ].map((template) => (
-              <button
-                key={template.id}
-                onClick={() => setSelectedTemplate(template.id)}
-                className={`flex items-center space-x-1.5 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition border ${
-                  selectedTemplate === template.id 
-                    ? 'bg-pink-600 border-pink-400 text-white shadow-lg' 
-                    : 'bg-gray-900 border-gray-700 text-gray-300 hover:bg-gray-800'
-                }`}
-              >
-                <span>{template.icon}</span>
-                <span>{template.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Action Buttons: Record & AI Transform */}
-        <div className="flex items-center justify-between pt-2">
-          <button 
-            onClick={applyAITransform}
-            className="flex-1 mr-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center space-x-2 shadow-lg transition active:scale-95"
-          >
-            <Sparkles className="w-4 h-4 text-yellow-300" />
-            <span>এআই ফিল্টার অ্যাপ্লাই করুন</span>
-          </button>
-
-          {/* Record Control Button */}
-          {!isRecording ? (
-            <button 
-              onClick={handleStartRecording}
-              className="w-16 h-16 bg-blue-600 rounded-full border-4 border-white/80 flex items-center justify-center shadow-xl transform active:scale-95 transition"
-            >
-              <div className="w-6 h-6 bg-white rounded-full"></div>
-            </button>
-          ) : (
-            <button 
-              onClick={handleStopRecording}
-              className="w-16 h-16 bg-red-600 rounded-full border-4 border-white/80 flex items-center justify-center shadow-xl transform active:scale-95 transition animate-pulse"
-            >
-              <div className="w-6 h-6 bg-white rounded-sm"></div>
-            </button>
-          )}
-        </div>
-
-      </div>
-
-    </div>
-  );
-}
+3.  **FOR YOU FEED (Exact):**
+    - Vertical snap scroll, full screen videos, loop, mute/unmute on tap, Tap for sound text top right.
+    - Top tabs: Following | For You (For You active bold white)
+    - Right actions: Creator profile circle with red + button, heart with 4.0K, comment 0, share 0, Save bookmark below. All icons white.
+    - Bottom: @creator username, 1.0M views, Original sound - SOT TOK Artist, Button: Use this sound with music icon.
+    - Use sample videos from /videos folder, Bangla kitchen cooking videos if possible.
 
 4.  **EXPLORE PAGE (Exact):**
     - White bg. Top Search bar with search icon.
@@ -236,7 +51,7 @@ export default function AICameraScreen() {
     - Right side inside preview: Flash icon (toggle torch), Flip icon (switch front/back camera).
     - Bottom controls: 15s and 30s pill selector, 15s active blue. Big blue record button #2a4bff with white border ring. On press start MediaRecorder, timer counting, on second press stop and save video to Firebase Storage, show preview and Post button. Left bottom small gallery thumbnail (last image from device), Right bottom Speed icon.
     - After record: Add caption screen with Post button -> upload to Firestore feed.
-Add a 'Divine Makeover & Video' section. Users can upload their photo and choose templates like 'Maa Durga', 'Maa Kali' for females, and 'Lord Shiva', 'Lord Narayan' for males. Include an AI processing button to transform their face into these legendary characters and generate a short festival video clip."
+
 **BOTTOM NAVIGATION (Exact Bengali):**
 Fixed bottom, black bg white icons, 5 items: হোম (home), এক্সপ্লোরার (compass), + blue button big (#2a4bff rounded-xl), ইনবক্স (bell), প্রোফাইল (user). Active state blue/yellow.
 
@@ -267,4 +82,3 @@ cd <repository-name>
 npm i
 npm run dev
 ```
-
