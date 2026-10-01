@@ -105,6 +105,66 @@ export type Database = {
         }
         Relationships: []
       }
+      messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          read: boolean
+          recipient_id: string
+          sender_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          read?: boolean
+          recipient_id: string
+          sender_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          read?: boolean
+          recipient_id?: string
+          sender_id?: string
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          actor_id: string
+          body: string
+          created_at: string
+          id: string
+          read: boolean
+          type: string
+          user_id: string
+          video_id: string | null
+        }
+        Insert: {
+          actor_id: string
+          body?: string
+          created_at?: string
+          id?: string
+          read?: boolean
+          type: string
+          user_id: string
+          video_id?: string | null
+        }
+        Update: {
+          actor_id?: string
+          body?: string
+          created_at?: string
+          id?: string
+          read?: boolean
+          type?: string
+          user_id?: string
+          video_id?: string | null
+        }
+        Relationships: []
+      }
       profile_rings: {
         Row: {
           created_at: string
@@ -138,6 +198,7 @@ export type Database = {
           full_name: string
           gender: string | null
           id: string
+          is_hidden: boolean
           level: number
           likes_count: number
           location: string
@@ -157,6 +218,7 @@ export type Database = {
           full_name?: string
           gender?: string | null
           id: string
+          is_hidden?: boolean
           level?: number
           likes_count?: number
           location?: string
@@ -176,6 +238,7 @@ export type Database = {
           full_name?: string
           gender?: string | null
           id?: string
+          is_hidden?: boolean
           level?: number
           likes_count?: number
           location?: string

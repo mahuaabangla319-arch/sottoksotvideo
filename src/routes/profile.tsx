@@ -1,7 +1,8 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { VideoModal, type ModalVideo } from "@/components/VideoModal";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { Copy, Flame, Globe, Lock, LogOut, MapPin, Play, Share2, Trash2, BadgeCheck } from "lucide-react";
+import { Copy, Flame, Globe, Lock, LogOut, MapPin, Play, Share2, Trash2, BadgeCheck, Settings, MessagesSquare } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { BottomNav } from "@/components/BottomNav";
@@ -41,6 +42,7 @@ function ProfilePage() {
   const navigate = useNavigate();
   const [tab, setTab] = useState<(typeof tabs)[number]>("Videos");
   const [editing, setEditing] = useState(false);
+  const [openVideo, setOpenVideo] = useState<ModalVideo | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -69,7 +71,7 @@ function ProfilePage() {
     queryFn: async () => {
       const { data } = await supabase
         .from("videos")
-        .select("id, caption, views, thumbnail_url, created_at, visibility, is_deleted")
+        .select("id, caption, views, likes, comments_count, video_url, thumbnail_url, created_at, visibility, is_deleted")
         .eq("user_id", user!.id)
         .eq("is_deleted", false)
         .order("created_at", { ascending: false });
@@ -127,14 +129,21 @@ function ProfilePage() {
   return (
     <PhoneShell className="bg-black text-white">
       <header className="flex items-center justify-between px-4 pt-4">
-        <div className="w-9" />
+        <Link to="/settings" aria-label="সেটিংস" className="flex h-9 w-9 items-center justify-center">
+          <Settings className="h-5 w-5 text-white" />
+        </Link>
         <div className="flex items-center gap-2">
           <SotTokLogo size={34} />
           <span className="font-display text-[16px] font-bold tracking-[2px] text-white">SOT TOK</span>
         </div>
-        <button onClick={share} aria-label="প্রোফাইল শেয়ার" className="flex h-9 w-9 items-center justify-center">
-          <Share2 className="h-5 w-5 text-white" />
-        </button>
+        <div className="flex items-center">
+          <Link to="/chat" aria-label="চ্যাট" className="flex h-9 w-9 items-center justify-center">
+            <MessagesSquare className="h-5 w-5 text-white" />
+          </Link>
+          <button onClick={share} aria-label="প্রোফাইল শেয়ার" className="flex h-9 w-9 items-center justify-center">
+            <Share2 className="h-5 w-5 text-white" />
+          </button>
+        </div>
       </header>
 
       <div className="mt-4 flex flex-col items-center px-5">
@@ -238,6 +247,9 @@ function ProfilePage() {
                 key={v.id}
                 className="relative aspect-[9/16] overflow-hidden rounded-[12px] bg-white/10"
               >
+                <button onClick={() => setOpenVideo(v)} aria-label="ভিডিও চালান" className="absolute inset-0 flex items-center justify-center">
+                  <Play className="h-7 w-7 fill-white/70 text-white/70" />
+                </button>
                 {v.thumbnail_url && (
                   <img src={v.thumbnail_url} alt="ভিডিও থাম্বনেইল" className="h-full w-full object-cover" loading="lazy" />
                 )}
@@ -284,6 +296,7 @@ function ProfilePage() {
           onSaved={() => void refetch()}
         />
       )}
+      {openVideo && <VideoModal video={openVideo} onClose={() => setOpenVideo(null)} />}
       <BottomNav />
     </PhoneShell>
   );

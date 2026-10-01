@@ -1,7 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { downloadVideo, fetchFollowingSet, setFollow } from "@/lib/social";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { Heart, MessageCircle, Share2, Bookmark, Plus, Music2 } from "lucide-react";
+import { Heart, MessageCircle, Share2, Bookmark, Plus, Music2, Check, Download } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { BottomNav } from "@/components/BottomNav";
@@ -33,6 +34,8 @@ export const Route = createFileRoute("/feed")({
 
 type FeedItem = {
   id: string;
+  userId?: string | undefined;
+  sotId?: string | undefined;
   username: string;
   caption: string;
   url: string;
@@ -115,14 +118,17 @@ function useFeed() {
 
       const ids = [...new Set(rows.map((v) => v.user_id))];
       const [{ data: profiles }, urls] = await Promise.all([
-        supabase.from("profiles").select("id, username").in("id", ids),
+        supabase.from("profiles").select("id, username, sottok_id").in("id", ids),
         signBatch(rows.map((v) => v.video_url)),
       ]);
       const nameById = new Map((profiles ?? []).map((p) => [p.id, p.username]));
+      const sotById = new Map((profiles ?? []).map((p) => [p.id, p.sottok_id]));
 
       return rows
         .map((v) => ({
           id: v.id,
+          userId: v.user_id,
+          sotId: sotById.get(v.user_id),
           username: "@" + (nameById.get(v.user_id) || "sottok"),
           caption: v.caption,
           url: urls.get(v.video_url) ?? "",
@@ -145,7 +151,13 @@ function VideoCard({
   onToggleLike,
   commentCount,
   onOpenComments,
+  followed,
+  onFollow,
+  isMe,
 }: {
+  followed: boolean;
+  onFollow: () => void;
+  isMe: boolean;
   item: FeedItem;
   muted: boolean;
   onToggleMute: () => void;
@@ -206,10 +218,20 @@ function VideoCard({
 
       <div className="absolute bottom-28 right-3 flex flex-col items-center gap-5">
         <div className="relative mb-1">
-          <div className="h-12 w-12 rounded-full border-2 border-white bg-flame" />
-          <span className="absolute -bottom-2 left-1/2 flex h-5 w-5 -translate-x-1/2 items-center justify-center rounded-full bg-red-600">
-            <Plus className="h-3.5 w-3.5 text-white" strokeWidth={3} />
-          </span>
+          {item.sotId ? (
+            <Link to="/id/$sotId" params={{ sotId: item.sotId }} aria-label="প্রোফাইল দেখুন" className="block h-12 w-12 rounded-full border-2 border-white bg-flame" />
+          ) : (
+            <div className="h-12 w-12 rounded-full border-2 border-white bg-flame" />
+          )}
+          {!isMe && (
+            <button
+              onClick={onFollow}
+              aria-label={followed ? "আনফলো" : "ফলো"}
+              className={`absolute -bottom-2 left-1/2 flex h-5 w-5 -translate-x-1/2 items-center justify-center rounded-full ${followed ? "bg-white" : "bg-red-600"}`}
+            >
+              {followed ? <Check className="h-3.5 w-3.5 text-red-600" strokeWidth={3} /> : <Plus className="h-3.5 w-3.5 text-white" strokeWidth={3} />}
+            </button>
+          )}
         </div>
         <button onClick={onToggleLike} className="flex flex-col items-center gap-1" aria-label="লাইক">
           <Heart className={`h-8 w-8 ${liked ? "fill-red-500 text-red-500" : "text-white"}`} />
@@ -223,6 +245,17 @@ function VideoCard({
           <Share2 className="h-8 w-8 text-white" />
           <span className="text-[11px] text-white">Share</span>
         </button>
+        <button
+          onClick={() => {
+            toast("ডাউনলোড শুরু হয়েছে…");
+            void downloadVideo(item.url, `sottok-${item.id.slice(0, 8)}`);
+          }}
+          className="flex flex-col items-center gap-1"
+          aria-label="ডাউনলোড"
+        >
+          <Download className="h-8 w-8 text-white" />
+          <span className="text-[11px] text-white">ডাউনলোড</span>
+        </button>
         <button className="flex flex-col items-center gap-1" aria-label="সেভ">
           <Bookmark className="h-8 w-8 text-white" />
           <span className="text-[11px] text-white">Save</span>
@@ -230,7 +263,11 @@ function VideoCard({
       </div>
 
       <div className="absolute bottom-24 left-4 right-24">
-        <p className="text-[15px] font-semibold text-white">{item.username}</p>
+        {item.sotId ? (
+          <Link to="/id/$sotId" params={{ sotId: item.sotId }} className="text-[15px] font-semibold text-white">{item.username}</Link>
+        ) : (
+          <p className="text-[15px] font-semibold text-white">{item.username}</p>
+        )}
         <p className="text-[12px] text-white/70">{formatCompact(item.views)} views</p>
         <p className="mt-1 text-[13px] text-white">{item.caption}</p>
         <p className="mt-1 text-[12px] text-white/80">{item.sound}</p>
@@ -252,6 +289,7 @@ function FeedPage() {
   const [likeDelta, setLikeDelta] = useState<Record<string, number>>({});
   const [commentDelta, setCommentDelta] = useState<Record<string, number>>({});
   const [openComments, setOpenComments] = useState<string | null>(null);
+  const [followSet, setFollowSet] = useState<Set<string>>(new Set());
   const scrollerRef = useRef<HTMLDivElement>(null);
 
   const baseItems = useMemo(() => {
@@ -277,6 +315,26 @@ function FeedPage() {
       alive = false;
     };
   }, [baseItems, user]);
+
+  useEffect(() => {
+    const ids = [...new Set(baseItems.map((i) => i.userId).filter((x): x is string => !!x))];
+    if (!user || !ids.length) return;
+    void fetchFollowingSet(user.id, ids).then(setFollowSet);
+  }, [baseItems, user]);
+
+  async function toggleFollow(other?: string) {
+    if (!other) { toast.error("ডেমো ভিডিও"); return; }
+    if (!user) { toast.error("ফলো করতে লগইন করুন"); return; }
+    const was = followSet.has(other);
+    setFollowSet((s) => { const n = new Set(s); if (was) n.delete(other); else n.add(other); return n; });
+    try {
+      await setFollow(user.id, other, !was);
+      toast.success(was ? "আনফলো করা হয়েছে" : "ফলো করা হয়েছে");
+    } catch {
+      setFollowSet((s) => { const n = new Set(s); if (was) n.add(other); else n.delete(other); return n; });
+      toast.error("আবার চেষ্টা করুন");
+    }
+  }
 
   async function toggleLike(id: string) {
     if (!user) {
@@ -350,6 +408,9 @@ function FeedPage() {
               onToggleLike={() => void toggleLike(item.id)}
               commentCount={Math.max(0, item.comments + (commentDelta[item.id] ?? 0))}
               onOpenComments={() => setOpenComments(item.id)}
+              followed={!!item.userId && followSet.has(item.userId)}
+              onFollow={() => void toggleFollow(item.userId)}
+              isMe={!!user && item.userId === user.id}
             />
           ))
         )}
