@@ -1,6 +1,8 @@
 import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, BadgeCheck, Copy, Flame, MapPin, Share2 } from "lucide-react";
+import { ArrowLeft, BadgeCheck, Copy, Flame, MapPin, MessageCircle, Play, Share2 } from "lucide-react";
+import { useState } from "react";
+import { VideoModal, type ModalVideo } from "@/components/VideoModal";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { BottomNav } from "@/components/BottomNav";
@@ -57,6 +59,23 @@ function PublicProfilePage() {
         .eq("following_id", profile!.id)
         .maybeSingle();
       return !!data;
+    },
+  });
+
+  const [open, setOpen] = useState<ModalVideo | null>(null);
+  const { data: videos } = useQuery({
+    queryKey: ["user-videos", profile?.id],
+    enabled: !!profile,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("videos")
+        .select("id, video_url, caption, likes, comments_count, views, thumbnail_url")
+        .eq("user_id", profile!.id)
+        .eq("visibility", "public")
+        .eq("is_deleted", false)
+        .order("created_at", { ascending: false })
+        .limit(60);
+      return data ?? [];
     },
   });
 
@@ -167,15 +186,41 @@ function PublicProfilePage() {
           ))}
         </div>
 
-        <button
-          onClick={toggleFollow}
-          className={`mt-4 w-full rounded-xl py-3 text-[14px] font-semibold ${
-            following ? "bg-white/15 text-white" : "bg-red-600 text-white"
-          }`}
-        >
-          {following ? "Following" : "Follow"}
-        </button>
+        {user?.id !== profile.id && (
+          <div className="mt-4 flex w-full gap-2">
+            <button
+              onClick={toggleFollow}
+              className={`flex-1 rounded-xl py-3 text-[14px] font-semibold ${
+                following ? "bg-white/15 text-white" : "bg-red-600 text-white"
+              }`}
+            >
+              {following ? "Following · আনফলো" : "Follow"}
+            </button>
+            <button
+              onClick={() => (user ? navigate({ to: "/chat/$userId", params: { userId: profile.id } }) : navigate({ to: "/login" }))}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-white/15 px-4 py-3 text-[13px] font-medium text-white"
+            >
+              <MessageCircle className="h-4 w-4" /> মেসেজ
+            </button>
+          </div>
+        )}
+
+        <h2 className="mt-6 w-full border-b border-white/10 pb-2 text-center text-[14px] font-semibold">Videos</h2>
+        <div className="mt-3 grid w-full grid-cols-3 gap-2 pb-6">
+          {(videos ?? []).length ? (
+            videos!.map((v) => (
+              <button key={v.id} onClick={() => setOpen(v)} className="relative aspect-[9/16] overflow-hidden rounded-[12px] bg-white/10">
+                {v.thumbnail_url && <img src={v.thumbnail_url} alt="ভিডিও থাম্বনেইল" className="h-full w-full object-cover" loading="lazy" />}
+                <Play className="absolute left-1/2 top-1/2 h-7 w-7 -translate-x-1/2 -translate-y-1/2 fill-white/80 text-white/80" />
+                <span className="absolute bottom-1.5 left-1.5 text-[11px] font-medium text-white drop-shadow">▶ {formatCount(v.views ?? 0)}</span>
+              </button>
+            ))
+          ) : (
+            <p className="col-span-3 py-8 text-center text-[13px] text-white/40">এখনো কোনো ভিডিও নেই।</p>
+          )}
+        </div>
       </div>
+      {open && <VideoModal video={open} onClose={() => setOpen(null)} />}
       <BottomNav />
     </PhoneShell>
   );
