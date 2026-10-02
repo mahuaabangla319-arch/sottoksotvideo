@@ -72,7 +72,7 @@ export async function downloadBrandedVideo(source: string, id: string, name: str
   video.preload = "auto";
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
-  if (!ctx || !canvas.captureStream) throw new Error("এই ডিভাইসে ওয়াটারমার্ক ভিডিও তৈরি হয় না");
+  if (!ctx || !canvas.captureStream) { URL.revokeObjectURL(input); throw new Error("এই ডিভাইসে ওয়াটারমার্ক ভিডিও তৈরি হয় না"); }
   const icon = await loadImage(logoUrl).catch(() => undefined);
   let frame = 0;
   let stream: MediaStream | undefined;
@@ -96,21 +96,26 @@ export async function downloadBrandedVideo(source: string, id: string, name: str
     const recorder = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
     const chunks: BlobPart[] = [];
     recorder.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data); };
-    const finished = new Promise<Blob>((resolve, reject) => {
+     const finished = new Promise<Blob>((resolve, reject) => {
       recorder.onerror = () => reject(new Error("ডাউনলোড ভিডিও তৈরি করা যায়নি"));
-      recorder.onstop = () => resolve(new Blob(chunks, { type: recorder.mimeType || "video/webm" }));
+       recorder.onstop = () => {
+         const result = new Blob(chunks, { type: recorder.mimeType || "video/webm" });
+         if (!result.size) reject(new Error("ভিডিও তৈরি করা যায়নি"));
+         else resolve(result);
+       };
     });
     const draw = () => {
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       drawBrand(ctx, canvas.width, canvas.height, id, icon);
       if (!video.ended) frame = requestAnimationFrame(draw);
     };
-    await audio.resume();
-    recorder.start(250);
-    await video.play();
+     await audio.resume();
+     await video.play();
+     recorder.start(250);
     draw();
     await new Promise<void>((resolve, reject) => {
-      video.onended = () => resolve();
+       if (video.ended) { resolve(); return; }
+       video.onended = () => resolve();
       video.onerror = () => reject(new Error("ভিডিও চালানো যায়নি"));
     });
     cancelAnimationFrame(frame);
