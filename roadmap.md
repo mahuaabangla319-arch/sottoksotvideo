@@ -1,0 +1,4 @@
+- [ ] Camera filters including original, Durga, Kali and other devotional looks, recorded into video.
+- [ ] Public-video duet and reusable sound selection with synchronized recording.
+- [ ] Downloads branded with each creator's own SOT ID and logo.
+- [ ] Verify camera and playback flows and report device-dependent limits.

@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Download, Heart, MessageCircle, X } from "lucide-react";
+import { Download, Heart, MessageCircle, X, Users, Music2 } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { CommentsSheet } from "@/components/CommentsSheet";
 import { useAuth } from "@/lib/auth";
 import { countView, fetchMyLikes, formatCompact, likeVideo, unlikeVideo } from "@/lib/engagement";
-import { downloadVideo, signVideo } from "@/lib/social";
+import { signVideo } from "@/lib/social";
+import { downloadBrandedVideo } from "@/lib/video-studio";
+import { supabase } from "@/integrations/supabase/client";
 
 export type ModalVideo = {
   id: string;
@@ -18,6 +21,8 @@ export type ModalVideo = {
 
 export function VideoModal({ video, onClose }: { video: ModalVideo; onClose: () => void }) {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const [downloading, setDownloading] = useState(false);
   const [liked, setLiked] = useState(false);
   const [likes, setLikes] = useState(video.likes);
   const [comments, setComments] = useState(video.comments_count);
@@ -26,6 +31,15 @@ export function VideoModal({ video, onClose }: { video: ModalVideo; onClose: () 
   const { data: url } = useQuery({
     queryKey: ["signed", video.video_url],
     queryFn: () => signVideo(video.video_url),
+  });
+  const { data: creatorId } = useQuery({
+    queryKey: ["video-creator-id", video.id],
+    queryFn: async () => {
+      const { data: row } = await supabase.from("videos").select("user_id").eq("id", video.id).maybeSingle();
+      if (!row) return null;
+      const { data: profile } = await supabase.from("profiles").select("sottok_id").eq("id", row.user_id).maybeSingle();
+      return profile?.sottok_id ?? null;
+    },
   });
 
   useEffect(() => {
@@ -64,16 +78,21 @@ export function VideoModal({ video, onClose }: { video: ModalVideo; onClose: () 
         </button>
         <button
           onClick={() => {
-            if (!url) return;
-            toast("ডাউনলোড শুরু হয়েছে…");
-            void downloadVideo(url, `sottok-${video.id.slice(0, 8)}`);
+            if (!url || !creatorId) return;
+            setDownloading(true);
+            void downloadBrandedVideo(url, creatorId, `sottok-${creatorId}`)
+              .then(() => toast.success("SOT ID সহ ভিডিও ডাউনলোড হয়েছে"))
+              .catch((error) => toast.error(error instanceof Error ? error.message : "ডাউনলোড করা যায়নি"))
+              .finally(() => setDownloading(false));
           }}
           className="flex flex-col items-center gap-1"
           aria-label="ডাউনলোড"
         >
           <Download className="h-8 w-8 text-white" />
-          <span className="text-[11px] text-white">ডাউনলোড</span>
+          <span className="text-[11px] text-white">{downloading ? "তৈরি হচ্ছে…" : "ডাউনলোড"}</span>
         </button>
+        <button onClick={() => navigate({ to: "/create", search: { duet: video.id } })} className="flex flex-col items-center gap-1" aria-label="ডুয়েট"><Users className="h-7 w-7 text-white" /><span className="text-[11px] text-white">ডুয়েট</span></button>
+        <button onClick={() => navigate({ to: "/create", search: { sound: video.id } })} className="flex flex-col items-center gap-1" aria-label="এই গান ব্যবহার করুন"><Music2 className="h-7 w-7 text-white" /><span className="text-[11px] text-white">গান</span></button>
       </div>
       <div className="absolute bottom-8 left-4 right-20">
         <p className="text-[12px] text-white/70">{formatCompact(video.views)} views</p>

@@ -15,6 +15,8 @@ export const Route = createFileRoute("/chat/")({
       { name: "description", content: "SOT TOK-এর সব ইউজারের সাথে সরাসরি চ্যাট করুন।" },
       { property: "og:title", content: "চ্যাট — SOT TOK" },
       { property: "og:description", content: "SOT TOK-এর সব ইউজারের সাথে সরাসরি চ্যাট করুন।" },
+       { property: "og:type", content: "website" },
+       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: ChatList,

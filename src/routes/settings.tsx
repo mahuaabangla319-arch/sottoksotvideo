@@ -19,6 +19,8 @@ export const Route = createFileRoute("/settings")({
       { name: "description", content: "অ্যাকাউন্ট, প্রাইভেসি, নোটিফিকেশন ও অ্যাপ সেটিংস।" },
       { property: "og:title", content: "সেটিংস — SOT TOK" },
       { property: "og:description", content: "অ্যাকাউন্ট, প্রাইভেসি, নোটিফিকেশন ও অ্যাপ সেটিংস।" },
+       { property: "og:type", content: "website" },
+       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: SettingsPage,

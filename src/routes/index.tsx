@@ -12,6 +12,8 @@ export const Route = createFileRoute("/")({
       },
       { property: "og:title", content: "SOT TOK — নিজের পরিচয় নিজেই তৈরি করো" },
       { property: "og:description", content: "ভারতের নাম্বার ওয়ান শর্ট ভিডিও অ্যাপ — রেকর্ড করো, শেয়ার করো, ট্রেন্ড করো।" },
+       { property: "og:type", content: "website" },
+       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: Splash,

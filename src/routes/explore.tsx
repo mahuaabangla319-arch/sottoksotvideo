@@ -15,6 +15,8 @@ export const Route = createFileRoute("/explore")({
       { name: "description", content: "ট্রেন্ডিং চ্যালেঞ্জ, ফুড, কমেডি আর নতুন ক্রিয়েটর খুঁজে নিন।" },
       { property: "og:title", content: "Explore — SOT TOK" },
       { property: "og:description", content: "ট্রেন্ডিং চ্যালেঞ্জ, ফুড, কমেডি আর নতুন ক্রিয়েটর খুঁজে নিন।" },
+       { property: "og:type", content: "website" },
+       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: ExplorePage,
