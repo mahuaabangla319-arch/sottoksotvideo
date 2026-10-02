@@ -1,8 +1,9 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { downloadVideo, fetchFollowingSet, setFollow } from "@/lib/social";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { fetchFollowingSet, setFollow } from "@/lib/social";
+import { downloadBrandedVideo } from "@/lib/video-studio";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { Heart, MessageCircle, Share2, Bookmark, Plus, Music2, Check, Download } from "lucide-react";
+import { Heart, MessageCircle, Share2, Bookmark, Plus, Music2, Check, Download, Users } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { BottomNav } from "@/components/BottomNav";
@@ -168,6 +169,8 @@ function VideoCard({
   onOpenComments: () => void;
 }) {
   const ref = useRef<HTMLVideoElement>(null);
+  const navigate = useNavigate();
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     const el = ref.current;
@@ -246,16 +249,21 @@ function VideoCard({
           <span className="text-[11px] text-white">Share</span>
         </button>
         <button
+          disabled={downloading || !item.sotId}
           onClick={() => {
-            toast("ডাউনলোড শুরু হয়েছে…");
-            void downloadVideo(item.url, `sottok-${item.id.slice(0, 8)}`);
+            setDownloading(true);
+            void downloadBrandedVideo(item.url, item.sotId ?? "", `sottok-${item.sotId}`)
+              .then(() => toast.success("SOT ID সহ ভিডিও ডাউনলোড হয়েছে"))
+              .catch((error) => toast.error(error instanceof Error ? error.message : "ডাউনলোড করা যায়নি"))
+              .finally(() => setDownloading(false));
           }}
           className="flex flex-col items-center gap-1"
           aria-label="ডাউনলোড"
         >
           <Download className="h-8 w-8 text-white" />
-          <span className="text-[11px] text-white">ডাউনলোড</span>
+          <span className="text-[11px] text-white">{downloading ? "তৈরি হচ্ছে…" : "ডাউনলোড"}</span>
         </button>
+        {item.userId && <button onClick={() => navigate({ to: "/create", search: { duet: item.id } })} className="flex flex-col items-center gap-1" aria-label="ডুয়েট"><Users className="h-7 w-7 text-white" /><span className="text-[11px] text-white">ডুয়েট</span></button>}
         <button className="flex flex-col items-center gap-1" aria-label="সেভ">
           <Bookmark className="h-8 w-8 text-white" />
           <span className="text-[11px] text-white">Save</span>
@@ -271,7 +279,7 @@ function VideoCard({
         <p className="text-[12px] text-white/70">{formatCompact(item.views)} views</p>
         <p className="mt-1 text-[13px] text-white">{item.caption}</p>
         <p className="mt-1 text-[12px] text-white/80">{item.sound}</p>
-        <button className="mt-2 inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1.5 text-[12px] text-white backdrop-blur">
+        <button onClick={() => item.userId && navigate({ to: "/create", search: { sound: item.id } })} disabled={!item.userId} className="mt-2 inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1.5 text-[12px] text-white backdrop-blur">
           <Music2 className="h-3.5 w-3.5" /> Use this sound
         </button>
       </div>
