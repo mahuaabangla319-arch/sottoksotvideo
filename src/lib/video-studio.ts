@@ -113,10 +113,12 @@ export async function downloadBrandedVideo(source: string, id: string, name: str
      await video.play();
      recorder.start(250);
     draw();
-    await new Promise<void>((resolve, reject) => {
+     await new Promise<void>((resolve, reject) => {
        if (video.ended) { resolve(); return; }
        video.onended = () => resolve();
       video.onerror = () => reject(new Error("ভিডিও চালানো যায়নি"));
+       const remaining = (video.duration - video.currentTime) * 1000;
+       if (Number.isFinite(remaining) && remaining > 0) window.setTimeout(resolve, remaining + 2000);
     });
     cancelAnimationFrame(frame);
     recorder.stop();
