@@ -70,6 +70,7 @@ export async function downloadBrandedVideo(source: string, id: string, name: str
   video.playsInline = true;
   video.muted = false;
   video.preload = "auto";
+  video.load();
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
   if (!ctx || !canvas.captureStream) { URL.revokeObjectURL(input); throw new Error("এই ডিভাইসে ওয়াটারমার্ক ভিডিও তৈরি হয় না"); }
@@ -78,10 +79,11 @@ export async function downloadBrandedVideo(source: string, id: string, name: str
   let stream: MediaStream | undefined;
   let audio: AudioContext | undefined;
   try {
-    await new Promise<void>((resolve, reject) => {
+     await new Promise<void>((resolve, reject) => {
       if (video.readyState >= 1) { resolve(); return; }
       video.onloadedmetadata = () => resolve();
       video.onerror = () => reject(new Error("ভিডিও খোলা যায়নি"));
+       window.setTimeout(() => reject(new Error("ভিডিও খুলতে সময় লাগছে; আবার চেষ্টা করুন")), 12000);
     });
     canvas.width = Math.min(720, video.videoWidth || 360);
     canvas.height = Math.round(canvas.width * video.videoHeight / video.videoWidth);
