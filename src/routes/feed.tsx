@@ -110,6 +110,8 @@ function useFeed() {
         .select("id, caption, video_url, sound_name, views, likes, comments_count, user_id")
         .eq("visibility", "public")
         .eq("is_deleted", false)
+        .eq("admin_hidden", false)
+        .order("is_pinned", { ascending: false })
         .order("created_at", { ascending: false })
         .range(from, from + PAGE_SIZE - 1);
 
