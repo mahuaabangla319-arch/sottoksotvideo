@@ -8,6 +8,13 @@
       "when": 1790818465076,
       "tag": "0000_notifications_and_chat",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1790992283303,
+      "tag": "0001_super_admin_system",
+      "breakpoints": true
     }
   ]
 }

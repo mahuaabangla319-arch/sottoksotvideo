@@ -77,6 +77,11 @@ function SettingsPage() {
       return data;
     },
   });
+  const { data: isAdmin } = useQuery({
+    queryKey: ["is-admin", user?.id],
+    enabled: !!user,
+    queryFn: async () => (await supabase.rpc("is_admin", { _user_id: user!.id })).data === true,
+  });
 
   const toggleNotif = async () => {
     const next = !notif;
@@ -127,6 +132,11 @@ function SettingsPage() {
         <h1 className="text-[18px] font-semibold">সেটিংস</h1>
       </header>
 
+      {isAdmin && (
+        <button onClick={() => navigate({ to: "/admin" })} className="mx-3 mt-5 flex w-[calc(100%-1.5rem)] items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#FFD700] to-[#fe2c55] py-3.5 text-[15px] font-bold text-black">
+          <Shield className="h-5 w-5" /> Admin Panel
+        </button>
+      )}
       {user && (
         <Section title="অ্যাকাউন্ট">
           <Row icon={<User className="h-5 w-5" />} label={`@${profile?.username ?? ""}`} hint={user.email ?? ""} onClick={() => navigate({ to: "/profile" })} />

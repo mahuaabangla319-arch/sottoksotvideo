@@ -105,9 +105,15 @@ function CreatePage() {
 
   useEffect(() => {
     let alive = true;
-    void supabase.from("videos").select("id, video_url, sound_name, caption, user_id")
-      .eq("visibility", "public").eq("is_deleted", false).order("created_at", { ascending: false }).limit(30)
-      .then(({ data }) => { if (alive) setSongs(data ?? []); });
+    void Promise.all([
+      supabase.from("songs").select("id, title, artist, audio_url").eq("is_hidden", false).order("created_at", { ascending: false }).limit(50),
+      supabase.from("videos").select("id, video_url, sound_name, caption, user_id")
+        .eq("visibility", "public").eq("is_deleted", false).order("created_at", { ascending: false }).limit(30),
+    ]).then(([s, v]) => {
+      if (!alive) return;
+      const official = (s.data ?? []).map((x) => ({ id: x.id, video_url: x.audio_url, sound_name: `🎵 ${x.title}`, caption: x.artist, user_id: "" }));
+      setSongs([...official, ...(v.data ?? [])]);
+    });
     return () => { alive = false; };
   }, []);
   useEffect(() => {
