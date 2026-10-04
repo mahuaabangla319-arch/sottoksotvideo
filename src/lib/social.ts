@@ -36,6 +36,17 @@ export async function signVideo(path: string) {
   return data?.signedUrl ?? "";
 }
 
+export async function signSong(path: string) {
+  if (path.startsWith('http')) {
+    const match = new URL(path).pathname.match(/\/storage\/v1\/object\/(?:sign|public)\/songs\/(.+)$/);
+    if (!match?.[1]) return path;
+    path = decodeURIComponent(match[1]);
+  }
+  const { data, error } = await supabase.storage.from('songs').createSignedUrl(path, 300);
+  if (error || !data?.signedUrl) throw new Error('গান খোলা যায়নি');
+  return data.signedUrl;
+}
+
 /** Downloads a video file to the device; falls back to opening it in a new tab. */
 export async function downloadVideo(url: string, name = "sottok-video") {
   try {

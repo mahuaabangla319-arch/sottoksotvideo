@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { BottomNav } from "@/components/BottomNav";
 import { PhoneShell } from "@/components/PhoneShell";
+import { DailyCreators } from "@/components/DailyCreators";
 
 export const Route = createFileRoute("/explore")({
   head: () => ({
@@ -76,13 +77,13 @@ function ExplorePage() {
           name: c.full_name || c.username,
           handle: "@" + c.username,
           sot: c.sottok_id,
-          img: c.avatar_url && c.avatar_url.startsWith("http") ? c.avatar_url : fallbackUsers[0]!.img,
+          img: c.avatar_url && c.avatar_url.startsWith("http") ? c.avatar_url : fallbackUsers[0]?.img ?? "",
         }))
       : fallbackUsers;
 
 
   return (
-    <PhoneShell className="bg-white">
+    <PhoneShell className="bg-background text-foreground">
       <div className="px-4 pt-5">
         <form
           onSubmit={submitSearch}
@@ -107,6 +108,7 @@ function ExplorePage() {
           />
         </div>
 
+        <DailyCreators />
         <div className="no-scrollbar mt-4 flex gap-5 overflow-x-auto border-b border-neutral-200">
           {tabs.map((t) => (
             <button

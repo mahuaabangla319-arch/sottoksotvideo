@@ -521,6 +521,7 @@ export type Database = {
         Row: {
           admin_hidden: boolean
           caption: string
+          category: string
           comments_count: number
           created_at: string
           id: string
@@ -537,6 +538,7 @@ export type Database = {
         Insert: {
           admin_hidden?: boolean
           caption?: string
+          category?: string
           comments_count?: number
           created_at?: string
           id?: string
@@ -553,6 +555,7 @@ export type Database = {
         Update: {
           admin_hidden?: boolean
           caption?: string
+          category?: string
           comments_count?: number
           created_at?: string
           id?: string
@@ -574,6 +577,17 @@ export type Database = {
     }
     Functions: {
       award_video_coins: { Args: { _video_id: string }; Returns: number }
+      can_read_song_object: { Args: { object_name: string }; Returns: boolean }
+      daily_creator_ranking: {
+        Args: never
+        Returns: {
+          sottok_id: string
+          total_likes: number
+          total_views: number
+          username: string
+          video_count: number
+        }[]
+      }
       generate_sot_id: { Args: never; Returns: string }
       has_role: {
         Args: {

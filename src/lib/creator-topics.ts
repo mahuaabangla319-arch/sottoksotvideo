@@ -1,0 +1,1 @@
+export const creatorTopics=[{key:'general',name:'সব'},{key:'beauty',name:'বিউটি'},{key:'comedy',name:'কমেডি'},{key:'dance',name:'ড্যান্স'},{key:'food',name:'রান্না'},{key:'devotional',name:'ভক্তি'},{key:'family',name:'পরিবার'}];
