@@ -2,3 +2,9 @@
 - [x] Public-video duet and reusable sound selection with synchronized recording.
 - [x] Downloads branded with each creator's own SOT ID and logo.
 - [x] Verify camera recording and branded export in browser; real-account posting awaits sign-in and device-specific camera/audio support varies.
+- [ ] Add 20 face-following makeup filters, funny looks and a 0–100 beauty control for everyone.
+- [ ] Add searchable authorized Bengali audio and three-photo reel templates; song supply needs confirmation.
+- [ ] Add daily creator rankings and clarify funded prizes versus existing wallet coins.
+- [ ] Add super-like feedback and pink-purple styling; confirm feed recommendation approach.
+- [ ] Resolve song storage exposure without unintentionally restricting the song library; access decision pending.
+- [ ] Verify recording, photo reels, feed reactions and authenticated access end-to-end.
