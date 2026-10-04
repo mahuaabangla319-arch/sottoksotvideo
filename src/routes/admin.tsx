@@ -6,7 +6,7 @@ import { ArrowLeft, Crown, Eye, EyeOff, Film, Loader2, Music2, Pin, Play, Search
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { signVideo, downloadVideo } from "@/lib/social";
+import { signVideo, signSong, downloadVideo } from "@/lib/social";
 import { formatCount } from "@/lib/profile";
 import { adminCreateUser, adminDeleteUser, adminSetBlocked } from "@/lib/admin.functions";
 
@@ -380,8 +380,7 @@ function MusicPanel({ adminId }: { adminId: string }) {
     const path = `${folder}/${crypto.randomUUID()}-${file.name.replace(/[^a-zA-Z0-9.]/g, "_")}`;
     const { error } = await supabase.storage.from("songs").upload(path, file, { contentType: file.type });
     if (error) throw error;
-    const { data } = await supabase.storage.from("songs").createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
-    return data?.signedUrl ?? "";
+    return path;
   };
 
   const submit = async () => {
@@ -403,14 +402,16 @@ function MusicPanel({ adminId }: { adminId: string }) {
     setBusy(false);
   };
 
-  const play = (s: any) => {
+  const play = async (s: any) => {
     if (playingId === s.id) { audioRef.current?.pause(); setPlayingId(null); return; }
     audioRef.current?.pause();
-    const a = new Audio(s.audio_url);
-    a.onended = () => setPlayingId(null);
-    void a.play();
-    audioRef.current = a;
-    setPlayingId(s.id);
+    try {
+      const a = new Audio(await signSong(s.audio_url));
+      a.onended = () => setPlayingId(null);
+      await a.play();
+      audioRef.current = a;
+      setPlayingId(s.id);
+    } catch { toast.error('গান খোলা যায়নি'); }
   };
   useEffect(() => () => audioRef.current?.pause(), []);
 

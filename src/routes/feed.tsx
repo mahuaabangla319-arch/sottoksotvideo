@@ -3,12 +3,14 @@ import { fetchFollowingSet, setFollow } from "@/lib/social";
 import { downloadBrandedVideo } from "@/lib/video-studio";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { Heart, MessageCircle, Share2, Bookmark, Plus, Music2, Check, Download, Users } from "lucide-react";
+import { Heart, MessageCircle, Share2, Bookmark, Plus, Music2, Check, Download, Users, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { BottomNav } from "@/components/BottomNav";
 import { CommentsSheet } from "@/components/CommentsSheet";
 import { useAuth } from "@/lib/auth";
+import { Button } from '@/components/ui/button';
+import { creatorTopics } from '@/lib/creator-topics';
 import {
   countView,
   fetchMyLikes,
@@ -95,9 +97,9 @@ async function signBatch(paths: string[]): Promise<Map<string, string>> {
   return map;
 }
 
-function useFeed() {
+function useFeed(topic: string, following: boolean, userId?: string) {
   return useInfiniteQuery({
-    queryKey: ["feed"],
+    queryKey: ["feed", topic, following, userId],
     initialPageParam: 0,
     staleTime: 60_000,
     gcTime: 5 * 60_000,
@@ -105,16 +107,24 @@ function useFeed() {
     getNextPageParam: (last: FeedItem[], pages) => (last.length < PAGE_SIZE ? undefined : pages.length),
     queryFn: async ({ pageParam }): Promise<FeedItem[]> => {
       const from = (pageParam as number) * PAGE_SIZE;
-      const { data } = await supabase
+      let query = supabase
         .from("videos")
         .select("id, caption, video_url, sound_name, views, likes, comments_count, user_id")
         .eq("visibility", "public")
         .eq("is_deleted", false)
-        .eq("admin_hidden", false)
-        .order("is_pinned", { ascending: false })
+        .eq("admin_hidden", false);
+      if(topic!=='general')query=query.eq('category',topic);
+      if(following){
+        if(!userId)return [];
+        const {data: follows,error}=await supabase.from('follows').select('following_id').eq('follower_id',userId);
+        if(error)throw error;
+        const ids=(follows??[]).map(f=>f.following_id);if(!ids.length)return [];
+        query=query.in('user_id',ids);
+      }
+      const { data, error } = await query.order("is_pinned", { ascending: false })
         .order("created_at", { ascending: false })
         .range(from, from + PAGE_SIZE - 1);
-
+      if(error)throw error;
 
       const rows = data ?? [];
       if (!rows.length) return [];
@@ -173,6 +183,12 @@ function VideoCard({
   const ref = useRef<HTMLVideoElement>(null);
   const navigate = useNavigate();
   const [downloading, setDownloading] = useState(false);
+  const [burst, setBurst] = useState(0);
+  const superLike = () => {
+    if(item.id.startsWith('demo-')){toast.error('ডেমো ভিডিওতে লাইক করা যাবে না');return;}
+    if(!liked)onToggleLike();
+    setBurst(n=>n+1);
+  };
 
   useEffect(() => {
     const el = ref.current;
@@ -210,10 +226,12 @@ function VideoCard({
         playsInline
         preload="none"
         onClick={onToggleMute}
+        onDoubleClick={superLike}
         className="h-full w-full bg-black object-cover"
       />
 
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-black/40" />
+      {burst>0&&<Heart key={burst} className="animate-super-heart pointer-events-none absolute left-1/2 top-1/2 h-28 w-28 fill-pink text-pink" aria-hidden="true"/>}
 
       {muted && (
         <span className="absolute right-3 top-14 rounded-full bg-black/50 px-3 py-1 text-[11px] text-white">
@@ -242,6 +260,7 @@ function VideoCard({
           <Heart className={`h-8 w-8 ${liked ? "fill-red-500 text-red-500" : "text-white"}`} />
           <span className="text-[11px] text-white">{formatCompact(item.likes)}</span>
         </button>
+        <Button variant="ghost" size="icon" onClick={superLike} aria-label="সুপার লাইক" title="সুপার লাইক" className="text-pink hover:bg-on-media/10"><Sparkles/></Button>
         <button onClick={onOpenComments} className="flex flex-col items-center gap-1" aria-label="কমেন্ট">
           <MessageCircle className="h-8 w-8 text-white" />
           <span className="text-[11px] text-white">{formatCompact(commentCount)}</span>
@@ -291,9 +310,10 @@ function VideoCard({
 
 function FeedPage() {
   const { user } = useAuth();
-  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useFeed();
+  const [topic,setTopic]=useState('general');
   const [muted, setMuted] = useState(true);
   const [tab, setTab] = useState<"following" | "foryou">("foryou");
+  const { data, error, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useFeed(topic,tab==='following',user?.id);
   const [activeIndex, setActiveIndex] = useState(0);
   const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
   const [likeDelta, setLikeDelta] = useState<Record<string, number>>({});
@@ -304,8 +324,9 @@ function FeedPage() {
 
   const baseItems = useMemo(() => {
     const rows = (data?.pages ?? []).flat();
-    return rows.length ? rows : demoVideos;
-  }, [data]);
+    return rows.length ? rows : topic==='general'&&tab==='foryou' ? demoVideos : [];
+  }, [data,topic,tab]);
+  useEffect(()=>{scrollerRef.current?.scrollTo({top:0});setActiveIndex(0);},[topic,tab]);
 
   const items = useMemo(
     () =>
@@ -388,25 +409,26 @@ function FeedPage() {
 
   return (
     <div className="mx-auto w-full max-w-[420px] bg-black">
-      <div className="fixed left-1/2 top-0 z-40 flex w-full max-w-[420px] -translate-x-1/2 justify-center gap-6 pt-4">
-        <button
+      <div className="fixed left-1/2 top-0 z-40 flex w-full max-w-[420px] -translate-x-1/2 flex-wrap justify-center gap-x-6 gap-y-2 bg-media/70 pt-3 pb-2 text-on-media">
+        <Button variant="ghost"
           onClick={() => setTab("following")}
           className={tab === "following" ? "text-[15px] font-bold text-white" : "text-[15px] text-white/60"}
         >
           Following
-        </button>
-        <button
+        </Button>
+        <Button variant="ghost"
           onClick={() => setTab("foryou")}
           className={tab === "foryou" ? "text-[15px] font-bold text-white" : "text-[15px] text-white/60"}
         >
           For You
-        </button>
+        </Button>
+        <label className="flex w-full items-center justify-center gap-2 text-xs">পছন্দের বিষয়<select aria-label="পছন্দের বিষয়" value={topic} onChange={e=>setTopic(e.target.value)} className="max-w-36 rounded-md border border-on-media/20 bg-media px-2 py-1 text-on-media">{creatorTopics.map(t=><option key={t.key} value={t.key}>{t.name}</option>)}</select></label>
       </div>
 
       <div ref={scrollerRef} onScroll={onScroll} className="snap-feed no-scrollbar h-screen overflow-y-scroll">
-        {isLoading ? (
+        {error?<div role="alert" className="flex h-screen items-center justify-center text-on-media">ফিড খোলা যায়নি; আবার চেষ্টা করুন</div>:isLoading ? (
           <div className="flex h-screen items-center justify-center text-white/50">লোড হচ্ছে…</div>
-        ) : (
+        ) : !items.length ? <div className="flex h-screen items-center justify-center px-8 text-center text-on-media/70">{tab==='following'&&!user?'ফলো করা ভিডিও দেখতে সাইন ইন করুন':'এই বিষয়ে এখনো কোনো ভিডিও নেই'}</div> : (
           items.map((item, i) => (
             <VideoCard
               key={item.id}
