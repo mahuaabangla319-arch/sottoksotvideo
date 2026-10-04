@@ -15,6 +15,13 @@
       "when": 1790992283303,
       "tag": "0001_super_admin_system",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791082287120,
+      "tag": "0002_creator_topics_daily_rankings_and_song_access",
+      "breakpoints": true
     }
   ]
 }
