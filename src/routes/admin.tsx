@@ -1,11 +1,13 @@
-import { useState, useEffect } from "react";
+import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { toast } from "sonner";
 
-export default function Admin() {
+export const Route = createFileRoute("/admin")({
+  component: AdminPage,
+});
+
+function AdminPage() {
   const [banners, setBanners] = useState<any[]>([]);
   const [title, setTitle] = useState("");
   const [link, setLink] = useState("");
@@ -17,63 +19,55 @@ export default function Admin() {
     const { data } = await supabase.from("banners").select("*").order("created_at", { ascending: false });
     if (data) setBanners(data);
   };
-
   useEffect(() => { fetchBanners(); }, []);
 
   const handleUpload = async () => {
-    if (!image) return alert("ছবি সিলেক্ট করো দাদা");
+    if (!image) return toast.error("ছবি সিলেক্ট করো দাদা");
     setLoading(true);
     const fileName = `${Date.now()}-${image.name}`;
-    const { error: uploadError } = await supabase.storage.from("banners").upload(fileName, image);
-    if (uploadError) { alert(uploadError.message); setLoading(false); return; }
-    const { data: urlData } = supabase.storage.from("banners").getPublicUrl(fileName);
-
+    const { error: upErr } = await supabase.storage.from("banners").upload(fileName, image);
+    if (upErr) { toast.error(upErr.message); setLoading(false); return; }
+    const { data } = supabase.storage.from("banners").getPublicUrl(fileName);
     const { error } = await supabase.from("banners").insert({
-      title, link_url: link, position, image_url: urlData.publicUrl, is_active: true
+      title, link_url: link, position, image_url: data.publicUrl, is_active: true
     });
-    if (error) alert(error.message);
-    else { alert("ব্যানার সবার App এ চলে গেছে!"); setTitle(""); setLink(""); setImage(null); fetchBanners(); }
+    if (error) toast.error(error.message);
+    else { toast.success("ব্যানার Live হয়ে গেছে!"); setTitle(""); setLink(""); setImage(null); fetchBanners(); }
     setLoading(false);
   };
 
-  const deleteBanner = async (id: string) => {
-    await supabase.from("banners").delete().eq("id", id);
-    fetchBanners();
-  };
-
   return (
-    <div className="p-4 max-w-4xl mx-auto space-y-6">
-      <h1 className="text-2xl font-bold">SottoK Sotto - Admin Panel</h1>
+    <div className="p-4 max-w-2xl mx-auto space-y-6 bg-gray-50 min-h-screen">
+      <h1 className="text-2xl font-bold">SOT TOK - Super Admin</h1>
 
-      <Card>
-        <CardHeader><CardTitle>নতুন ব্যানার যোগ করো</CardTitle></CardHeader>
-        <CardContent className="space-y-3">
-          <Input type="file" onChange={(e) => setImage(e.target.files?.[0] || null)} />
-          <Input placeholder="ব্যানারের নাম - যেমন Kotalpur Offer" value={title} onChange={(e) => setTitle(e.target.value)} />
-          <Input placeholder="ক্লিক করলে কোথায় যাবে - WhatsApp Link" value={link} onChange={(e) => setLink(e.target.value)} />
-          <select className="w-full border p-2 rounded" value={position} onChange={(e) => setPosition(e.target.value)}>
-            <option value="top">Top - সবার উপরে</option>
-            <option value="middle">Middle - 3 ভিডিও পর পর</option>
-            <option value="bottom">Bottom - নিচে</option>
-          </select>
-          <Button onClick={handleUpload} disabled={loading} className="w-full">
-            {loading? "আপলোড হচ্ছে..." : "ব্যানার সবাইকে দেখাও"}
-          </Button>
-        </CardContent>
-      </Card>
+      <div className="bg-white p-4 rounded-xl shadow space-y-3">
+        <h2 className="font-bold text-lg">নতুন ব্যানার যোগ করো (0 Coin লাগবে)</h2>
+        <input type="file" onChange={(e) => setImage(e.target.files?.[0] || null)} className="w-full border p-2 rounded" />
+        <input placeholder="ব্যানারের নাম - যেমন Kotalpur Offer" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full border p-2 rounded" />
+        <input placeholder="WhatsApp Link - ক্লিক করলে কোথায় যাবে" value={link} onChange={(e) => setLink(e.target.value)} className="w-full border p-2 rounded" />
+        <select value={position} onChange={(e) => setPosition(e.target.value)} className="w-full border p-2 rounded">
+          <option value="top">Top - সবার উপরে</option>
+          <option value="middle">Middle - 3 ভিডিও পর পর</option>
+          <option value="bottom">Bottom - নিচে</option>
+        </select>
+        <button onClick={handleUpload} disabled={loading} className="w-full bg-black text-white p-3 rounded font-bold">
+          {loading? "আপলোড হচ্ছে..." : "ব্যানার সবাইকে দেখাও"}
+        </button>
+      </div>
 
-      <Card>
-        <CardHeader><CardTitle>সব ব্যানার</CardTitle></CardHeader>
-        <CardContent className="grid gap-3">
+      <div className="bg-white p-4 rounded-xl shadow">
+        <h3 className="font-bold mb-3">Live ব্যানার গুলো</h3>
+        <div className="space-y-2">
           {banners.map((b) => (
-            <div key={b.id} className="flex items-center justify-between border p-2 rounded">
+            <div key={b.id} className="flex justify-between items-center border p-2 rounded">
               <img src={b.image_url} className="w-20 h-12 object-cover rounded" />
-              <div><p className="font-bold">{b.title}</p><p className="text-xs">{b.position}</p></div>
-              <Button variant="destructive" size="sm" onClick={() => deleteBanner(b.id)}>Delete</Button>
+              <div><p className="font-bold text-sm">{b.title}</p><p className="text-xs">{b.position}</p></div>
+              <button onClick={async () => { await supabase.from("banners").delete().eq("id", b.id); fetchBanners(); toast.success("Delete হয়েছে"); }} className="bg-red-500 text-white px-3 py-1 rounded text-xs">Delete</button>
             </div>
           ))}
-        </CardContent>
-      </Card>
+          {banners.length===0 && <p className="text-sm text-gray-500">এখনো কোনো ব্যানার নেই</p>}
+        </div>
+      </div>
     </div>
   );
 }
