@@ -1,63 +1,132 @@
-BUILD GOD MODE SUPER ADMIN PANEL - Full Control Without Coding - Package com.sottok.sottovideo
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { toast } from "sonner";
 
-SECURITY: Only email mahuaabangla319@gmail.com can access /admin. For others redirect to home. Add second password layer: Admin password is SOT@2026Admin. Secure Supabase RLS.
+const ADMIN_EMAIL = "mahuaabangla319@gmail.com";
+const ADMIN_PASS = "SOT@2026Admin";
 
-Create /admin with dark mode sidebar, super fast, mobile responsive, with 17 sections:
+export default function Admin() {
+  const navigate = useNavigate();
+  const [auth, setAuth] = useState(false);
+  const [pass, setPass] = useState("");
+  const [tab, setTab] = useState("Boost Engine");
+  const [users, setUsers] = useState<any[]>([]);
+  const [videos, setVideos] = useState<any[]>([]);
 
-=== EXISTING 10 SECTIONS (KEEP AND IMPROVE) ===
-1. DASHBOARD OVERVIEW: Total Users, Total Videos, Total Reports, Coins Distributed, Today's Uploads, Earnings graph, Active Users graph.
-2. USER MANAGEMENT: List users with SOT ID, name, email, followers, videos, coins, join date. Actions: View Profile, Ban/Unban, Delete, Add/Remove Coins, Make Verified Blue Tick, Search by SOT ID/email.
-3. VIDEO MANAGEMENT: List all videos with thumbnail, uploader, views, likes, reports. Actions: Play, Delete, Hide, Make Featured/Trending, Boost.
-4. BANNER & ADS MANAGEMENT: Add Banner Images for Home Slider with Upload, Link, Start/End Date, Active toggle. Manage AdMob Enable/Disable and Change Ad IDs. Announcement Popup - Write message show to all users on app open.
-5. CONTENT MODERATION: Reported Videos Queue with reason, Approve/Delete/Warn/Ban. Blocked Words List.
-6. COIN & WALLET CONTROL: Set coin rates per upload/ad/login, Set conversion 1000 coins = INR, Withdraw Requests list with UPI ID Approve/Reject, Manually add coins.
-7. NOTIFICATIONS: Send Push to All Users or single user by SOT ID. Send from "SOT TOK Official" account.
-8. HASHTAG & TRENDING CONTROL: Add/Edit/Delete Trending Hashtags, Make #Trending/#Featured.
-9. SETTINGS CONTROL: Change App Name, Logo, Splash Screen, Maintenance Mode On/Off, App Version Control.
-10. ADMIN LOGS: Show who did what.
+  const [vidId, setVidId] = useState(""); const [vLikes, setVLikes] = useState(""); const [vViews, setVViews] = useState("");
+  const [sotId, setSotId] = useState(""); const [fCount, setFCount] = useState("");
+  const [verifyId, setVerifyId] = useState(""); const [tick, setTick] = useState("blue"); const [frameUrl, setFrameUrl] = useState(""); const [frameName, setFrameName] = useState("");
+  const [bannerUrl, setBannerUrl] = useState(""); const [songTitle, setSongTitle] = useState(""); const [songUrl, setSongUrl] = useState("");
 
-=== NEW 7 GOD MODE SECTIONS YOU ASKED FOR (ADD THESE NOW) ===
+  useEffect(()=>{ check(); },[]);
+  const check = async () => {
+    const {data:{user}} = await supabase.auth.getUser();
+    if(!user || user.email !== ADMIN_EMAIL){ toast.error("Only Admin"); navigate("/"); return; }
+    const {data:u} = await supabase.from("profiles").select("*").limit(50);
+    if(u) setUsers(u);
+    const {data:v} = await supabase.from("videos").select("*").limit(50);
+    if(v) setVideos(v);
+  };
 
-11. VIRAL BOOST ENGINE (Like/View/Follower Badhano):
-- Create page /admin/boost
-- For ANY Video: Enter Video ID or select from list -> Add Custom Likes (e.g. +1000 likes), Add Custom Views (e.g. +10K views), Add Custom Comments, Add Shares. System will show real-looking fake users as likers. Add Gradual Boost option - Add likes slowly in 24 hours to look natural, not instantly.
-- For ANY User: Enter SOT ID -> Add Custom Followers (e.g. +5000 followers), Add Following count, Add Total Likes on profile. Option to add with real-looking bot profiles.
-- Show boost history and active boosts.
+  const boostVideo = async () => {
+    if(!vidId) return toast.error("Video ID দাও দাদা");
+    const {data:vd} = await supabase.from("videos").select("likes,views").eq("id", vidId).single();
+    if(!vd) return toast.error("Video পাওয়া যায়নি");
+    await supabase.from("videos").update({ likes: (vd.likes||0)+(parseInt(vLikes)||0), views: (vd.views||0)+(parseInt(vViews)||0) }).eq("id", vidId);
+    await supabase.from("admin_boost_logs").insert({target_id: vidId, type:"video", likes: parseInt(vLikes)||0, views: parseInt(vViews)||0});
+    toast.success(`Done! +${vLikes} Like, +${vViews} View বেড়ে গেছে`);
+  };
 
-12. VERIFICATION & PROFILE FRAME SYSTEM (Blue Tick & Diamond Frame):
-- Create page /admin/verification
-- Verification Types: Blue Tick (Official), Gold Tick (Top Creator), Red Tick (SOT TOK Team). Admin can assign any tick to any user by SOT ID.
-- Profile Frame System: Create Frame Library. Admin can Upload Frames: Example - Diamond Frame, Fire Frame, Crown Frame, Gold Circle, Rainbow Border. Each frame is PNG with transparent center. Assign frame to any user by SOT ID or give to all users above 10K followers. User can choose frame from profile settings if admin gave them. Also option to Change Shape: Circle, Square with rounded, Diamond Shape, Star Shape.
+  const boostUser = async () => {
+    if(!sotId) return toast.error("SOT ID দাও");
+    const {data:pr} = await supabase.from("profiles").select("followers_count").eq("sot_id", sotId).single();
+    if(!pr) return toast.error("User পাওয়া যায়নি");
+    await supabase.from("profiles").update({followers_count: (pr.followers_count||0)+(parseInt(fCount)||0)}).eq("sot_id", sotId);
+    toast.success(`${sotId} তে +${fCount} Follower Add হয়ে গেছে`);
+  };
 
-13. BANNER & LOGO DESIGN SYSTEM:
-- In Banner Management add: Upload Multiple Banners, Set Banner Position (Home Top Slider, Profile Top, Between Feed videos).
-- Logo Frame Changer: Change App Logo, Splash Logo, Admin can push new logo to all users without app update (Remote Config).
-- Giveaway Banner: Admin can create "Win 10000 Coins" banner.
+  const giveTick = async () => {
+    if(!verifyId) return toast.error("SOT ID দাও");
+    await supabase.from("profiles").update({is_verified:true, verification_type:tick}).eq("sot_id", verifyId);
+    await supabase.from("admin_verifications").upsert({user_sot_id: verifyId, tick_type: tick});
+    toast.success(`${verifyId} কে ${tick} tick দিয়ে দিলাম`);
+  };
 
-14. OFFICIAL NOTIFICATION & POSTING SYSTEM:
-- Create Official Account: @sottokofficial - All notifications and posts from this account will have special Official badge.
-- Daily Notification Scheduler: Write notification today and schedule for tomorrow 8PM. Auto send daily from SOT TOK Official. Includes image notification.
-- Official Post: Admin can upload video from admin panel which will be posted as @sottokofficial and will be shown as Featured to all users on top of feed.
+  const uploadFrame = async () => {
+    if(!frameUrl) return toast.error("Frame Image URL দাও");
+    await supabase.from("admin_frames").insert({name: frameName||"Diamond", image_url: frameUrl, type:"diamond"});
+    toast.success("Diamond Frame Upload হয়ে গেছে! এখন Verification থেকে দিতে পারবে");
+  };
 
-15. MUSIC & SOUND LIBRARY MANAGEMENT:
-- Create page /admin/music
-- Add New Song: Upload MP3 (max 60s), Add Song Name, Artist Name, Thumbnail, Category (Trending, Bengali, Hindi, Remix, Devotional), Make Trending toggle.
-- List all songs with Play, Delete, Edit, Make Trending, Views count.
-- Users will see these songs in camera screen -> Add Music.
-- Auto fetch trending songs option via API later.
+  const addBanner = async () => {
+    if(!bannerUrl) return toast.error("Banner URL দাও");
+    await supabase.from("admin_banners").insert({image_url: bannerUrl, position:"home_slider", active:true});
+    toast.success("Banner Add হয়ে গেছে - Home এ দেখাবে");
+  };
 
-16. CAMERA & FILTER CONTROL SYSTEM:
-- Create page /admin/camera
-- Filter Management: Upload Filter LUT or create filter presets. Fields: Filter Name (e.g. Beauty, Vintage, Cinematic, Black & White, Kolkata), Upload Filter Preview Image, Intensity slider. Add/Edit/Delete filters.
-- Effect Management: Add effects like Heart Eyes, Dog Face, Crown, Glasses (AR effects list). Enable/Disable.
-- Camera Settings Control: From admin set Default Camera Mode (15s/30s/60s), Max Recording Time, Enable/Disable Beauty by default, Enable/Disable Flash.
-- Background Management: Upload Video Backgrounds for Green Screen effect.
+  const addSong = async () => {
+    if(!songUrl) return toast.error("Song URL দাও");
+    await supabase.from("admin_songs").insert({title: songTitle||"New Song", audio_url: songUrl, category:"Trending", trending:true});
+    toast.success("গান Add হয়ে গেছে - ইউজারদের ক্যামেরায় চলে আসবে");
+  };
 
-17. GIFT & REWARD & GITHUB SYNC:
-- Gift Management: Upload Gifts (Rose, Diamond, Crown) with coin price. Users can send gifts to creators.
-- Reward Rules: Set Level System - Level 1 to Level 100 based on followers/likes. Each level gets frame + badge.
-- GitHub Sync Note: All admin changes must be saved to Supabase tables: admin_banners, admin_songs, admin_filters, admin_frames, admin_boost_logs, admin_notifications, trending_hashtags. So admin can control without redeploy.
+  if(!auth) return (
+    <div className="min-h-screen bg-black flex items-center justify-center">
+      <Card className="bg-zinc-900 border-zinc-800 w-96"><CardHeader><CardTitle className="text-white">God Mode Login</CardTitle><p className="text-xs text-zinc-500">{ADMIN_EMAIL}</p></CardHeader>
+      <CardContent className="space-y-3"><Input type="password" placeholder="Password: SOT@2026Admin" value={pass} onChange={e=>setPass(e.target.value)} className="bg-zinc-800 text-white"/><Button className="w-full bg-blue-600" onClick={()=>pass===ADMIN_PASS?setAuth(true):toast.error("Wrong Password")}>Unlock</Button></CardContent></Card>
+    </div>
+  );
 
-UI: Use Tailwind, dark theme, Jio Blue #0066FF accent, cards with charts, tables with pagination and search, image upload with preview, confirm dialogs for Delete/Ban.
+  return (
+    <div className="min-h-screen bg-black text-white flex">
+      <aside className="w-64 bg-zinc-900 p-4 space-y-2">
+        <h1 className="font-bold text-blue-500 mb-4">SOT TOK GOD</h1>
+        {["Dashboard","Boost Engine","Verification & Frames","Banners","Music Library","Camera Filters","Users","Videos"].map(t=>(
+          <button key={t} onClick={()=>setTab(t)} className={`w-full text-left p-2 rounded text-sm ${tab===t?'bg-blue-600':'bg-zinc-800'}`}>{t}</button>
+        ))}
+      </aside>
+      <main className="flex-1 p-6 space-y-6">
+        <h2 className="text-2xl font-bold">{tab}</h2>
 
-After build, make sure /admin is super fast and secure.
+        {tab==="Boost Engine" && (
+          <div className="grid md:grid-cols-2 gap-6">
+            <Card className="bg-zinc-900 border-zinc-800"><CardHeader><CardTitle>Video ID দিয়ে Like/View বাড়াও</CardTitle></CardHeader><CardContent className="space-y-3">
+              <Input placeholder="Video ID paste করো" value={vidId} onChange={e=>setVidId(e.target.value)} className="bg-zinc-800"/>
+              <div className="flex gap-2"><Input placeholder="Like e.g. 100" value={vLikes} onChange={e=>setVLikes(e.target.value)} className="bg-zinc-800"/><Input placeholder="View e.g. 100" value={vViews} onChange={e=>setVViews(e.target.value)} className="bg-zinc-800"/></div>
+              <Button onClick={boostVideo} className="w-full bg-blue-600">POST - Boost Now</Button>
+            </CardContent></Card>
+            <Card className="bg-zinc-900 border-zinc-800"><CardHeader><CardTitle>SOT ID দিয়ে Follower বাড়াও</CardTitle></CardHeader><CardContent className="space-y-3">
+              <Input placeholder="SOT ID e.g. SOT123" value={sotId} onChange={e=>setSotId(e.target.value)} className="bg-zinc-800"/>
+              <Input placeholder="Follower e.g. 5000" value={fCount} onChange={e=>setFCount(e.target.value)} className="bg-zinc-800"/>
+              <Button onClick={boostUser} className="w-full bg-green-600">POST - Add Followers</Button>
+            </CardContent></Card>
+          </div>
+        )}
+
+        {tab==="Verification & Frames" && (
+          <div className="grid md:grid-cols-2 gap-6">
+            <Card className="bg-zinc-900 border-zinc-800"><CardHeader><CardTitle>Blue/Gold/Red Tick দাও</CardTitle></CardHeader><CardContent className="space-y-3">
+              <Input placeholder="SOT ID" value={verifyId} onChange={e=>setVerifyId(e.target.value)} className="bg-zinc-800"/>
+              <select value={tick} onChange={e=>setTick(e.target.value)} className="w-full bg-zinc-800 p-2 rounded"><option value="blue">Blue Tick</option><option value="gold">Gold Tick</option><option value="red">Red Tick</option></select>
+              <Button onClick={giveTick} className="w-full bg-blue-600">Give Verification</Button>
+            </CardContent></Card>
+            <Card className="bg-zinc-900 border-zinc-800"><CardHeader><CardTitle>Diamond Frame Upload</CardTitle></CardHeader><CardContent className="space-y-3">
+              <Input placeholder="Frame Name e.g. Diamond Fire" value={frameName} onChange={e=>setFrameName(e.target.value)} className="bg-zinc-800"/>
+              <Input placeholder="Frame PNG URL (transparent)" value={frameUrl} onChange={e=>setFrameUrl(e.target.value)} className="bg-zinc-800"/>
+              <Button onClick={uploadFrame} className="w-full bg-purple-600">Upload Frame</Button>
+              <p className="text-xs text-zinc-500">PNG টা Supabase Storage > admin_assets এ Upload করে URL কপি করে এখানে দাও</p>
+            </CardContent></Card>
+          </div>
+        )}
+
+        {tab==="Banners" && (<Card className="bg-zinc-900 border-zinc-800"><CardHeader><CardTitle>Banner Upload</CardTitle></CardHeader><CardContent className="space-y-3"><Input placeholder="Banner Image URL" value={bannerUrl} onChange={e=>setBannerUrl(e.target.value)} className="bg-zinc-800"/><Button onClick={addBanner} className="bg-blue-600">Add Banner to Home</Button></CardContent></Card>)}
+        {tab==="Music Library" && (<Card className="bg-zinc-900 border-zinc-800"><CardHeader><CardTitle>গান Upload - Admin Song</CardTitle></CardHeader><CardContent className="space-y-3"><Input placeholder="Song Title" value={songTitle} onChange={e=>setSongTitle(e.target.value)} className="bg-zinc-800"/><Input placeholder="MP3 URL" value={songUrl} onChange={e=>setSongUrl(e.target.value)} className="bg-zinc-800"/><Button onClick={addSong} className="bg-blue-600">Upload Song - ক্যামেরায় চলে যাবে</Button></CardContent></Card>)}
+        {tab==="Dashboard" && (<div className="grid grid-cols-3 gap-4"><Card className="bg-zinc-900"><CardContent className="p-4">Users: {users.length}</CardContent></Card><Card className="bg-zinc-900"><CardContent className="p-4">Videos: {videos.length}</CardContent></Card></div>)}
+      </main>
+    </div>
+  );
+}
