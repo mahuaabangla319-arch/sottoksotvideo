@@ -1,19 +1,5 @@
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-
-export function ShowBanner({ position }: { position: string }) {
-  const [banners, setBanners] = useState<any[]>([]);
-  useEffect(() => {
-    supabase.from("banners").select("*").eq("position", position).eq("is_active", true).then(({data}) => { if(data) setBanners(data) });
-  }, [position]);
-  if (banners.length === 0) return null;
-  return (
-    <div className="my-3 px-2">
-      {banners.map(b => (
-        <a key={b.id} href={b.link_url} target="_blank">
-          <img src={b.image_url} alt={b.title} className="w-full rounded-xl shadow-md border" />
-        </a>
-      ))}
-    </div>
-  );
+// Banner storage is not provisioned in the current schema. Do not query
+// a nonexistent table or display invented advertisements.
+export function ShowBanner(_props: { position: string }) {
+  return null;
 }
