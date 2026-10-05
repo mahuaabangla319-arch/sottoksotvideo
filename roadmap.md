@@ -8,3 +8,5 @@
 - [ ] Add super-like feedback and pink-purple styling; confirm feed recommendation approach.
 - [ ] Resolve song storage exposure without unintentionally restricting the song library; access decision pending.
 - [ ] Verify recording, photo reels, feed reactions and authenticated access end-to-end.
+
+- [ ] Match the reference feed creator block for all users, including their selected avatar, follow state and eligible-only verification; verify live readback.
