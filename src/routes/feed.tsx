@@ -40,7 +40,7 @@ type FeedItem = {
   id: string;
   userId?: string | undefined;
   sotId?: string | undefined;
-  avatar?: string | null;
+  avatar?: string | null | undefined;
   verified?: boolean;
   username: string;
   caption: string;
@@ -248,7 +248,7 @@ function VideoCard({
         </span>
       )}
 
-      <div className="absolute bottom-24 right-3 flex w-12 flex-col items-center gap-5 text-on-media">
+      <div className="absolute bottom-24 right-3 flex w-12 flex-col items-center gap-5 text-on-media [&_svg]:size-8">
         <Button variant="ghost" onClick={onToggleLike} className="h-auto w-12 flex-col gap-1 p-0 hover:bg-on-media/10" aria-label="লাইক">
           <Heart className={`size-8 ${liked ? "fill-brand text-brand" : "text-on-media"}`} />
           <span className="text-xs">{formatCompact(item.likes)}</span>
