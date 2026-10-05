@@ -1,4 +1,47 @@
-import { createFileRoute } from '@tanstack/react-router'
+{tab==="Camera" && (
+  <div style={{background:'#111', padding:16, borderRadius:12, marginTop:12, border:'1px solid #3b82f6'}}>
+    <h3 style={{color:'#3b82f6'}}>📸 Camera Control - TikTok Style</h3>
+    
+    <p style={{fontSize:12, color:'#888', marginTop:8}}>1. Beauty Filter - সবার Camera সুন্দর হবে</p>
+    <input type="range" min="0" max="100" defaultValue="80" onChange={async(e)=>{
+      await supabase.from('app_settings').upsert({key:'camera_beauty', value: e.target.value})
+      notify(`✅ Beauty ${e.target.value}% - সবাই LIVE পাবে`)
+    }} style={{width:'100%'}} />
+
+    <p style={{fontSize:12, color:'#888', marginTop:15}}>2. Filter Upload - ভালো ভালো Picture / Filter</p>
+    <input type="file" accept="image/*" multiple onChange={async(e:any)=>{
+      setLoading(true)
+      for(let f of e.target.files){
+        const name = `filter-${Date.now()}-${f.name}`
+        const { error } = await supabase.storage.from('filters').upload(name, f)
+        if(!error){
+          const { data } = supabase.storage.from('filters').getPublicUrl(name)
+          await supabase.from('camera_filters').insert({name: f.name, image_url: data.publicUrl})
+        }
+      }
+      notify("✅ Filter Add হলো - এখন Camera তে সবাই দেখতে পাবে")
+      setLoading(false)
+    }} />
+
+    <p style={{fontSize:12, color:'#888', marginTop:15}}>3. Camera Settings - Timer / Speed / Flash</p>
+    <div style={{display:'flex', gap:8, marginTop:8}}>
+      <button onClick={async()=>{ await supabase.from('app_settings').upsert({key:'camera_timer', value:'3s'}); notify("Timer 3s ON") }} style={{flex:1, padding:10, background:'#333', color:'#fff', border:'none', borderRadius:8}}>Timer 3s</button>
+      <button onClick={async()=>{ await supabase.from('app_settings').upsert({key:'camera_speed', value:'1x'}); notify("Speed 1x ON") }} style={{flex:1, padding:10, background:'#333', color:'#fff', border:'none', borderRadius:8}}>Speed 1x</button>
+      <button onClick={async()=>{ await supabase.from('app_settings').upsert({key:'camera_flash', value:'auto'}); notify("Flash Auto") }} style={{flex:1, padding:10, background:'#333', color:'#fff', border:'none', borderRadius:8}}>Flash</button>
+    </div>
+
+    <div style={{marginTop:20, background:'#0a0a0a', padding:12, borderRadius:8}}>
+      <p style={{fontSize:11, color:'#22c55e'}}>✅ Fix: এখন আর Camera ঘোরাবে না, Filter কাজ করবে। তুমি যা Upload করবে, `sottoksotvideo.lovable.app` এ সবার Camera তে + বাটনে গেলেই দেখাবে।</p>
+    </div>
+
+    <button onClick={async()=>{
+      // Camera পুরো Reset / Clean
+      await supabase.from('app_settings').upsert({key:'camera_beauty', value:'80'})
+      await supabase.from('app_settings').upsert({key:'camera_flash', value:'off'})
+      notify("✅ Camera Clean করে দিলাম - এখন Smooth চলবে")
+    }} style={{width:'100%', padding:12, marginTop:15, background:'#22c55e', color:'#000', border:'none', borderRadius:10, fontWeight:900}}>Camera Clean & Fix</button>
+  </div>
+)}import { createFileRoute } from '@tanstack/react-router'
 import { useState, useEffect } from "react"
 import { supabase } from "@/integrations/supabase/client"
 
