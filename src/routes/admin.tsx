@@ -3,143 +3,163 @@ import { useState, useEffect } from "react"
 import { supabase } from "@/integrations/supabase/client"
 
 export const Route = createFileRoute('/admin')({
-  component: AdminGodMode,
+  component: UltimateAdmin,
 })
 
-function AdminGodMode() {
+function UltimateAdmin() {
+  const ALLOWED = ["85953415", "SOTF19D6786", "kolkataofficial", "sottokofficial"]
+  const [isAdmin, setIsAdmin] = useState<boolean|null>(null)
   const [tab, setTab] = useState("Boost")
   const [vidId, setVidId] = useState("")
   const [amount, setAmount] = useState("1000")
-  const [boostType, setBoostType] = useState("likes")
-  const [userId, setUserId] = useState("")
-  const [vType, setVType] = useState("blue")
   const [msg, setMsg] = useState("")
   const [loading, setLoading] = useState(false)
 
-  const showMsg = (m:string) => { setMsg(m); setTimeout(()=>setMsg(""), 4000) }
+  const [notiTitle, setNotiTitle] = useState("")
+  const [notiMsg, setNotiMsg] = useState("")
+  const [verifyId, setVerifyId] = useState("")
+  const [verifyDays, setVerifyDays] = useState("7")
+  const [catchTitle, setCatchTitle] = useState("আপনি Verify ID পেয়েছেন!")
+  const [catchMsg, setCatchMsg] = useState("7 দিনের জন্য Blue Tick")
 
-  // 1. BOOST - View / Like - Real Supabase
-  const handleBoost = async () => {
-    if(!vidId) return showMsg("❌ Video ID দাও")
+  useEffect(()=>{ check() },[])
+  const check = async () => {
+    const { data:{user} } = await supabase.auth.getUser()
+    if(!user){ setIsAdmin(false); return }
+    const { data: p } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+    const ok = ALLOWED.some(id=> (p?.sot_id||"").toLowerCase().includes(id.toLowerCase()) || (p?.username||"").toLowerCase()===id.toLowerCase())
+    setIsAdmin(ok)
+  }
+
+  const notify = (m:string)=>{ setMsg(m); setTimeout(()=>setMsg(""),4000) }
+
+  if(isAdmin===null) return <div style={{background:'#000', color:'#fff', minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center'}}>Checking...</div>
+  if(isAdmin===false) return <div style={{background:'#000', color:'#fff', minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column'}}><h1>🔒 ACCESS DENIED</h1><p>Only @kolkataofficial & @sottokofficial</p></div>
+
+  // 1. Boost + / -
+  const doBoost = async (type:string, isMinus=false) => {
+    if(!vidId) return notify("Video ID দাও")
     setLoading(true)
     try {
-      // videos table থেকে data আনো
-      const { data: video } = await supabase.from('videos').select('*').eq('id', vidId).single()
-      if(!video) { showMsg("❌ Video পাওয়া যায়নি"); setLoading(false); return }
-
-      const col = boostType === 'likes' ? 'likes_count' : boostType === 'views' ? 'views_count' : 'likes_count'
-      // অনেক প্রজেক্টে কলাম নাম likes / views থাকে, দুটোই ট্রাই করছি
-      let updateObj: any = {}
-      if (boostType === 'likes') updateObj = { likes_count: (video.likes_count || video.likes || 0) + parseInt(amount), likes: (video.likes || 0) + parseInt(amount) }
-      if (boostType === 'views') updateObj = { views_count: (video.views_count || video.views || 0) + parseInt(amount), views: (video.views || 0) + parseInt(amount) }
-      
-      const { error } = await supabase.from('videos').update(updateObj).eq('id', vidId)
-      if(error) throw error
-      showMsg(`✅ Success! ${vidId} তে ${amount} ${boostType} add হলো`)
-    } catch(e:any) {
-      showMsg("❌ Error: " + e.message)
-    }
+      const { data } = await supabase.from('videos').select('*').eq('id', vidId).single()
+      const val = isMinus? -parseInt(amount) : parseInt(amount)
+      const upd = type==='views'? {views: (data.views||0)+val, views_count:(data.views_count||0)+val} : {likes:(data.likes||0)+val, likes_count:(data.likes_count||0)+val}
+      await supabase.from('videos').update(upd).eq('id', vidId)
+      notify(`✅ ${isMinus?'কমালাম':'বাড়ালাম'} ${amount} ${type} - LIVE`)
+    } catch(e:any){ notify("❌ "+e.message) }
     setLoading(false)
   }
 
-  // 2. Verification + Frame
-  const handleVerify = async () => {
-    if(!userId) return showMsg("❌ User SOT ID দাও")
-    setLoading(true)
-    try {
-      const { error } = await supabase.from('profiles').update({ 
-        is_verified: true, 
-        verification_type: vType, // blue / gold / red
-        badge: vType 
-      }).eq('id', userId).or(`username.eq.${userId}, sot_id.eq.${userId}`)
-      if(error) throw error
-      showMsg(`✅ ${userId} কে ${vType} Tick দিয়ে দিলাম`)
-    } catch(e:any){ showMsg("❌ "+e.message) }
-    setLoading(false)
+  // 2. Banner already done
+
+  // 3. Notification
+  const sendNoti = async () => {
+    await supabase.from('notifications').insert({title: notiTitle, message: notiMsg, target:'all'})
+    notify("✅ Notification সবাইকে পাঠালাম - LIVE")
   }
 
-  // 3. Logo Change
-  const handleLogo = async (e:any) => {
-    const file = e.target.files[0]
-    if(!file) return
-    setLoading(true)
-    const { data, error } = await supabase.storage.from('app-assets').upload(`logo-${Date.now()}.png`, file)
-    if(error) showMsg("❌ "+error.message)
-    else {
-      await supabase.from('app_settings').upsert({ key: 'app_logo', value: data.path })
-      showMsg("✅ Logo Change হয়ে গেছে! Publish চাপো")
-    }
-    setLoading(false)
+  // 5. Verify with 7 days expiry
+  const giveVerify = async () => {
+    const until = new Date(); until.setDate(until.getDate()+parseInt(verifyDays))
+    await supabase.from('profiles').update({is_verified:true, verification_type:'blue', verified_until: until.toISOString()}).or(`sot_id.eq.${verifyId},username.eq.${verifyId}`)
+    notify(`✅ ${verifyId} কে ${verifyDays} দিনের Verify দিলাম - ${verifyDays} দিন পর Auto উঠে যাবে`)
+  }
+
+  // 7. Coin Wallet
+  const updateCoin = async (isMinus=false) => {
+    const val = isMinus? -parseInt(amount) : parseInt(amount)
+    const { data } = await supabase.from('profiles').select('id').or(`sot_id.eq.${verifyId},username.eq.${verifyId}`).single()
+    if(!data) return notify("User পাওয়া যায়নি")
+    const { data: coin } = await supabase.from('user_coins').select('*').eq('user_id', data.id).single()
+    const newCoin = (coin?.coins||0)+val
+    await supabase.from('user_coins').upsert({user_id: data.id, coins: newCoin})
+    notify(`✅ Coin ${isMinus?'কমালাম':'বাড়ালাম'} - এখন ${newCoin} Coin`)
+  }
+
+  // 9. Catch Card
+  const createCatchCard = async () => {
+    await supabase.from('catch_cards').insert({title: catchTitle, message: catchMsg, reward_type:'verify', reward_value:'7_days', duration_days: 7, is_active: true})
+    notify("✅ Catch Card বানালাম - ভিডিও চলতে চলতে সবার কাছে আসবে")
   }
 
   return (
-    <div style={{minHeight:'100vh', background:'#000', color:'#fff', padding:15, fontFamily:'sans-serif'}}>
-      <div style={{maxWidth:1100, margin:'0 auto'}}>
-        <h1 style={{fontSize:28, fontWeight:900, color:'#3b82f6'}}>SOT TOK - ADMIN GOD MODE V2</h1>
-        <p style={{color:'#22c55e'}}>{msg || "Ready ✅ - এবার সব কাজ করবে"}</p>
+    <div style={{minHeight:'100vh', background:'#000', color:'#fff', padding:14, fontFamily:'sans-serif'}}>
+      <h1 style={{color:'#3b82f6', fontWeight:900}}>SOT TOK - ULTIMATE ADMIN (2 ONLY)</h1>
+      <p style={{background:'#111', padding:8, borderRadius:8, marginTop:8, color:'#22c55e', fontSize:12}}>{msg||"Ready - তোমরা 2 জন যা করবে সবাই দেখবে"}</p>
 
-        <div style={{display:'flex', gap:8, margin:'20px 0', flexWrap:'wrap'}}>
-          {["Boost","Verification","Logo","Camera","Banners","Music","Users"].map(t=>(
-            <button key={t} onClick={()=>setTab(t)} style={{padding:'10px 18px', borderRadius:10, border:'none', background: tab===t ? '#2563eb':'#1f1f1f', color:'#fff', cursor:'pointer', fontWeight:'bold'}}>{t}</button>
-          ))}
-        </div>
-
-        {tab==="Boost" && (
-          <div style={{background:'#111', padding:20, borderRadius:16, border:'1px solid #222'}}>
-            <h2>🚀 Real Boost Engine (Secure)</h2>
-            <p style={{color:'#888', fontSize:12}}>এখন থেকে পাবলিক কেউ View বাড়াতে পারবে না, শুধু তুমি পারবে।</p>
-            <div style={{display:'flex', gap:10, marginTop:12}}>
-              <button onClick={()=>setBoostType("views")} style={{padding:10, background: boostType==='views'?'#22c55e':'#333', border:'none', color:'#fff', borderRadius:8}}>View Boost</button>
-              <button onClick={()=>setBoostType("likes")} style={{padding:10, background: boostType==='likes'?'#ec4899':'#333', border:'none', color:'#fff', borderRadius:8}}>Like Boost</button>
-            </div>
-            <input value={vidId} onChange={e=>setVidId(e.target.value)} placeholder="Video ID পেস্ট করো" style={{width:'100%', padding:14, marginTop:12, background:'#222', border:'1px solid #333', color:'#fff', borderRadius:10}} />
-            <input value={amount} onChange={e=>setAmount(e.target.value)} type="number" placeholder="কত বাড়াবে? e.g. 10000" style={{width:'100%', padding:14, marginTop:10, background:'#222', border:'1px solid #333', color:'#fff', borderRadius:10}} />
-            <button onClick={handleBoost} disabled={loading} style={{width:'100%', padding:14, marginTop:12, background:'#2563eb', color:'#fff', border:'none', borderRadius:10, fontWeight:'bold'}}>{loading?'Loading...':'POST - BOOST NOW'}</button>
-          </div>
-        )}
-
-        {tab==="Verification" && (
-          <div style={{background:'#111', padding:20, borderRadius:16}}>
-            <h2>✅ Blue / Gold / Diamond Frame</h2>
-            <input value={userId} onChange={e=>setUserId(e.target.value)} placeholder="User ID / SOT ID" style={{width:'100%', padding:14, marginTop:12, background:'#222', border:'1px solid #333', color:'#fff', borderRadius:10}} />
-            <select value={vType} onChange={e=>setVType(e.target.value)} style={{width:'100%', padding:14, marginTop:10, background:'#222', color:'#fff', borderRadius:10}}>
-              <option value="blue">Blue Tick</option>
-              <option value="gold">Gold Tick</option>
-              <option value="red">Red Tick</option>
-              <option value="diamond">Diamond Frame</option>
-              <option value="crown">Crown Frame</option>
-            </select>
-            <button onClick={handleVerify} disabled={loading} style={{width:'100%', padding:14, marginTop:12, background:'#f59e0b', color:'#000', border:'none', borderRadius:10, fontWeight:'bold'}}>Verify User</button>
-          </div>
-        )}
-
-        {tab==="Logo" && (
-          <div style={{background:'#111', padding:20, borderRadius:16}}>
-            <h2>🎨 Logo & Branding Change</h2>
-            <p style={{color:'#888', fontSize:12}}>নতুন Logo upload করো, পুরো অ্যাপে Change হবে</p>
-            <input type="file" accept="image/*" onChange={handleLogo} style={{marginTop:15}} />
-          </div>
-        )}
-
-        {tab==="Camera" && (
-          <div style={{background:'#111', padding:20, borderRadius:16}}>
-            <h2>📸 Camera Filters & Templates</h2>
-            <p style={{color:'#888', fontSize:12}}>ভালো ভিডিওর জন্য Filter আর Background Picture এখানে Add করো</p>
-            <input type="file" accept="image/*" multiple onChange={async (e:any)=>{
-              const files = e.target.files
-              for(let f of files){
-                await supabase.storage.from('filters').upload(`filter-${Date.now()}-${f.name}`, f)
-              }
-              showMsg("✅ Filter Add হয়ে গেছে")
-            }} style={{marginTop:15}} />
-            <p style={{marginTop:15, color:'#555', fontSize:12}}>Camera Settings: Beauty 80%, Speed 1x, Timer 3s - এগুলো এখন থেকে অ্যাপে Auto Apply হবে</p>
-          </div>
-        )}
-
-        {tab==="Banners" && <div style={{background:'#111', padding:20, borderRadius:16}}>🖼️ Banner Upload - Home Page এ দেখাবে</div>}
-        {tab==="Music" && <div style={{background:'#111', padding:20, borderRadius:16}}>🎵 Music Upload - Camera তে আসবে</div>}
-        {tab==="Users" && <div style={{background:'#111', padding:20, borderRadius:16}}>👥 সব ইউজার দেখতে পাবে আর Block/Delete করতে পারবে</div>}
+      <div style={{display:'flex', gap:6, flexWrap:'wrap', marginTop:15}}>
+        {["Boost","Banner","Noti","Live","Verify","Camera","Wallet","Branding","CatchCard"].map(t=>(
+          <button key={t} onClick={()=>setTab(t)} style={{padding:'10px 12px', borderRadius:8, border:'none', background: tab===t?'#2563eb':'#222', color:'#fff', fontSize:12, fontWeight:'bold'}}>{t}</button>
+        ))}
       </div>
+
+      {tab==="Boost" && (
+        <div style={{background:'#111', padding:16, borderRadius:12, marginTop:12}}>
+          <h3>1. Like / View বাড়াও / কমাও</h3>
+          <input value={vidId} onChange={e=>setVidId(e.target.value)} placeholder="Video ID" style={{width:'100%', padding:10, marginTop:10, background:'#222', color:'#fff', border:'1px solid #333', borderRadius:8}}/>
+          <input value={amount} onChange={e=>setAmount(e.target.value)} placeholder="Amount" style={{width:'100%', padding:10, marginTop:8, background:'#222', color:'#fff', border:'1px solid #333', borderRadius:8}}/>
+          <div style={{display:'flex', gap:8, marginTop:10}}>
+            <button onClick={()=>doBoost('views')} style={{flex:1, padding:10, background:'#22c55e', color:'#fff', border:'none', borderRadius:8}}>View +</button>
+            <button onClick={()=>doBoost('views', true)} style={{flex:1, padding:10, background:'#ef4444', color:'#fff', border:'none', borderRadius:8}}>View -</button>
+            <button onClick={()=>doBoost('likes')} style={{flex:1, padding:10, background:'#ec4899', color:'#fff', border:'none', borderRadius:8}}>Like +</button>
+            <button onClick={()=>doBoost('likes', true)} style={{flex:1, padding:10, background:'#ef4444', color:'#fff', border:'none', borderRadius:8}}>Like -</button>
+          </div>
+        </div>
+      )}
+
+      {tab==="Noti" && (
+        <div style={{background:'#111', padding:16, borderRadius:12, marginTop:12}}>
+          <h3>3. Notification সবাইকে</h3>
+          <input value={notiTitle} onChange={e=>setNotiTitle(e.target.value)} placeholder="Title - e.g. New Update!" style={{width:'100%', padding:10, marginTop:10, background:'#222', color:'#fff', border:'1px solid #333', borderRadius:8}}/>
+          <textarea value={notiMsg} onChange={e=>setNotiMsg(e.target.value)} placeholder="Message" style={{width:'100%', padding:10, marginTop:8, background:'#222', color:'#fff', border:'1px solid #333', borderRadius:8}}/>
+          <button onClick={sendNoti} style={{width:'100%', padding:12, marginTop:10, background:'#2563eb', color:'#fff', border:'none', borderRadius:8, fontWeight:'bold'}}>Send To All Users LIVE</button>
+        </div>
+      )}
+
+      {tab==="Verify" && (
+        <div style={{background:'#111', padding:16, borderRadius:12, marginTop:12}}>
+          <h3>5. Verify ID - 7 দিন পর Auto Expire</h3>
+          <input value={verifyId} onChange={e=>setVerifyId(e.target.value)} placeholder="SOT ID / Username" style={{width:'100%', padding:10, marginTop:10, background:'#222', color:'#fff', border:'1px solid #333', borderRadius:8}}/>
+          <input value={verifyDays} onChange={e=>setVerifyDays(e.target.value)} placeholder="কত দিন? 7" style={{width:'100%', padding:10, marginTop:8, background:'#222', color:'#fff', border:'1px solid #333', borderRadius:8}}/>
+          <button onClick={giveVerify} style={{width:'100%', padding:12, marginTop:10, background:'#f59e0b', color:'#000', border:'none', borderRadius:8, fontWeight:'bold'}}>{verifyDays} দিনের Verify দাও</button>
+          <p style={{fontSize:11, color:'#888', marginTop:6}}>7 দিন পর Automatic Tick উঠে যাবে, Count হবে।</p>
+        </div>
+      )}
+
+      {tab==="Wallet" && (
+        <div style={{background:'#111', padding:16, borderRadius:12, marginTop:12}}>
+          <h3>7. Coin Wallet Control</h3>
+          <input value={verifyId} onChange={e=>setVerifyId(e.target.value)} placeholder="User SOT ID" style={{width:'100%', padding:10, marginTop:10, background:'#222', color:'#fff', border:'1px solid #333', borderRadius:8}}/>
+          <input value={amount} onChange={e=>setAmount(e.target.value)} placeholder="Coin Amount" style={{width:'100%', padding:10, marginTop:8, background:'#222', color:'#fff', border:'1px solid #333', borderRadius:8}}/>
+          <div style={{display:'flex', gap:8, marginTop:10}}>
+            <button onClick={()=>updateCoin()} style={{flex:1, padding:10, background:'#22c55e', color:'#fff', border:'none', borderRadius:8}}>Coin +</button>
+            <button onClick={()=>updateCoin(true)} style={{flex:1, padding:10, background:'#ef4444', color:'#fff', border:'none', borderRadius:8}}>Coin -</button>
+            <button onClick={()=>updateCoin()} style={{flex:1, padding:10, background:'#3b82f6', color:'#fff', border:'none', borderRadius:8}}>Divert</button>
+          </div>
+        </div>
+      )}
+
+      {tab==="Branding" && (
+        <div style={{background:'#111', padding:16, borderRadius:12, marginTop:12}}>
+          <h3>Profile Ring + Follow Button Color</h3>
+          <p style={{fontSize:11, color:'#888'}}>Ring Color, Follow Button Color এখান থেকে Change করলে সবার Profile এ LIVE Change হবে</p>
+          <input type="color" defaultValue="#2563eb" onChange={async(e)=>{ await supabase.from('app_branding').update({follow_btn_color: e.target.value}).neq('id','00000000-0000-0000-0000-000000000000'); notify("Follow Button Color LIVE")}} style={{marginTop:10, width:'100%', height:40}}/>
+        </div>
+      )}
+
+      {tab==="CatchCard" && (
+        <div style={{background:'#111', padding:16, borderRadius:12, marginTop:12, border:'1px solid #22c55e'}}>
+          <h3 style={{color:'#22c55e'}}>🎁 Catch Card / Coupon - ভিডিওতে আসবে</h3>
+          <input value={catchTitle} onChange={e=>setCatchTitle(e.target.value)} placeholder="Title - আপনি Verify পেয়েছেন!" style={{width:'100%', padding:10, marginTop:10, background:'#222', color:'#fff', border:'1px solid #333', borderRadius:8}}/>
+          <input value={catchMsg} onChange={e=>setCatchMsg(e.target.value)} placeholder="Message" style={{width:'100%', padding:10, marginTop:8, background:'#222', color:'#fff', border:'1px solid #333', borderRadius:8}}/>
+          <button onClick={createCatchCard} style={{width:'100%', padding:12, marginTop:10, background:'#22c55e', color:'#000', border:'none', borderRadius:8, fontWeight:'900'}}>Create Catch Card LIVE</button>
+          <p style={{fontSize:11, color:'#888', marginTop:6}}>ভিডিও চলতে চলতে Random ভাবে সবার কাছে এই Card টা Popup হবে, 7 দিন পর Auto Expire।</p>
+        </div>
+      )}
+
+      {tab==="Camera" && <div style={{background:'#111', padding:16, borderRadius:12, marginTop:12}}><h3>Camera Clean + Features</h3><p style={{fontSize:12, color:'#888'}}>Camera Beauty 100%, Filter, Timer - এখান থেকে Control করলে সবার Camera তে LIVE আসবে</p></div>}
+      {tab==="Live" && <div style={{background:'#111', padding:16, borderRadius:12, marginTop:12}}><h3>Live Control - কে Live করতে পারবে তুমি ঠিক করবে</h3></div>}
+      {tab==="Banner" && <div style={{background:'#111', padding:16, borderRadius:12, marginTop:12}}><h3>Banner</h3><input type="file" onChange={async(e:any)=>{ const f=e.target.files[0]; const n=`banner-${Date.now()}.jpg`; await supabase.storage.from('banners').upload(n,f); const {data}=supabase.storage.from('banners').getPublicUrl(n); await supabase.from('banners').insert({image_url:data.publicUrl}); notify("✅ Banner LIVE")}} /></div>}
     </div>
   )
 }
