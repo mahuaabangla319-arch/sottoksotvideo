@@ -3,13 +3,14 @@ import { fetchFollowingSet, setFollow } from "@/lib/social";
 import { downloadBrandedVideo } from "@/lib/video-studio";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { Heart, MessageCircle, Share2, Bookmark, Plus, Music2, Check, Download, Users, Sparkles } from "lucide-react";
+import { Heart, MessageCircle, Share2, Bookmark, Plus, Music2, Check, Download, Users, Sparkles, User, BadgeCheck } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { BottomNav } from "@/components/BottomNav";
 import { CommentsSheet } from "@/components/CommentsSheet";
 import { useAuth } from "@/lib/auth";
 import { Button } from '@/components/ui/button';
+import { avatarSrc } from '@/lib/profile';
 import { creatorTopics } from '@/lib/creator-topics';
 import {
   countView,
@@ -39,6 +40,8 @@ type FeedItem = {
   id: string;
   userId?: string | undefined;
   sotId?: string | undefined;
+  avatar?: string | null | undefined;
+  verified?: boolean;
   username: string;
   caption: string;
   url: string;
@@ -103,7 +106,8 @@ function useFeed(topic: string, following: boolean, userId?: string) {
     initialPageParam: 0,
     staleTime: 60_000,
     gcTime: 5 * 60_000,
-    refetchOnWindowFocus: false,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
     getNextPageParam: (last: FeedItem[], pages) => (last.length < PAGE_SIZE ? undefined : pages.length),
     queryFn: async ({ pageParam }): Promise<FeedItem[]> => {
       const from = (pageParam as number) * PAGE_SIZE;
@@ -130,10 +134,13 @@ function useFeed(topic: string, following: boolean, userId?: string) {
       if (!rows.length) return [];
 
       const ids = [...new Set(rows.map((v) => v.user_id))];
-      const [{ data: profiles }, urls] = await Promise.all([
-        supabase.from("profiles").select("id, username, sottok_id").in("id", ids),
+      const [{ data: profiles, error: profileError }, urls] = await Promise.all([
+        supabase.from("profiles").select("id, username, sottok_id, avatar_url, verified, followers_count").in("id", ids),
         signBatch(rows.map((v) => v.video_url)),
       ]);
+      if (profileError) throw profileError;
+      const avatarById = new Map(await Promise.all((profiles ?? []).map(async (p) => [p.id, await avatarSrc(p.avatar_url)] as const)));
+      const verifiedById = new Map((profiles ?? []).map((p) => [p.id, p.verified || p.followers_count >= 10_000]));
       const nameById = new Map((profiles ?? []).map((p) => [p.id, p.username]));
       const sotById = new Map((profiles ?? []).map((p) => [p.id, p.sottok_id]));
 
@@ -142,6 +149,8 @@ function useFeed(topic: string, following: boolean, userId?: string) {
           id: v.id,
           userId: v.user_id,
           sotId: sotById.get(v.user_id),
+          avatar: avatarById.get(v.user_id),
+          verified: verifiedById.get(v.user_id) ?? false,
           username: "@" + (nameById.get(v.user_id) || "sottok"),
           caption: v.caption,
           url: urls.get(v.video_url) ?? "",
@@ -216,7 +225,7 @@ function VideoCard({
   }
 
   return (
-    <section className="snap-item relative h-screen w-full">
+    <section className="snap-item relative h-dvh w-full">
       <video
         ref={ref}
         src={active ? item.url : undefined}
@@ -227,82 +236,69 @@ function VideoCard({
         preload="none"
         onClick={onToggleMute}
         onDoubleClick={superLike}
-        className="h-full w-full bg-black object-cover"
+        className="h-full w-full bg-media object-cover"
       />
 
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-black/40" />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-media/75 via-transparent to-media/40" />
       {burst>0&&<Heart key={burst} className="animate-super-heart pointer-events-none absolute left-1/2 top-1/2 h-28 w-28 fill-pink text-pink" aria-hidden="true"/>}
 
       {muted && (
-        <span className="absolute right-3 top-14 rounded-full bg-black/50 px-3 py-1 text-[11px] text-white">
+        <span className="absolute right-3 top-24 rounded-full bg-media/50 px-3 py-1 text-[11px] text-on-media">
           Tap for sound
         </span>
       )}
 
-      <div className="absolute bottom-28 right-3 flex flex-col items-center gap-5">
-        <div className="relative mb-1">
+      <div className="absolute bottom-24 right-3 flex w-12 flex-col items-center gap-5 text-on-media [&_svg]:size-8">
+        <Button variant="ghost" onClick={onToggleLike} className="h-auto w-12 flex-col gap-1 p-0 hover:bg-on-media/10" aria-label="লাইক">
+          <Heart className={`size-8 ${liked ? "fill-brand text-brand" : "text-on-media"}`} />
+          <span className="text-xs">{formatCompact(item.likes)}</span>
+        </Button>
+        <Button variant="ghost" onClick={onOpenComments} className="h-auto w-12 flex-col gap-1 p-0 hover:bg-on-media/10" aria-label="কমেন্ট">
+          <MessageCircle className="size-8" /><span className="text-xs">{formatCompact(commentCount)}</span>
+        </Button>
+        <Button variant="ghost" onClick={share} className="h-auto w-12 flex-col gap-1 p-0 hover:bg-on-media/10" aria-label="শেয়ার">
+          <Share2 className="size-8" /><span className="text-xs">Share</span>
+        </Button>
+        <Button variant="ghost" className="h-auto w-12 flex-col gap-1 p-0 hover:bg-on-media/10" aria-label="সেভ">
+          <Bookmark className="size-8" /><span className="text-xs">Save</span>
+        </Button>
+      </div>
+
+      <div className="absolute bottom-20 left-3 right-20 text-on-media">
+        <div className="mb-3 flex items-center gap-3">
           {item.sotId ? (
-            <Link to="/id/$sotId" params={{ sotId: item.sotId }} aria-label="প্রোফাইল দেখুন" className="block h-12 w-12 rounded-full border-2 border-white bg-flame" />
-          ) : (
-            <div className="h-12 w-12 rounded-full border-2 border-white bg-flame" />
-          )}
-          {!isMe && (
-            <button
-              onClick={onFollow}
-              aria-label={followed ? "আনফলো" : "ফলো"}
-              className={`absolute -bottom-2 left-1/2 flex h-5 w-5 -translate-x-1/2 items-center justify-center rounded-full ${followed ? "bg-white" : "bg-red-600"}`}
-            >
-              {followed ? <Check className="h-3.5 w-3.5 text-red-600" strokeWidth={3} /> : <Plus className="h-3.5 w-3.5 text-white" strokeWidth={3} />}
-            </button>
-          )}
+            <Link to="/id/$sotId" params={{ sotId: item.sotId }} aria-label="প্রোফাইল দেখুন" className="block size-20 shrink-0 overflow-hidden rounded-full border-[3px] border-on-media bg-media">
+              {item.avatar ? <img src={item.avatar} alt={`${item.username} প্রোফাইল ছবি`} className="h-full w-full object-cover" loading="lazy" /> : <User className="h-full w-full p-4 text-on-media/60" />}
+            </Link>
+          ) : <div className="flex size-20 shrink-0 items-center justify-center rounded-full border-[3px] border-on-media bg-media"><User className="size-9 text-on-media/60" /></div>}
+          <div className="min-w-0 space-y-2">
+            {!isMe && item.userId && <Button onClick={onFollow} aria-label={followed ? "আনফলো" : "ফলো"} aria-pressed={followed} className="h-10 bg-follow px-3 text-base font-bold text-on-media hover:bg-follow/90">
+              {followed ? <Check className="size-5" /> : <Plus className="size-5" />} {followed ? "Following" : "Follow"}
+            </Button>}
+            {item.sotId && <p className="break-words text-[11px] font-medium">SOT TOK • ID: {item.sotId}</p>}
+          </div>
         </div>
-        <button onClick={onToggleLike} className="flex flex-col items-center gap-1" aria-label="লাইক">
-          <Heart className={`h-8 w-8 ${liked ? "fill-red-500 text-red-500" : "text-white"}`} />
-          <span className="text-[11px] text-white">{formatCompact(item.likes)}</span>
-        </button>
-        <Button variant="ghost" size="icon" onClick={superLike} aria-label="সুপার লাইক" title="সুপার লাইক" className="text-pink hover:bg-on-media/10"><Sparkles/></Button>
-        <button onClick={onOpenComments} className="flex flex-col items-center gap-1" aria-label="কমেন্ট">
-          <MessageCircle className="h-8 w-8 text-white" />
-          <span className="text-[11px] text-white">{formatCompact(commentCount)}</span>
-        </button>
-        <button onClick={share} className="flex flex-col items-center gap-1" aria-label="শেয়ার">
-          <Share2 className="h-8 w-8 text-white" />
-          <span className="text-[11px] text-white">Share</span>
-        </button>
-        <button
-          disabled={downloading || !item.sotId}
-          onClick={() => {
+        <div className="flex items-center gap-1.5">
+          {item.sotId ? <Link to="/id/$sotId" params={{ sotId: item.sotId }} className="min-w-0 break-all text-xl font-bold">{item.username}</Link> : <p className="min-w-0 break-all text-xl font-bold">{item.username}</p>}
+          {item.verified && <BadgeCheck aria-label="ভেরিফাইড" className="size-5 shrink-0 fill-verified text-on-media" />}
+        </div>
+        <p className="mt-1 text-sm text-on-media/70">{formatCompact(item.views)} views</p>
+        <p className="mt-2 line-clamp-3 break-words text-sm leading-relaxed">{item.caption}</p>
+        <p className="mt-2 truncate text-xs text-on-media/80">{item.sound}</p>
+        <Button variant="ghost" onClick={() => item.userId && navigate({ to: "/create", search: { sound: item.id } })} disabled={!item.userId} className="mt-2 h-8 rounded-full bg-on-media/15 px-3 text-xs text-on-media hover:bg-on-media/25">
+          <Music2 className="size-3.5" /> Use this sound
+        </Button>
+        <div className="mt-1 flex gap-1">
+          <Button variant="ghost" size="icon" onClick={superLike} aria-label="সুপার লাইক" title="সুপার লাইক" className="size-8 text-pink hover:bg-on-media/10"><Sparkles className="size-4" /></Button>
+          {item.userId && <Button variant="ghost" size="icon" onClick={() => navigate({ to: "/create", search: { duet: item.id } })} aria-label="ডুয়েট" title="ডুয়েট" className="size-8 hover:bg-on-media/10"><Users className="size-4" /></Button>}
+          <Button variant="ghost" size="icon" disabled={downloading || !item.sotId} aria-label="ডাউনলোড" title={downloading ? "তৈরি হচ্ছে…" : "ডাউনলোড"} className="size-8 hover:bg-on-media/10" onClick={() => {
             setDownloading(true);
             void downloadBrandedVideo(item.url, item.sotId ?? "", `sottok-${item.sotId}`)
               .then(() => toast.success("SOT ID সহ ভিডিও ডাউনলোড হয়েছে"))
               .catch((error) => toast.error(error instanceof Error ? error.message : "ডাউনলোড করা যায়নি"))
               .finally(() => setDownloading(false));
-          }}
-          className="flex flex-col items-center gap-1"
-          aria-label="ডাউনলোড"
-        >
-          <Download className="h-8 w-8 text-white" />
-          <span className="text-[11px] text-white">{downloading ? "তৈরি হচ্ছে…" : "ডাউনলোড"}</span>
-        </button>
-        {item.userId && <button onClick={() => navigate({ to: "/create", search: { duet: item.id } })} className="flex flex-col items-center gap-1" aria-label="ডুয়েট"><Users className="h-7 w-7 text-white" /><span className="text-[11px] text-white">ডুয়েট</span></button>}
-        <button className="flex flex-col items-center gap-1" aria-label="সেভ">
-          <Bookmark className="h-8 w-8 text-white" />
-          <span className="text-[11px] text-white">Save</span>
-        </button>
-      </div>
-
-      <div className="absolute bottom-24 left-4 right-24">
-        {item.sotId ? (
-          <Link to="/id/$sotId" params={{ sotId: item.sotId }} className="text-[15px] font-semibold text-white">{item.username}</Link>
-        ) : (
-          <p className="text-[15px] font-semibold text-white">{item.username}</p>
-        )}
-        <p className="text-[12px] text-white/70">{formatCompact(item.views)} views</p>
-        <p className="mt-1 text-[13px] text-white">{item.caption}</p>
-        <p className="mt-1 text-[12px] text-white/80">{item.sound}</p>
-        <button onClick={() => item.userId && navigate({ to: "/create", search: { sound: item.id } })} disabled={!item.userId} className="mt-2 inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1.5 text-[12px] text-white backdrop-blur">
-          <Music2 className="h-3.5 w-3.5" /> Use this sound
-        </button>
+          }}><Download className="size-4" /></Button>
+        </div>
       </div>
     </section>
   );
@@ -349,8 +345,11 @@ function FeedPage() {
 
   useEffect(() => {
     const ids = [...new Set(baseItems.map((i) => i.userId).filter((x): x is string => !!x))];
+    let alive = true;
+    setFollowSet(new Set());
     if (!user || !ids.length) return;
-    void fetchFollowingSet(user.id, ids).then(setFollowSet);
+    void fetchFollowingSet(user.id, ids).then((value) => { if (alive) setFollowSet(value); });
+    return () => { alive = false; };
   }, [baseItems, user]);
 
   async function toggleFollow(other?: string) {
@@ -408,27 +407,27 @@ function FeedPage() {
   }, [fetchNextPage, hasNextPage, isFetchingNextPage, items.length]);
 
   return (
-    <div className="mx-auto w-full max-w-[420px] bg-black">
+    <div className="mx-auto w-full max-w-[420px] bg-media">
       <div className="fixed left-1/2 top-0 z-40 flex w-full max-w-[420px] -translate-x-1/2 flex-wrap justify-center gap-x-6 gap-y-2 bg-media/70 pt-3 pb-2 text-on-media">
         <Button variant="ghost"
           onClick={() => setTab("following")}
-          className={tab === "following" ? "text-[15px] font-bold text-white" : "text-[15px] text-white/60"}
+          className={tab === "following" ? "text-[15px] font-bold text-on-media" : "text-[15px] text-on-media/60"}
         >
           Following
         </Button>
         <Button variant="ghost"
           onClick={() => setTab("foryou")}
-          className={tab === "foryou" ? "text-[15px] font-bold text-white" : "text-[15px] text-white/60"}
+          className={tab === "foryou" ? "text-[15px] font-bold text-on-media" : "text-[15px] text-on-media/60"}
         >
           For You
         </Button>
         <label className="flex w-full items-center justify-center gap-2 text-xs">পছন্দের বিষয়<select aria-label="পছন্দের বিষয়" value={topic} onChange={e=>setTopic(e.target.value)} className="max-w-36 rounded-md border border-on-media/20 bg-media px-2 py-1 text-on-media">{creatorTopics.map(t=><option key={t.key} value={t.key}>{t.name}</option>)}</select></label>
       </div>
 
-      <div ref={scrollerRef} onScroll={onScroll} className="snap-feed no-scrollbar h-screen overflow-y-scroll">
-        {error?<div role="alert" className="flex h-screen items-center justify-center text-on-media">ফিড খোলা যায়নি; আবার চেষ্টা করুন</div>:isLoading ? (
-          <div className="flex h-screen items-center justify-center text-white/50">লোড হচ্ছে…</div>
-        ) : !items.length ? <div className="flex h-screen items-center justify-center px-8 text-center text-on-media/70">{tab==='following'&&!user?'ফলো করা ভিডিও দেখতে সাইন ইন করুন':'এই বিষয়ে এখনো কোনো ভিডিও নেই'}</div> : (
+      <div ref={scrollerRef} onScroll={onScroll} className="snap-feed no-scrollbar h-dvh overflow-y-scroll">
+        {error?<div role="alert" className="flex h-dvh items-center justify-center text-on-media">ফিড খোলা যায়নি; আবার চেষ্টা করুন</div>:isLoading ? (
+          <div className="flex h-dvh items-center justify-center text-on-media/50">লোড হচ্ছে…</div>
+        ) : !items.length ? <div className="flex h-dvh items-center justify-center px-8 text-center text-on-media/70">{tab==='following'&&!user?'ফলো করা ভিডিও দেখতে সাইন ইন করুন':'এই বিষয়ে এখনো কোনো ভিডিও নেই'}</div> : (
           items.map((item, i) => (
             <VideoCard
               key={item.id}

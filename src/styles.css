@@ -65,6 +65,8 @@
   --color-pink-soft: var(--pink-soft);
   --color-on-media: var(--on-media);
   --color-media: var(--media);
+  --color-follow: var(--follow);
+  --color-verified: var(--verified);
   --color-social-violet: var(--social-violet);
   --font-display: "Inter", system-ui, sans-serif;
   --font-bn: "Noto Sans Bengali", "Inter", system-ui, sans-serif;
@@ -73,6 +75,8 @@
 
 :root {
   --radius: 0.625rem;
+  --follow: oklch(0.49 0.25 294);
+  --verified: oklch(0.69 0.17 242);
   --brand: oklch(0.63 0.244 4.5);
   --on-media: oklch(1 0 0);
   --media: oklch(0.08 0 0);

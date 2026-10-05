@@ -15,3 +15,5 @@
 - Save creator-selected video categories for feed filtering; do not infer gender or attractiveness from images.
 - Compute daily creator rankings server-side over visible public videos since midnight in India, without adding wallet rewards.
 - Store song object paths rather than long-lived signed links; authorize visible library files plus owner/admin access before issuing short-lived playback URLs.
+
+- Resolve feed creator avatars from profile avatar paths and use stored verification or follower eligibility for badges; never use placeholder portraits or infer identity from images.
