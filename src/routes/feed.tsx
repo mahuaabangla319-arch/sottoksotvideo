@@ -3,7 +3,8 @@ import { fetchFollowingSet, setFollow } from "@/lib/social";
 import { downloadBrandedVideo } from "@/lib/video-studio";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { Heart, MessageCircle, Share2, Bookmark, Plus, Music2, Check, Download, Users, Sparkles, User, BadgeCheck } from "lucide-react";
+import { Heart, MessageCircle, Share2, Bookmark, Plus, Music2, Check, Download, Users, Sparkles, User, BadgeCheck, Gift } from "lucide-react";
+import { GiftSheet } from "@/components/GiftSheet";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { BottomNav } from "@/components/BottomNav";
@@ -158,6 +159,7 @@ function useFeed(topic: string, following: boolean, userId?: string) {
           views: v.views ?? 0,
           likes: v.likes ?? 0,
           comments: v.comments_count ?? 0,
+          gifts: (v as { gifts_count?: number }).gifts_count ?? 0,
         }))
         .filter((r) => r.url);
     },
@@ -193,6 +195,8 @@ function VideoCard({
   const navigate = useNavigate();
   const [downloading, setDownloading] = useState(false);
   const [burst, setBurst] = useState(0);
+  const [giftOpen, setGiftOpen] = useState(false);
+  const [giftFx, setGiftFx] = useState<{ emoji: string; n: number } | null>(null);
   const superLike = () => {
     if(item.id.startsWith('demo-')){toast.error('ডেমো ভিডিওতে লাইক করা যাবে না');return;}
     if(!liked)onToggleLike();
@@ -256,13 +260,21 @@ function VideoCard({
         <Button variant="ghost" onClick={onOpenComments} className="h-auto w-12 flex-col gap-1 p-0 hover:bg-on-media/10" aria-label="কমেন্ট">
           <MessageCircle className="size-8" /><span className="text-xs">{formatCompact(commentCount)}</span>
         </Button>
+        <Button variant="ghost" onClick={() => { if (item.id.startsWith("demo-")) { toast.error("ডেমো ভিডিওতে গিফট দেওয়া যাবে না"); return; } setGiftOpen(true); }} className="h-auto w-12 flex-col gap-1 p-0 hover:bg-on-media/10" aria-label="গিফট">
+          <Gift className="size-8 text-gold" /><span className="text-xs">{item.gifts > 0 ? formatCompact(item.gifts) : "Gift"}</span>
+        </Button>
         <Button variant="ghost" onClick={share} className="h-auto w-12 flex-col gap-1 p-0 hover:bg-on-media/10" aria-label="শেয়ার">
           <Share2 className="size-8" /><span className="text-xs">Share</span>
         </Button>
         <Button variant="ghost" className="h-auto w-12 flex-col gap-1 p-0 hover:bg-on-media/10" aria-label="সেভ">
           <Bookmark className="size-8" /><span className="text-xs">Save</span>
         </Button>
+        <div className={`mt-1 grid size-11 place-items-center rounded-full border-4 border-media bg-gradient-to-br from-pink to-brand ${active ? "animate-spin [animation-duration:4s]" : ""}`} aria-hidden="true">
+          <Music2 className="!size-4" />
+        </div>
       </div>
+      {giftFx && <span key={giftFx.n} className="animate-super-heart pointer-events-none absolute left-1/2 top-1/2 text-8xl" aria-hidden="true">{giftFx.emoji}</span>}
+      {giftOpen && <GiftSheet videoId={item.id} onClose={() => setGiftOpen(false)} onSent={(emoji) => setGiftFx((p) => ({ emoji, n: (p?.n ?? 0) + 1 }))} />}
 
       <div className="absolute bottom-20 left-3 right-20 text-on-media">
         <div className="mb-3 flex items-center gap-3">
