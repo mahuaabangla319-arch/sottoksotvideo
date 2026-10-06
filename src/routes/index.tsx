@@ -1,60 +1,128 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import splash from "@/assets/mahalaya-splash.jpg.asset.json";
+import { createFileRoute } from '@tanstack/react-router'
+import { useState, useEffect } from "react";
 
-export const Route = createFileRoute("/")({
-  head: () => ({
-    meta: [
-      { title: "SOT TOK — নিজের পরিচয় নিজেই তৈরি করো" },
-      {
-        name: "description",
-        content: "SOT TOK — ভারতের নাম্বার ওয়ান শর্ট ভিডিও অ্যাপ। ভিডিও বানাও, শেয়ার করো, নিজের পরিচয় তৈরি করো।",
-      },
-      { property: "og:title", content: "SOT TOK — নিজের পরিচয় নিজেই তৈরি করো" },
-      { property: "og:description", content: "ভারতের নাম্বার ওয়ান শর্ট ভিডিও অ্যাপ — রেকর্ড করো, শেয়ার করো, ট্রেন্ড করো।" },
-       { property: "og:type", content: "website" },
-       { name: "twitter:card", content: "summary_large_image" },
-    ],
-  }),
-  component: Splash,
-});
+function IndexPageNew(){
+  const [groups, setGroups] = useState<any[]>([]);
+  const [joined, setJoined] = useState<string[]>([]);
+  const [notif, setNotif] = useState<any>(null);
+  const [showNotif, setShowNotif] = useState(false);
 
-const DURATION = 5000;
+  // PUBLIC GROUPS LOAD - Admin এর 22 Plans থেকে
+  useEffect(()=>{
+    const load = () => {
+      const all = JSON.parse(localStorage.getItem("st_22_public")||"[]");
+      const g = all.filter((x:any)=>x.tab==="Groups");
+      if(g.length===0){
+        // Default PUBLIC GROUP - সবাই দেখবে
+        setGroups([
+          {id:"1", name:"🙏 Ganesh Thakur Official Group", leader:"@sottokofficial", members:1250, tab:"Groups"},
+          {id:"2", name:"SOT TOK Family Official", leader:"@sottokofficial", members:890, tab:"Groups"}
+        ]);
+      } else {
+        setGroups(g);
+      }
+      setJoined(JSON.parse(localStorage.getItem("st_joined_groups")||"[]"));
 
-function Splash() {
-  const navigate = useNavigate();
-  const [progress, setProgress] = useState(0);
-
-  useEffect(() => {
-    const start = Date.now();
-    const id = window.setInterval(() => {
-      setProgress(Math.min(100, ((Date.now() - start) / DURATION) * 100));
-    }, 50);
-    const timeout = window.setTimeout(() => navigate({ to: "/feed" }), DURATION + 50);
-    return () => {
-      window.clearInterval(id);
-      window.clearTimeout(timeout);
+      // NOTIFICATION - নতুন গ্রুপ আসলে
+      const last = JSON.parse(localStorage.getItem("st_last_update")||"null");
+      const lastSeen = localStorage.getItem("st_last_seen_notif");
+      if(last && last.id?.toString()!== lastSeen){
+        setNotif(last);
+        setShowNotif(true);
+        // Browser Notification
+        if("Notification" in window && Notification.permission==="granted"){
+          new Notification(`🔥 নতুন ${last.tab} আসছে!`, {body: `${last.name} - Leader @sottokofficial LIVE!`});
+        }
+        // Auto hide 8 sec পর
+        setTimeout(()=>setShowNotif(false), 8000);
+      }
     };
-  }, [navigate]);
+    load();
+    if("Notification" in window && Notification.permission!=="granted"){
+      Notification.requestPermission();
+    }
+    // Live check - Admin update করলেই show করবে
+    const interval = setInterval(load, 3000);
+    return ()=>clearInterval(interval);
+  },[]);
+
+  const handleJoin = (id:string, name:string) => {
+    if(!joined.includes(id)){
+      const newJ = [...joined, id];
+      setJoined(newJ);
+      localStorage.setItem("st_joined_groups", JSON.stringify(newJ));
+      alert(`✅ ${name} এ JOIN হয়ে গেলে! এখন LIVE এ আসতে পারবে! 🙏 Leader @sottokofficial`);
+    }
+    window.location.href='/groups';
+  };
+
+  const closeNotif = () => {
+    if(notif){
+      localStorage.setItem("st_last_seen_notif", notif.id.toString());
+    }
+    setShowNotif(false);
+  };
 
   return (
-    <div className="relative flex min-h-screen w-full items-center justify-center bg-black">
-      <img
-        src={splash.url}
-        alt="শুভ মহালয়া — SOT TOK শর্ট ভিডিও অ্যাপ"
-        className="absolute inset-0 h-full w-full object-cover blur-2xl opacity-60"
-        aria-hidden
-      />
-      <img
-        src={splash.url}
-        alt="শুভ মহালয়া — SOT TOK শর্ট ভিডিও অ্যাপ"
-        className="relative z-10 w-full max-w-[420px] object-contain"
-      />
-      <div className="absolute bottom-12 z-10 w-full max-w-[420px] px-10">
-        <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/25">
-          <div className="h-full rounded-full bg-gold transition-[width] duration-100 ease-linear" style={{ width: `${progress}%` }} />
+    <div className="min-h-screen bg-black text-white pb-24">
+      {/* 🔔 NOTIFICATION - যেকোনো নতুন GROUP/PLAN আসলে সবাইকে জানাবে */}
+      {showNotif && notif && (
+        <div className="fixed top-2 left-2 right-2 z-50 bg-gradient-to-r from-orange-500 to-red-500 p-3 rounded-2xl flex justify-between items-center shadow-2xl animate-bounce">
+          <div className="flex-1">
+            <p className="font-bold text-sm">🔔 নতুন {notif.tab} আসছে!</p>
+            <p className="text-xs">{notif.name} - PUBLIC LIVE</p>
+            <p className="text-[10px]">👑 Leader: @sottokofficial</p>
+          </div>
+          <button onClick={closeNotif} className="bg-black/30 px-3 py-1 rounded-full text-xs ml-2">X</button>
+          <button onClick={()=>{closeNotif(); window.location.href='/groups'}} className="bg-white text-black px-3 py-1 rounded-full text-xs ml-2 font-bold">দেখো</button>
+        </div>
+      )}
+
+      {/* HEADER */}
+      <div className="bg-gradient-to-r from-pink-600 to-purple-600 p-4 m-3 rounded-2xl text-center">
+        <h1 className="text-xl font-bold">🎵 SOT TOK VIDEO 🎵</h1>
+        <p className="text-xs">22 Plans PUBLIC - Leader @sottokofficial</p>
+      </div>
+
+      {/* 🔥 GANESH + ALL PUBLIC GROUPS FROM ADMIN - LIVE JOIN */}
+      <div className="mx-3">
+        <h2 className="font-bold mb-2">👥 PUBLIC GROUPS - Admin থেকে LIVE ({groups.length})</h2>
+        {groups.map((g:any)=>(
+          <div key={g.id} className="bg-zinc-900 border-2 border-orange-500/50 rounded-2xl p-4 mb-3">
+            <div className="text-center">
+              <p className="text-3xl">{g.name.includes("Ganesh")?"🙏":"👥"}</p>
+              <h2 className="font-bold text-[15px] mt-1">{g.name}</h2>
+              <p className="text-xs text-yellow-400">👑 Leader: {g.leader||"@sottokofficial"}</p>
+              <p className="text-xs text-zinc-400">👥 {g.members||1250} Members • PUBLIC LIVE • {g.tab}</p>
+              <p className="text-[10px] text-green-400 mt-1">● LIVE - JOIN করে LIVE এ আসতে পারবে</p>
+            </div>
+            <button
+              onClick={()=>handleJoin(g.id.toString(), g.name)}
+              className={`w-full mt-3 py-3 rounded-full font-bold ${joined.includes(g.id.toString())?'bg-green-600':'bg-blue-600 animate-pulse'}`}
+            >
+              {joined.includes(g.id.toString())?'Joined ✅ - LIVE এ যাও':'JOIN GROUP - ACTIVE ✅'}
+            </button>
+          </div>
+        ))}
+      </div>
+
+      {/* TRENDING */}
+      <div className="mx-3 bg-zinc-900 p-4 rounded-2xl border border-zinc-800">
+        <h2 className="font-bold">🔥 Trending Videos - PUBLIC</h2>
+        <p className="text-xs text-zinc-500 mt-2">Video PUBLIC LIVE আসবে - @sottokofficial</p>
+        <div className="grid grid-cols-2 gap-2 mt-3">
+          <button onClick={()=>window.location.href='/groups'} className="bg-zinc-800 p-3 rounded-xl text-xs">👥 Groups দেখো</button>
+          <button onClick={()=>window.location.href='/admin'} className="bg-zinc-800 p-3 rounded-xl text-xs">⚙️ Admin 22 Plans</button>
         </div>
       </div>
+
+      {/* FOOTER */}
+      <div className="text-center mt-6 text-[10px] text-zinc-600">
+        <p>22 Plans PUBLIC SYSTEM • Leader @sottokofficial</p>
+        <p>Admin এ GROUP বানালেই এখানে LIVE + Notification যাবে</p>
+      </div>
     </div>
-  );
+  )
 }
+
+export const Route = createFileRoute('/')({ component: IndexPageNew, })
