@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useState, useEffect } from "react";
 
 function ForYouAllUsers(){
-  const [wallet, setWallet] = useState({main:2500, coins:1250, diamonds:340});
+  const [wallet, setWallet] = useState({main2500, coins:1250, diamonds:340});
   const [showRecharge, setShowRecharge] = useState(false);
   const [showPay, setShowPay] = useState(false);
   const [showPin, setShowPin] = useState(false);
