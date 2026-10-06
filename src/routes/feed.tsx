@@ -50,6 +50,7 @@ type FeedItem = {
   views: number;
   likes: number;
   comments: number;
+  gifts: number;
 };
 
 const PAGE_SIZE = 6;
@@ -114,7 +115,7 @@ function useFeed(topic: string, following: boolean, userId?: string) {
       const from = (pageParam as number) * PAGE_SIZE;
       let query = supabase
         .from("videos")
-        .select("id, caption, video_url, sound_name, views, likes, comments_count, user_id")
+        .select("id, caption, video_url, sound_name, views, likes, comments_count, gifts_count, user_id")
         .eq("visibility", "public")
         .eq("is_deleted", false)
         .eq("admin_hidden", false);
@@ -159,7 +160,7 @@ function useFeed(topic: string, following: boolean, userId?: string) {
           views: v.views ?? 0,
           likes: v.likes ?? 0,
           comments: v.comments_count ?? 0,
-          gifts: (v as { gifts_count?: number }).gifts_count ?? 0,
+          gifts: v.gifts_count ?? 0,
         }))
         .filter((r) => r.url);
     },
