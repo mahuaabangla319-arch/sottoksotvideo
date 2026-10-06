@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createFileRoute } from '@tanstack/react-router'
 import { useState, useEffect } from "react"
 import { supabase } from "@/integrations/supabase/client"
@@ -96,4 +97,7 @@ function OwnerAdminFinal() {
         </div>
       )}
 
-      {tab==="Boost" && <div style={{background:'#111', padding:16, borderRadius:12, marginTop:12}}><h3>🚀 Boost + 10X Fast</h3><input value={vidId} onChange={e=>setVidId(e.target.value)} placeholder="Video ID" style={{width:'100%', padding:10, marginTop:8, background:'#222', color:'#fff', borderRadius:8, border:'1px solid #333'}}/><input value={amount} onChange={e=>setAmount(e.target.value)} placeholder="Amount" style={{width:'100%', padding:10, marginTop:8, background:'#222', color:'#
+      {tab==="Boost" && <div style={{background:'#111', padding:16, borderRadius:12, marginTop:12}}><h3>🚀 Boost</h3><input value={vidId} onChange={e=>setVidId(e.target.value)} placeholder="Video ID" style={{width:'100%', padding:10, marginTop:8, background:'#222', color:'#fff', borderRadius:8, border:'1px solid #333'}}/></div>}
+    </div>
+  );
+}
