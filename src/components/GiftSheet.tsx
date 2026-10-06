@@ -24,8 +24,8 @@ export function GiftSheet({ videoId, onClose, onSent }: { videoId: string; onClo
     setBusy(key);
     const { data, error } = await supabase.rpc("send_gift", { _video_id: videoId, _gift_type: key });
     setBusy(null);
-    if (error) return toast.error("গিফট পাঠানো যায়নি");
-    if (data !== "ok") return toast.error(MESSAGES[data as string] ?? "গিফট পাঠানো যায়নি");
+    if (error) { toast.error("গিফট পাঠানো যায়নি"); return; }
+    if (data !== "ok") { toast.error(MESSAGES[data as string] ?? "গিফট পাঠানো যায়নি"); return; }
     toast.success("গিফট পাঠানো হয়েছে!");
     onSent(emoji);
     onClose();
