@@ -22,6 +22,13 @@
       "when": 1791082287120,
       "tag": "0002_creator_topics_daily_rankings_and_song_access",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791254473586,
+      "tag": "0003_gifts",
+      "breakpoints": true
     }
   ]
 }
