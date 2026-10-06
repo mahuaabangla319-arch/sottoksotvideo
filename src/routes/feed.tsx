@@ -50,7 +50,7 @@ type FeedItem = {
   views: number;
   likes: number;
   comments: number;
-  gifts: number;
+  gifts?: number;
 };
 
 const PAGE_SIZE = 6;
@@ -262,7 +262,7 @@ function VideoCard({
           <MessageCircle className="size-8" /><span className="text-xs">{formatCompact(commentCount)}</span>
         </Button>
         <Button variant="ghost" onClick={() => { if (item.id.startsWith("demo-")) { toast.error("ডেমো ভিডিওতে গিফট দেওয়া যাবে না"); return; } setGiftOpen(true); }} className="h-auto w-12 flex-col gap-1 p-0 hover:bg-on-media/10" aria-label="গিফট">
-          <Gift className="size-8 text-gold" /><span className="text-xs">{item.gifts > 0 ? formatCompact(item.gifts) : "Gift"}</span>
+          <Gift className="size-8 text-gold" /><span className="text-xs">{(item.gifts ?? 0) > 0 ? formatCompact(item.gifts ?? 0) : "Gift"}</span>
         </Button>
         <Button variant="ghost" onClick={share} className="h-auto w-12 flex-col gap-1 p-0 hover:bg-on-media/10" aria-label="শেয়ার">
           <Share2 className="size-8" /><span className="text-xs">Share</span>
