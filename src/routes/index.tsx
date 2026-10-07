@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useState, useEffect } from "react";
 
 function ForYouAllUsers(){
-  const [wallet, setWallet] = useState({main:2500, coins:1250, diamonds:340});
+  const [wallet, setWallet] = useState({main: 2500, coins:1250, diamonds:340});
   const [showRecharge, setShowRecharge] = useState(false);
   const [showPay, setShowPay] = useState(false);
   const [showPin, setShowPin] = useState(false);
@@ -15,53 +15,77 @@ function ForYouAllUsers(){
     if(saved){ setWallet(JSON.parse(saved)); }
   },[]);
 
+  // ===== PUBLIC LIVE GROUPS - দুটো একসাথেই =====
+  const [publicGroups, setPublicGroups] = useState<any[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem("PUBLIC_LIVE_LIST") || "[]")
+    } catch { return [] }
+  });
+  const [newGroupName, setNewGroupName] = useState("");
+
+  const addPublicGroup = () => {
+    if(!newGroupName.trim()){
+      alert("নাম লেখো দাদা");
+      return;
+    }
+    const newItem = { id: Date.now(), name: newGroupName, by: "@sottokofficial", time: new Date().toLocaleString() };
+    const newList = [newItem, ...publicGroups];
+    localStorage.setItem("PUBLIC_LIVE_LIST", JSON.stringify(newList));
+    setPublicGroups(newList);
+    setNewGroupName("");
+  };
+
   return (
     <div className="min-h-screen bg-black text-white pb-24">
       <div className="flex justify-center gap-12 py-4">
-        <span className="text-zinc-500">Following</span>
-        <span className="font-bold border-b-2">For You</span>
+        <span className="text-zinc-500">For You</span>
       </div>
-      <p className="text-right text-xs text-zinc-400 px-4">Tap for sound</p>
 
-      <div className="flex px-4 mt-4">
-        <img src="https://i.pravatar.cc/100?img=12" className="w-16 h-16 rounded-full border-2 border-white" />
-        <div className="ml-4">
-          <button className="bg-purple-600 px-6 py-2 rounded-lg font-bold text-sm">+ Follow</button>
-          <p className="text-sm mt-1">SOT TOK ID: 96216703</p>
-          <p className="text-xs text-zinc-400">@mahatohimanshu755</p>
+      {/* ADMIN FORM + PUBLIC LIST - একসাথেই */}
+      <div className="px-3">
+        <div className="bg-green-900/40 border border-green-500 p-3 rounded-xl">
+          <p className="text-green-400 text-xs font-bold mb-2">✅ @sottokofficial - 22 Plans PUBLIC MODE</p>
+          <div className="flex gap-2">
+            <input 
+              value={newGroupName} 
+              onChange={e=>setNewGroupName(e.target.value)} 
+              placeholder="Groups নাম - যেমন Ganesh Thaku"
+              className="flex-1 p-3 rounded-xl bg-black text-white border border-zinc-700 outline-none"
+            />
+            <button onClick={addPublicGroup} className="bg-orange-500 px-4 rounded-xl font-bold text-black">
+              LIVE
+            </button>
+          </div>
+          <button onClick={addPublicGroup} className="w-full mt-2 bg-orange-500 p-3 rounded-xl font-bold text-black">
+            🚀 Groups PUBLIC LIVE করো - সবাই দেখবে
+          </button>
+        </div>
+
+        <div className="mt-3">
+          {publicGroups.length > 0 && <p className="text-white font-bold mb-2">🔥 PUBLIC LIVE Plans - {publicGroups.length} টা</p>}
+          {publicGroups.map((g:any)=>(
+            <div key={g.id} className="bg-zinc-900 border border-green-600 p-3 rounded-xl mb-2 text-white flex justify-between">
+              <div>
+                <div className="font-bold">🔥 {g.name}</div>
+                <div className="text-xs text-green-400">{g.by} - LIVE</div>
+              </div>
+              <button onClick={()=>{
+                const filtered = publicGroups.filter((x:any)=> x.id !== g.id);
+                localStorage.setItem("PUBLIC_LIVE_LIST", JSON.stringify(filtered));
+                setPublicGroups(filtered);
+              }} className="text-xs bg-red-900 px-2 py-1 rounded">Delete</button>
+            </div>
+          ))}
         </div>
       </div>
 
-      <div className="mx-3 mt-6 bg-zinc-900 rounded-2xl p-4">
-        <p className="font-bold">Wallet</p>
-        <div className="mt-3 space-y-2 text-sm">
-          <div className="flex justify-between"><span>Main Wallet</span><b>Rs {wallet.main}</b></div>
-          <div className="flex justify-between"><span>Coins</span><b>{wallet.coins}</b></div>
-          <div className="flex justify-between"><span>Diamonds</span><b>{wallet.diamonds}</b></div>
-        </div>
-        <div className="flex gap-2 mt-4">
-          <button className="flex-1 border border-purple-600 py-2 rounded-full text-xs">Withdraw Diamonds</button>
-          <button onClick={()=>setShowRecharge(true)} className="flex-1 bg-purple-600 py-2 rounded-full text-xs">Recharge +</button>
-        </div>
-        <p className="text-xs text-center mt-2 text-zinc-400">100 Diamonds = Rs 80</p>
+      <div className="p-4 text-zinc-500 text-center mt-6">
+        নিচে তোমার ভিডিও ফিড থাকবে...
       </div>
+    </div>
+  )
+}
 
-      <div className="mx-2 mt-4 bg-zinc-900 rounded-t-3xl p-4">
-        <p className="text-center font-bold">Gift Pathan</p>
-        <div className="grid grid-cols-5 gap-2 mt-4 text-[10px]">
-          <button className="bg-zinc-800 p-2 rounded-xl">Free 0</button>
-          <button className="bg-zinc-800 p-2 rounded-xl">Rose 10</button>
-          <button className="bg-zinc-800 p-2 rounded-xl">Heart 50</button>
-          <button className="bg-zinc-800 p-2 rounded-xl">Crown 100</button>
-          <button className="bg-zinc-800 p-2 rounded-xl">Elephant 500</button>
-          <button className="bg-zinc-800 p-2 rounded-xl">Diamond 1000</button>
-          <button className="bg-zinc-800 p-2 rounded-xl">Car 5000</button>
-          <button className="bg-zinc-800 p-2 rounded-xl">Trophy 10000</button>
-          <button className="bg-zinc-800 p-2 rounded-xl">Lion 2000</button>
-          <button className="bg-zinc-800 p-2 rounded-xl">Rocket 3000</button>
-        </div>
-      </div>
-
-      {showRecharge && (
-        <div className="fixed inset-0 bg-black/90 z-50 p-4">
-          <div className="bg-zinc-900 rounded
+export const Route = createFileRoute('/' as any)({
+  component: ForYouAllUsers,
+})
