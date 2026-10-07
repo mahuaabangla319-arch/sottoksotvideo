@@ -1,154 +1,99 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { useRef, useState, useEffect } from 'react'
-import { useSearchParams } from '@tanstack/react-router'
+import { useEffect, useRef, useState } from "react";
 
-export const Route = createFileRoute('/camera')({
-  component: SafeSotTokCamera,
-})
-
-function SafeSotTokCamera() {
-  const videoRef = useRef<HTMLVideoElement>(null) as any
-  const [isRec, setIsRec] = useState(false)
-  const [sec, setSec] = useState(0)
-  const [facing, setFacing] = useState('user')
-  const [myId, setMyId] = useState('...')
-  const [hasCamera, setHasCamera] = useState(true)
-  const [beauty, setBeauty] = useState(50)
-  const [showBeauty, setShowBeauty] = useState(false)
-  const [showFilter, setShowFilter] = useState(false)
-  const [filter, setFilter] = useState('none')
-  const [flash, setFlash] = useState(false)
-
-  const filters = [
-    { name: 'Original', value: 'none' },
-    { name: 'Soft', value: 'brightness(1.1) contrast(0.9)' },
-    { name: 'Pink', value: 'sepia(0.2) hue-rotate(-10deg) saturate(1.2)' },
-    { name: 'Milky', value: 'brightness(1.2) contrast(0.8)' },
-    { name: 'Sunshine', value: 'brightness(1.15) saturate(1.3)' },
-    { name: 'Clear', value: 'contrast(1.1) brightness(1.05)' },
-    { name: 'Vintage', value: 'sepia(0.4)' },
-    { name: 'B&W', value: 'grayscale(1)' },
-  ]
+export default function CameraPage() {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [timer, setTimer] = useState("Off");
+  const [beauty, setBeauty] = useState(50);
+  const [speed, setSpeed] = useState("1x");
+  const [flash, setFlash] = useState(false);
 
   useEffect(() => {
-    try {
-      let id = localStorage.getItem('sot_tok_id')
-      if (!id) {
-        id = Math.floor(1000000 + Math.random() * 9000000).toString()
-        localStorage.setItem('sot_tok_id', id)
-      }
-      setMyId(id)
-    } catch {}
-
-    async function startCam() {
+    async function startCamera() {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: facing },
+          video: { facingMode: "user" },
           audio: true
-        })
+        });
         if (videoRef.current) {
-          videoRef.current.srcObject = stream
+          videoRef.current.srcObject = stream;
         }
-        setHasCamera(true)
-      } catch (e) {
-        setHasCamera(false)
+      } catch (err) {
+        console.log("Camera error:", err);
       }
     }
-    startCam()
-  }, [facing])
-
-  useEffect(() => {
-    let interval: any
-    if (isRec) {
-      interval = setInterval(() => setSec(s => s + 1), 1000)
-    } else {
-      setSec(0)
-    }
-    return () => clearInterval(interval)
-  }, [isRec])
-
-  const videoStyle: any = {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    width: '100vw',
-    height: '100vh',
-    objectFit: 'cover',
-    background: '#000',
-    zIndex: 1,
-    filter: `${filter!== 'none'? filter : ''} brightness(${0.8 + beauty/250})`,
-    transform: facing === 'user'? 'scaleX(-1)' : 'none',
-  }
+    startCamera();
+  }, []);
 
   return (
-    <div style={{ position: 'relative', width: '100vw', height: '100vh', background: '#000', overflow: 'hidden' }}>
-      <video ref={videoRef} autoPlay muted playsInline style={videoStyle} />
+    <div className="relative w-full h-screen bg-black overflow-hidden">
+      {/* Camera Video */}
+      <video
+        ref={videoRef}
+        autoPlay
+        playsInline
+        muted
+        className="absolute w-full h-full object-cover"
+        style={{ filter: `brightness(${100 + beauty * 0.2}%)` }}
+      />
 
-      {/* TOP BAR */}
-      <div style={{ position: 'fixed', top: 0, left: 0, right: 0, height: 60, background: 'linear-gradient(to bottom, rgba(0,0,0,0.7), transparent)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 15px', zIndex: 20 }}>
-        <button onClick={() => window.history.back()} style={{ color: 'white', fontSize: 28, background: 'none', border: 'none' }}>✕</button>
-        <div style={{ color: 'white', background: 'rgba(0,0,0,0.5)', padding: '4px 12px', borderRadius: 15, fontSize: 13 }}>
-          <span style={{ color: 'red' }}>●</span> 00:{sec.toString().padStart(2,'0')} / 0:15
-        </div>
-        <button style={{ color: 'white', fontSize: 22, background: 'none', border: 'none' }}>⚙️</button>
-      </div>
-
-      {/* RIGHT TOOLBAR - PURE VIGO ORIGINAL - NO LIVE BUTTON */}
-      <div style={{ position: 'fixed', right: 10, top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', gap: 22, zIndex: 20, alignItems: 'center' }}>
-        <div onClick={() => {setShowBeauty(!showBeauty); setShowFilter(false)}} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' }}>
-          <div style={{ width: 48, height: 48, background: showBeauty? '#ff0050' : 'rgba(255,255,255,0.2)', backdropFilter: 'blur(10px)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, border: '1px solid rgba(255,255,255,0.3)' }}>✨</div>
-          <span style={{ fontSize: 11, color: 'white', marginTop: 4 }}>Beauty</span>
-        </div>
-        <div onClick={() => {setShowFilter(!showFilter); setShowBeauty(false)}} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' }}>
-          <div style={{ width: 48, height: 48, background: showFilter? '#ff0050' : 'rgba(255,255,255,0.2)', backdropFilter: 'blur(10px)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, border: '1px solid rgba(255,255,255,0.3)' }}>🎨</div>
-          <span style={{ fontSize: 11, color: 'white' }}>Filter</span>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <div style={{ width: 48, height: 48, background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(10px)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, border: '1px solid rgba(255,255,255,0.3)' }}>1x</div>
-          <span style={{ fontSize: 11, color: 'white' }}>Speed</span>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <div style={{ width: 48, height: 48, background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(10px)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, border: '1px solid rgba(255,255,255,0.3)' }}>⏱️</div>
-          <span style={{ fontSize: 11, color: 'white' }}>Timer</span>
-        </div>
-        <div onClick={() => window.location.href = '/music'} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' }}>
-          <div style={{ width: 48, height: 48, background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(10px)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, border: '1px solid rgba(255,255,255,0.3)' }}>🎵</div>
-          <span style={{ fontSize: 11, color: 'white' }}>Music</span>
-        </div>
-        <div onClick={() => setFlash(!flash)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' }}>
-          <div style={{ width: 48, height: 48, background: flash? '#ffcc00' : 'rgba(255,255,255,0.2)', backdropFilter: 'blur(10px)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, border: '1px solid rgba(255,255,255,0.3)' }}>⚡</div>
-          <span style={{ fontSize: 11, color: 'white' }}>Flash</span>
+      {/* Top Bar - Vigo Original */}
+      <div className="absolute top-0 w-full flex justify-between items-center p-4 z-20">
+        <button className="text-white text-2xl">✕</button>
+        <div className="flex gap-4 items-center">
+          <button onClick={() => setFlash(!flash)} className="text-white text-xl">⚡</button>
+          <span className="text-white text-sm">Music ♫</span>
         </div>
       </div>
 
-      {showBeauty && (
-        <div style={{ position: 'fixed', bottom: 130, left: 20, right: 20, background: 'rgba(0,0,0,0.75)', borderRadius: 20, padding: 15, zIndex: 20 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', color: 'white', fontSize: 13, marginBottom: 8 }}><span>Smooth</span><span>{beauty}</span><span>Shape</span></div>
-          <input type="range" min="0" max="100" value={beauty} onChange={(e) => setBeauty(Number(e.target.value))} style={{ width: '100%', accentColor: '#ff0050' }} />
-        </div>
-      )}
-
-      {showFilter && (
-        <div style={{ position: 'fixed', bottom: 130, left: 0, right: 0, background: 'rgba(0,0,0,0.75)', padding: '12px 10px', zIndex: 20, display: 'flex', gap: 12, overflowX: 'auto' }}>
-          {filters.map((f) => (
-            <div key={f.name} onClick={() => setFilter(f.value)} style={{ minWidth: 60, textAlign: 'center', cursor: 'pointer' }}>
-              <div style={{ width: 56, height: 56, borderRadius: 12, background: filter === f.value? '#ff0050' : 'rgba(255,255,255,0.2)', border: filter === f.value? '2px solid #ff0050' : '1px solid rgba(255,255,255,0.3)', filter: f.value as any, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🖼️</div>
-              <span style={{ fontSize: 11, color: filter === f.value? '#ff0050' : 'white' }}>{f.name}</span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* BOTTOM BAR */}
-      <div style={{ position: 'fixed', bottom: 20, left: 20, right: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 20 }}>
-        <div style={{ width: 52, height: 52, borderRadius: 12, border: '2px solid white', background: '#222', overflow: 'hidden' }}>
-          <div style={{ width: '100%', height: '100%', background: 'linear-gradient(45deg, #ff0050, #ffcc00)' }}></div>
-        </div>
-        <button onClick={() => setIsRec(!isRec)} style={{ width: 82, height: 82, background: isRec? 'white' : '#ff0050', borderRadius: '50%', border: '5px solid white', boxShadow: '0 0 20px rgba(255,0,80,0.6)', transform: isRec? 'scale(1.1)' : 'scale(1)', transition: 'all 0.2s' }}>
-          {isRec && <div style={{ width: 28, height: 28, background: '#ff0050', borderRadius: 4, margin: 'auto' }}></div>}
+      {/* Right Side Tools - Vigo Style */}
+      <div className="absolute right-3 top-20 flex flex-col gap-6 z-20 text-white text-center">
+        <button onClick={() => setTimer(timer === "Off"? "3s" : timer === "3s"? "5s" : timer === "5s"? "10s" : "Off")} className="flex flex-col items-center">
+          <div className="w-10 h-10 rounded-full border border-white flex items-center justify-center text-xs">◷</div>
+          <span className="text-[10px] mt-1">{timer}</span>
         </button>
-        <button onClick={() => setFacing(facing === 'user'? 'environment' : 'user')} style={{ width: 52, height: 52, background: 'rgba(0,0,0,0.5)', borderRadius: '50%', color: 'white', fontSize: 24, border: '1px solid rgba(255,255,255,0.3)' }}>🔄</button>
+
+        <div className="flex flex-col items-center">
+          <div className="w-10 h-10 rounded-full border border-white flex items-center justify-center">✨</div>
+          <span className="text-[10px] mt-1">Beauty</span>
+        </div>
+
+        <div className="flex flex-col items-center">
+          <div className="w-10 h-10 rounded-full border border-white flex items-center justify-center">🎨</div>
+          <span className="text-[10px] mt-1">Filter</span>
+        </div>
+
+        <button onClick={() => setSpeed(speed === "1x"? "2x" : speed === "2x"? "0.5x" : "1x")} className="flex flex-col items-center">
+          <div className="w-10 h-10 rounded-full border border-white flex items-center justify-center text-[10px]">{speed}</div>
+          <span className="text-[10px] mt-1">Speed</span>
+        </button>
+      </div>
+
+      {/* Beauty Slider - Vigo Style */}
+      <div className="absolute right-16 top-32 z-20">
+        <input
+          type="range"
+          min="0"
+          max="100"
+          value={beauty}
+          onChange={(e) => setBeauty(Number(e.target.value))}
+          className="w-24 rotate-[-90deg]"
+        />
+      </div>
+
+      {/* Bottom Bar */}
+      <div className="absolute bottom-0 w-full p-5 z-20 flex flex-col items-center gap-4">
+        <div className="flex gap-6 text-white text-sm">
+          <span>15s</span>
+          <span className="font-bold border-b-2 border-white">60s</span>
+          <span>3m</span>
+        </div>
+
+        <div className="flex items-center justify-between w-full max-w-[300px]">
+          <div className="w-10 h-10 bg-gray-600 rounded-lg"></div>
+          <button className="w-20 h-20 rounded-full bg-[#ff2d55] border-4 border-white"></button>
+          <div className="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center text-white">↑</div>
+        </div>
       </div>
     </div>
-  )
+  );
 }
