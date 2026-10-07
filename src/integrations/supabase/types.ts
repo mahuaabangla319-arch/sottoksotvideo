@@ -186,44 +186,6 @@ export type Database = {
         }
         Relationships: []
       }
-      gifts: {
-        Row: {
-          created_at: string
-          from_user: string
-          gift_type: string
-          gift_value: number
-          id: string
-          to_user: string
-          video_id: string | null
-        }
-        Insert: {
-          created_at?: string
-          from_user: string
-          gift_type: string
-          gift_value: number
-          id?: string
-          to_user: string
-          video_id?: string | null
-        }
-        Update: {
-          created_at?: string
-          from_user?: string
-          gift_type?: string
-          gift_value?: number
-          id?: string
-          to_user?: string
-          video_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "gifts_video_id_fkey"
-            columns: ["video_id"]
-            isOneToOne: false
-            referencedRelation: "videos"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       messages: {
         Row: {
           content: string
@@ -562,7 +524,6 @@ export type Database = {
           category: string
           comments_count: number
           created_at: string
-          gifts_count: number
           id: string
           is_deleted: boolean
           is_pinned: boolean
@@ -580,7 +541,6 @@ export type Database = {
           category?: string
           comments_count?: number
           created_at?: string
-          gifts_count?: number
           id?: string
           is_deleted?: boolean
           is_pinned?: boolean
@@ -598,7 +558,6 @@ export type Database = {
           category?: string
           comments_count?: number
           created_at?: string
-          gifts_count?: number
           id?: string
           is_deleted?: boolean
           is_pinned?: boolean
@@ -641,10 +600,6 @@ export type Database = {
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       purchase_ring: {
         Args: { _price: number; _ring_key: string }
-        Returns: string
-      }
-      send_gift: {
-        Args: { _gift_type: string; _video_id: string }
         Returns: string
       }
     }

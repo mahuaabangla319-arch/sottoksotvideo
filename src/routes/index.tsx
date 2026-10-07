@@ -1,91 +1,60 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { useState, useEffect } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import splash from "@/assets/mahalaya-splash.jpg.asset.json";
 
-function ForYouAllUsers(){
-  const [wallet, setWallet] = useState({main: 2500, coins:1250, diamonds:340});
-  const [showRecharge, setShowRecharge] = useState(false);
-  const [showPay, setShowPay] = useState(false);
-  const [showPin, setShowPin] = useState(false);
-  const [amount, setAmount] = useState(10);
-  const [method, setMethod] = useState("");
-  const [pin, setPin] = useState("");
+export const Route = createFileRoute("/")({
+  head: () => ({
+    meta: [
+      { title: "SOT TOK — নিজের পরিচয় নিজেই তৈরি করো" },
+      {
+        name: "description",
+        content: "SOT TOK — ভারতের নাম্বার ওয়ান শর্ট ভিডিও অ্যাপ। ভিডিও বানাও, শেয়ার করো, নিজের পরিচয় তৈরি করো।",
+      },
+      { property: "og:title", content: "SOT TOK — নিজের পরিচয় নিজেই তৈরি করো" },
+      { property: "og:description", content: "ভারতের নাম্বার ওয়ান শর্ট ভিডিও অ্যাপ — রেকর্ড করো, শেয়ার করো, ট্রেন্ড করো।" },
+       { property: "og:type", content: "website" },
+       { name: "twitter:card", content: "summary_large_image" },
+    ],
+  }),
+  component: Splash,
+});
 
-  useEffect(()=>{
-    const saved = localStorage.getItem("st_user_wallet");
-    if(saved){ setWallet(JSON.parse(saved)); }
-  },[]);
+const DURATION = 5000;
 
-  // ===== PUBLIC LIVE GROUPS - দুটো একসাথেই =====
-  const [publicGroups, setPublicGroups] = useState<any[]>(() => {
-    try {
-      return JSON.parse(localStorage.getItem("PUBLIC_LIVE_LIST") || "[]")
-    } catch { return [] }
-  });
-  const [newGroupName, setNewGroupName] = useState("");
+function Splash() {
+  const navigate = useNavigate();
+  const [progress, setProgress] = useState(0);
 
-  const addPublicGroup = () => {
-    if(!newGroupName.trim()){
-      alert("নাম লেখো দাদা");
-      return;
-    }
-    const newItem = { id: Date.now(), name: newGroupName, by: "@sottokofficial", time: new Date().toLocaleString() };
-    const newList = [newItem, ...publicGroups];
-    localStorage.setItem("PUBLIC_LIVE_LIST", JSON.stringify(newList));
-    setPublicGroups(newList);
-    setNewGroupName("");
-  };
+  useEffect(() => {
+    const start = Date.now();
+    const id = window.setInterval(() => {
+      setProgress(Math.min(100, ((Date.now() - start) / DURATION) * 100));
+    }, 50);
+    const timeout = window.setTimeout(() => navigate({ to: "/feed" }), DURATION + 50);
+    return () => {
+      window.clearInterval(id);
+      window.clearTimeout(timeout);
+    };
+  }, [navigate]);
 
   return (
-    <div className="min-h-screen bg-black text-white pb-24">
-      <div className="flex justify-center gap-12 py-4">
-        <span className="text-zinc-500">For You</span>
-      </div>
-
-      {/* ADMIN FORM + PUBLIC LIST - একসাথেই */}
-      <div className="px-3">
-        <div className="bg-green-900/40 border border-green-500 p-3 rounded-xl">
-          <p className="text-green-400 text-xs font-bold mb-2">✅ @sottokofficial - 22 Plans PUBLIC MODE</p>
-          <div className="flex gap-2">
-            <input 
-              value={newGroupName} 
-              onChange={e=>setNewGroupName(e.target.value)} 
-              placeholder="Groups নাম - যেমন Ganesh Thaku"
-              className="flex-1 p-3 rounded-xl bg-black text-white border border-zinc-700 outline-none"
-            />
-            <button onClick={addPublicGroup} className="bg-orange-500 px-4 rounded-xl font-bold text-black">
-              LIVE
-            </button>
-          </div>
-          <button onClick={addPublicGroup} className="w-full mt-2 bg-orange-500 p-3 rounded-xl font-bold text-black">
-            🚀 Groups PUBLIC LIVE করো - সবাই দেখবে
-          </button>
+    <div className="relative flex min-h-screen w-full items-center justify-center bg-black">
+      <img
+        src={splash.url}
+        alt="শুভ মহালয়া — SOT TOK শর্ট ভিডিও অ্যাপ"
+        className="absolute inset-0 h-full w-full object-cover blur-2xl opacity-60"
+        aria-hidden
+      />
+      <img
+        src={splash.url}
+        alt="শুভ মহালয়া — SOT TOK শর্ট ভিডিও অ্যাপ"
+        className="relative z-10 w-full max-w-[420px] object-contain"
+      />
+      <div className="absolute bottom-12 z-10 w-full max-w-[420px] px-10">
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/25">
+          <div className="h-full rounded-full bg-gold transition-[width] duration-100 ease-linear" style={{ width: `${progress}%` }} />
         </div>
-
-        <div className="mt-3">
-          {publicGroups.length > 0 && <p className="text-white font-bold mb-2">🔥 PUBLIC LIVE Plans - {publicGroups.length} টা</p>}
-          {publicGroups.map((g:any)=>(
-            <div key={g.id} className="bg-zinc-900 border border-green-600 p-3 rounded-xl mb-2 text-white flex justify-between">
-              <div>
-                <div className="font-bold">🔥 {g.name}</div>
-                <div className="text-xs text-green-400">{g.by} - LIVE</div>
-              </div>
-              <button onClick={()=>{
-                const filtered = publicGroups.filter((x:any)=> x.id !== g.id);
-                localStorage.setItem("PUBLIC_LIVE_LIST", JSON.stringify(filtered));
-                setPublicGroups(filtered);
-              }} className="text-xs bg-red-900 px-2 py-1 rounded">Delete</button>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="p-4 text-zinc-500 text-center mt-6">
-        নিচে তোমার ভিডিও ফিড থাকবে...
       </div>
     </div>
-  )
+  );
 }
-
-export const Route = createFileRoute('/' as any)({
-  component: ForYouAllUsers,
-})
