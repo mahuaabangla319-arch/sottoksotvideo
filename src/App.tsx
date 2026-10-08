@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 
 export default function App(){
   const [coins,setCoins]=useState(1250)
@@ -6,213 +6,146 @@ export default function App(){
   const [mainWallet,setMainWallet]=useState(2500)
   const [admin1,setAdmin1]=useState(1250)
   const [admin2,setAdmin2]=useState(1250)
-  const [showRecharge,setShowRecharge]=useState(false)
-  const [showWithdraw,setShowWithdraw]=useState(false)
-
-  const gifts=[
-    {id:1,name:'Free',icon:'✨',price:0},
-    {id:2,name:'Rose',icon:'🌹',price:10},
-    {id:3,name:'Heart',icon:'💖',price:50},
-    {id:4,name:'Crown',icon:'👑',price:100},
-    {id:5,name:'Elephant',icon:'🐘',price:500},
-    {id:6,name:'Diamond',icon:'💎',price:1000},
-    {id:7,name:'Car',icon:'🚗',price:5000},
-    {id:8,name:'Super Trophy',icon:'🏆',price:10000},
-    {id:9,name:'Lion',icon:'🦁',price:2000},
-    {id:10,name:'Rocket',icon:'🚀',price:3000},
+  const [showGift,setShowGift]=useState(false)
+  const [showLudo,setShowLudo]=useState(false)
+  const [isMic,setIsMic]=useState(false)
+  const [isVideo,setIsVideo]=useState(false)
+  const [myPos,setMyPos]=useState(0)
+  const [chat,setChat]=useState([{u:'System',m:'সব অনলাইন ইউজার Auto Connect হলো!'}])
+  const [msg,setMsg]=useState('')
+  
+  const onlineUsers=[
+    {id:1,name:'@mahatohimanshu755',avatar:'https://i.pravatar.cc/100?img=3',online:true},
+    {id:2,name:'@sottokofficial',avatar:'https://i.pravatar.cc/100?img=5',online:true},
+    {id:3,name:'@kolkata_girl',avatar:'https://i.pravatar.cc/100?img=11',online:true},
+    {id:4,name:'@gamer_boy',avatar:'https://i.pravatar.cc/100?img=12',online:true},
   ]
 
-  const sendGift=(gift:any)=>{
-    if(gift.price===0){
-      alert('Free Gift Sent!')
-      return
-    }
-    if(coins < gift.price){
-      alert(`Coin sesh dada! ${gift.price} coin lagbe, tomar ache ${coins}. Recharge koro!`)
-      setShowRecharge(true)
-      return
-    }
-    // Coin কাটবে
-    setCoins(coins - gift.price)
-    // Diamonds এ Add হবে Creator এর (80% Creator, 20% Admin)
-    let creatorDiamond = gift.price * 0.80
-    let adminCut = gift.price * 0.20
-    setDiamonds(diamonds + creatorDiamond)
-    // 2 Admin এ ভাগ
-    setAdmin1(admin1 + adminCut*0.5)
-    setAdmin2(admin2 + adminCut*0.5)
-    alert(`${gift.icon} ${gift.name} Sent! ${gift.price} Coin katlo. Creator pelo ${creatorDiamond} Diamond`)
+  const gifts=[
+    {name:'Free',icon:'✨',price:0},{name:'Rose',icon:'🌹',price:10},
+    {name:'Heart',icon:'💖',price:50},{name:'Crown',icon:'👑',price:100},
+    {name:'Elephant',icon:'🐘',price:500},{name:'Diamond',icon:'💎',price:1000},
+    {name:'Car',icon:'🚗',price:5000},{name:'Trophy',icon:'🏆',price:10000},
+    {name:'Lion',icon:'🦁',price:2000},{name:'Rocket',icon:'🚀',price:3000},
+  ]
+
+  const sendGift=(g:any)=>{
+    if(coins<g.price){alert('Coin নেই!');return}
+    if(g.price>0){setCoins(coins-g.price);setDiamonds(diamonds+g.price*0.8);setAdmin1(admin1+g.price*0.1);setAdmin2(admin2+g.price*0.1)}
+    setChat([...chat,{u:'Tumi',m:`${g.icon} ${g.name} পাঠালে`}])
+    setShowGift(false)
   }
 
-  const handleRecharge=(amount:number, coin:number)=>{
-    // Google Play 15% কাটবে
-    let googleCut = amount * 0.15
-    let remaining = amount - googleCut
-    let a1 = remaining * 0.5
-    let a2 = remaining * 0.5
-    setCoins(coins + coin)
-    setMainWallet(mainWallet + amount) // Recharge এ Main Wallet এও Add
-    setAdmin1(admin1 + a1)
-    setAdmin2(admin2 + a2)
-    setShowRecharge(false)
-    alert(`Recharge Success! ${coin} Coin pelo. Google katlo ${googleCut} Taka, Admin1: ${a1} Taka, Admin2: ${a2} Taka`)
+  const joinLudo=(fee:number)=>{
+    if(mainWallet<fee){alert('Main Wallet e taka nei');return}
+    setMainWallet(mainWallet-fee)
+    setShowLudo(true)
+    setChat([{u:'System',m:`₹${fee} Table e ${onlineUsers.length} জন Auto Connect হলো! Video Call শুরু!`}])
   }
 
-  const handleWithdraw=()=>{
-    if(diamonds < 100){
-      alert('100 Diamond na hole withdraw hobe na dada!')
-      return
-    }
-    let rs = (diamonds/100)*80
-    setMainWallet(mainWallet + rs)
-    setDiamonds(0)
-    setShowWithdraw(false)
-    alert(`${diamonds} Diamond = Rs ${rs} Main Wallet e gelo! UPI te withdraw korte parbe`)
+  const roll=()=>{
+    let d=Math.floor(Math.random()*6)+1
+    let np=myPos+d
+    if(np>=100){np=100; let win=100*0.9; setMainWallet(mainWallet+win); alert(`জিতে গেলে! ₹${win}`)}
+    setMyPos(np)
+    setChat(c=>[...c,{u:'Tumi',m:`🎲 ${d} - Pos ${np}/100`}])
   }
 
   return(
-    <div style={{background:'black', color:'white', minHeight:'100vh', fontFamily:'system-ui', maxWidth:420, margin:'0 auto', position:'relative', paddingBottom:70}}>
-      
-      {/* Top - Following / For You */}
-      <div style={{display:'flex', justifyContent:'center', gap:20, padding:12, position:'fixed', top:0, width:'100%', maxWidth:420, background:'black', zIndex:20}}>
-        <span style={{color:'#666'}}>Following</span>
-        <span style={{fontWeight:900}}>For You</span>
+    <div style={{background:'black',color:'white',minHeight:'100vh',maxWidth:420,margin:'0 auto',position:'relative'}}>
+      {/* For You */}
+      <div style={{display:'flex',justifyContent:'center',gap:30,padding:12,position:'fixed',top:0,width:'100%',maxWidth:420,background:'black',zIndex:10}}>
+        <span style={{color:'#666'}}>Following</span><b style={{borderBottom:'2px solid white'}}>For You</b>
       </div>
-
-      {/* Filter */}
-      <div style={{paddingTop:45, display:'flex', justifyContent:'center'}}>
-        <div style={{background:'#1a1a1a', borderRadius:20, padding:'6px 14px', fontSize:13, display:'flex', gap:10, alignItems:'center'}}>
-          <span>পছন্দের বিষয়</span><span style={{background:'#222', padding:'4px 10px', borderRadius:20}}>সব ▼</span>
+      
+      <div style={{paddingTop:50,height:'65vh',display:'flex',justifyContent:'space-between',padding:16,alignItems:'flex-end',background:'linear-gradient(transparent,#111)'}}>
+        <div>
+          <div style={{display:'flex',gap:10,alignItems:'center'}}><img src="https://i.pravatar.cc/100?img=3" style={{width:44,height:44,borderRadius:'50%',border:'2px solid #a855f7'}}/><span style={{background:'#a855f7',padding:'4px 12px',borderRadius:20,fontSize:12}}>+ Follow</span></div>
+          <p style={{fontSize:11,marginTop:8}}>SOT TOK • ID: 96216703</p><b style={{fontSize:13}}>@mahatohimanshu755</b>
+        </div>
+        <div style={{display:'flex',flexDirection:'column',gap:16,alignItems:'center'}}>
+          <div>❤️<br/><span style={{fontSize:10}}>0</span></div>
+          <div>💬<br/><span style={{fontSize:10}}>0</span></div>
+          <div onClick={()=>setShowGift(true)} style={{background:'#a855f7',padding:'8px',borderRadius:'50%'}}>🎁<br/><span style={{fontSize:9}}>Gift</span></div>
+          <div>🔗<br/><span style={{fontSize:9}}>Share</span></div>
         </div>
       </div>
 
-      <p style={{textAlign:'right', padding:'10px 16px 0', fontSize:11, color:'#aaa'}}>Tap for sound</p>
+      {/* LUDO ICON - নিচের দিকে */}
+      <div style={{display:'flex',justifyContent:'center',gap:8,padding:'0 12px'}}>
+        {[10,50,100].map(f=><button key={f} onClick={()=>joinLudo(f)} style={{flex:1,background:'#facc15',color:'black',border:'none',padding:10,borderRadius:12,fontWeight:900}}>🎲 LUDO ₹{f}</button>)}
+      </div>
 
-      {/* Profile + Video Area */}
-      <div style={{padding:'10px 16px', display:'flex', justifyContent:'space-between'}}>
-        <div style={{display:'flex', gap:12, alignItems:'center'}}>
-          <img src="https://i.pravatar.cc/100?img=11" style={{width:56, height:56, borderRadius:'50%', border:'2px solid white'}} />
-          <div>
-            <button style={{background:'#ff0050', border:'none', color:'white', padding:'6px 16px', borderRadius:20, fontWeight:900, fontSize:13}}>+ Follow</button>
-            <p style={{margin:'6px 0 0', fontSize:13, fontWeight:900}}>SOT TOK • ID: 96216703</p>
-            <p style={{margin:0, fontSize:11, color:'#aaa'}}>@mahatohimanshu755</p>
+      {/* Gift Panel - Video te touch korle */}
+      {showGift && (
+        <div style={{position:'fixed',bottom:0,left:'50%',transform:'translateX(-50%)',width:'100%',maxWidth:420,background:'#121212',borderRadius:'20px 20px 0 0',zIndex:50,borderTop:'1px solid #333'}}>
+          {/* Wallet */}
+          <div style={{margin:12,background:'#1e1e1e',borderRadius:16,padding:12}}>
+            <b>👜 Wallet</b>
+            <div style={{display:'flex',justifyContent:'space-between',marginTop:8,fontSize:13}}><span>👜 Main Wallet</span><b style={{color:'#facc15'}}>Rs {mainWallet}</b></div>
+            <div style={{display:'flex',justifyContent:'space-between',fontSize:13}}><span>🪙 Coins</span><b>{coins}</b></div>
+            <div style={{display:'flex',justifyContent:'space-between',fontSize:13}}><span>💎 Diamonds</span><b>{diamonds}</b></div>
+            <div style={{display:'flex',gap:8,marginTop:8}}><button style={{flex:1,border:'1px solid #a855f7',background:'transparent',color:'#a855f7',padding:6,borderRadius:20,fontSize:11}}>Withdraw ↓</button><button style={{flex:1,background:'#a855f7',border:'none',color:'white',padding:6,borderRadius:20,fontSize:11}}>Recharge +⚡</button></div>
+            <p style={{fontSize:9,textAlign:'center',color:'#aaa',marginTop:6}}>100 Diamonds = Rs 80</p>
+          </div>
+          {/* Gift Grid */}
+          <div style={{padding:12}}>
+            <div style={{display:'flex',justifyContent:'space-between'}}><b>🎁 গিফট পাঠান</b><span onClick={()=>setShowGift(false)} style={{background:'#222',padding:'4px 10px',borderRadius:20}}>✕</span></div>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:8,marginTop:10}}>
+              {gifts.map(g=><div key={g.name} onClick={()=>sendGift(g)} style={{background:'#1e1e1e',borderRadius:10,padding:8,textAlign:'center'}}><div style={{fontSize:20}}>{g.icon}</div><div style={{fontSize:9}}>{g.name}</div><div style={{fontSize:8,color:'#facc15'}}>{g.price}</div></div>)}
+            </div>
           </div>
         </div>
-        {/* Right Side Icons */}
-        <div style={{display:'flex', flexDirection:'column', gap:16, alignItems:'center', paddingTop:10}}>
-          <div style={{textAlign:'center'}}><div style={{fontSize:28}}>❤️</div><span style={{fontSize:11}}>2</span></div>
-          <div style={{textAlign:'center'}}><div style={{fontSize:24}}>💬</div><span style={{fontSize:11}}>0</span></div>
-          <div style={{textAlign:'center'}}><div style={{fontSize:24}}>🎁</div><span style={{fontSize:11}}>1</span></div>
-          <div style={{textAlign:'center'}}><div style={{fontSize:22}}>🔗</div><span style={{fontSize:10}}>Share</span></div>
-        </div>
-      </div>
+      )}
 
-      {/* WALLET - তোমার Screenshot এর মতো */}
-      <div style={{margin:'0 12px', background:'#1e1e1e', borderRadius:16, padding:12, border:'1px solid #333'}}>
-        <p style={{fontWeight:900, margin:'0 0 10px', display:'flex', gap:6, alignItems:'center'}}>👜 Wallet</p>
-        
-        <div style={{display:'flex', justifyContent:'space-between', marginBottom:8}}>
-          <span style={{display:'flex', gap:6, fontSize:13, color:'#ccc'}}>👜 Main Wallet</span>
-          <b style={{fontSize:13}}>Rs {mainWallet}</b>
-        </div>
-        <div style={{display:'flex', justifyContent:'space-between', marginBottom:8}}>
-          <span style={{display:'flex', gap:6, fontSize:13, color:'#ccc'}}>🪙 Coins</span>
-          <b style={{fontSize:13}}>{coins}</b>
-        </div>
-        <div style={{display:'flex', justifyContent:'space-between', marginBottom:10}}>
-          <span style={{display:'flex', gap:6, fontSize:13, color:'#ccc'}}>💎 Diamonds</span>
-          <b style={{fontSize:13}}>{diamonds}</b>
-        </div>
+      {/* LUDO ROOM - Video/Audio Call + Game */}
+      {showLudo && (
+        <div style={{position:'fixed',top:0,left:'50%',transform:'translateX(-50%)',width:'100%',maxWidth:420,height:'100%',background:'#0a0a14',zIndex:60,display:'flex',flexDirection:'column'}}>
+          <div style={{padding:10,background:'#1a1a2e',display:'flex',justifyContent:'space-between'}}>
+            <b>🎲 LUDO - Video Call Room ({onlineUsers.length} Online)</b>
+            <button onClick={()=>setShowLudo(false)} style={{background:'#333',border:'none',color:'white',padding:'6px 12px',borderRadius:20}}>✕</button>
+          </div>
 
-        <div style={{display:'flex', gap:8}}>
-          <button onClick={()=>setShowWithdraw(true)} style={{flex:1, background:'transparent', border:'1px solid #a855f7', color:'#a855f7', padding:8, borderRadius:20, fontSize:12, fontWeight:900}}>Withdraw Diamonds ↓</button>
-          <button onClick={()=>setShowRecharge(true)} style={{flex:1, background:'#a855f7', border:'none', color:'white', padding:8, borderRadius:20, fontSize:12, fontWeight:900}}>Recharge +⚡</button>
-        </div>
-
-        <p style={{fontSize:11, color:'#aaa', textAlign:'center', margin:'8px 0 0'}}>Exchange Rate: 100 Diamonds = Rs 80 ⓘ</p>
-      </div>
-
-      {/* GIFT PANEL - গিফট পাঠান */}
-      <div style={{marginTop:12, background:'#121212', borderRadius:20, padding:12, border:'1px solid #222'}}>
-        <p style={{textAlign:'center', fontWeight:900, margin:'0 0 12px'}}>🎁 গিফট পাঠান</p>
-        
-        <div style={{display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:8}}>
-          {gifts.map(g=>(
-            <div key={g.id} onClick={()=>sendGift(g)} style={{background:'#1e1e1e', borderRadius:12, padding:'10px 4px', textAlign:'center', border:'1px solid #333', cursor:'pointer'}}>
-              <div style={{fontSize:22}}>{g.icon}</div>
-              <p style={{fontSize:11, margin:'4px 0 0', fontWeight:600}}>{g.name}</p>
-              <p style={{fontSize:10, margin:0, color:'#aaa'}}>{g.price}</p>
-            </div>
-          ))}
-        </div>
-
-        {/* Ludo Cash Game - তোমার নতুন আইডিয়া */}
-        <div style={{marginTop:12, background:'#1a0a2e', borderRadius:12, padding:10, border:'1px solid #a855f7'}}>
-          <p style={{margin:0, fontSize:12, fontWeight:900, color:'#facc15'}}>🎲 LUDO CASH GAME - টাকা দিয়ে খেলো, টাকা জেতো</p>
-          <p style={{margin:'2px 0', fontSize:10, color:'#aaa'}}>Recharge করে খেলো, জিতলে Main Wallet এ টাকা পাবে - কয়েন না</p>
-          <div style={{display:'flex', gap:6, marginTop:6}}>
-            {[10,50,100].map(fee=>(
-              <button key={fee} onClick={()=>{
-                if(mainWallet<fee){alert('Taka nei! Recharge koro'); return}
-                setMainWallet(mainWallet-fee)
-                let win=fee*2*0.9
-                if(Math.random()>0.5){setMainWallet(mainWallet-fee+win); alert(`Jitle! ${win} Taka pele`)}else{alert('Harle!')}
-              }} style={{flex:1, background:'#a855f7', border:'none', color:'white', padding:6, borderRadius:8, fontSize:11, fontWeight:900}}>₹{fee}</button>
+          {/* Video Call Grid - 4 জন */}
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,padding:6}}>
+            {onlineUsers.map(u=>(
+              <div key={u.id} style={{background:'#1e1e1e',height:110,borderRadius:12,position:'relative',overflow:'hidden',border: u.name==='@mahatohimanshu755'?'2px solid #facc15':'1px solid #333'}}>
+                <img src={u.avatar} style={{width:'100%',height:'100%',objectFit:'cover',opacity:isVideo?1:0.3}}/>
+                <div style={{position:'absolute',bottom:4,left:4,background:'rgba(0,0,0,0.7)',padding:'2px 6px',borderRadius:10,fontSize:9}}>{u.name} {isMic?'🎤':''} {u.online?'🟢':''}</div>
+                {!isVideo && <div style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)',fontSize:24}}>👤</div>}
+              </div>
             ))}
           </div>
-        </div>
-      </div>
 
-      {/* RECHARGE POPUP - UPI / GPay */}
-      {showRecharge && <div style={{position:'fixed', top:0, left:0, width:'100%', height:'100%', background:'rgba(0,0,0,0.9)', zIndex:100, display:'flex', alignItems:'center', justifyContent:'center', padding:20}}>
-        <div style={{background:'#1e1e1e', width:'100%', maxWidth:360, borderRadius:20, padding:16}}>
-          <h3 style={{margin:0}}>Recharge - Coin Kino</h3>
-          <p style={{fontSize:11, color:'#aaa'}}>Google 15% katbe, baki 85 Taka 2 admin e 50/50</p>
-          
-          {[
-            {rs:50, coin:200},
-            {rs:100, coin:600, tag:'DHAMAKA 9-12 Oct'},
-            {rs:500, coin:3500},
-            {rs:1000, coin:8000},
-          ].map(p=>(
-            <div key={p.rs} onClick={()=>handleRecharge(p.rs,p.coin)} style={{background:'#2a2a2a', borderRadius:12, padding:12, marginTop:8, display:'flex', justifyContent:'space-between', alignItems:'center', border: p.tag?'1px solid gold':''}}>
-              <div>
-                <b>₹{p.rs} = {p.coin} Coins</b>
-                {p.tag && <span style={{background:'gold', color:'black', fontSize:9, padding:'2px 6px', borderRadius:10, marginLeft:6}}>{p.tag}</span>}
-                <p style={{fontSize:10, margin:0, color:'#aaa'}}>Admin1: {(p.rs*0.85*0.5).toFixed(2)} | Admin2: {(p.rs*0.85*0.5).toFixed(2)}</p>
-              </div>
-              <button style={{background:'#ff0050', border:'none', color:'white', padding:'6px 12px', borderRadius:20, fontSize:12}}>Buy</button>
-            </div>
-          ))}
-
-          <p style={{fontSize:11, textAlign:'center', marginTop:10}}>GPay / PhonePe / UPI দিয়ে Pay হবে</p>
-          <div style={{display:'flex', gap:8}}>
-            <a href="upi://pay?pa=sottok@oksbi&pn=SOT TOK&am=100&cu=INR" style={{flex:1, background:'#4285F4', color:'white', padding:10, borderRadius:10, textAlign:'center', textDecoration:'none', fontSize:13, fontWeight:900}}>G Pay</a>
-            <a href="upi://pay?pa=sottok@oksbi&pn=SOT TOK&am=100&cu=INR" style={{flex:1, background:'#5f259f', color:'white', padding:10, borderRadius:10, textAlign:'center', textDecoration:'none', fontSize:13, fontWeight:900}}>PhonePe</a>
+          <div style={{display:'flex',justifyContent:'center',gap:10,padding:8}}>
+            <button onClick={()=>setIsMic(!isMic)} style={{background:isMic?'#16a34a':'#333',border:'none',color:'white',padding:'8px 16px',borderRadius:20,fontSize:12}}>{isMic?'🎤 Mic ON':'🔇 Mic OFF'}</button>
+            <button onClick={()=>setIsVideo(!isVideo)} style={{background:isVideo?'#2563eb':'#333',border:'none',color:'white',padding:'8px 16px',borderRadius:20,fontSize:12}}>{isVideo?'📹 Video ON':'📷 Video OFF'}</button>
           </div>
-          <button onClick={()=>setShowRecharge(false)} style={{width:'100%', marginTop:10, background:'#333', border:'none', color:'white', padding:10, borderRadius:10}}>Close</button>
-        </div>
-      </div>}
 
-      {/* WITHDRAW POPUP */}
-      {showWithdraw && <div style={{position:'fixed', top:0, left:0, width:'100%', height:'100%', background:'rgba(0,0,0,0.9)', zIndex:100, display:'flex', alignItems:'center', justifyContent:'center', padding:20}}>
-        <div style={{background:'#1e1e1e', width:'100%', maxWidth:340, borderRadius:20, padding:16, textAlign:'center'}}>
-          <h3 style={{margin:0}}>Withdraw Diamonds</h3>
-          <p style={{fontSize:32, fontWeight:900, margin:'10px 0'}}>{diamonds} 💎 = Rs {(diamonds/100*80).toFixed(2)}</p>
-          <p style={{fontSize:11, color:'#aaa'}}>100 Diamond = Rs 80 • Main Wallet e jabe</p>
-          <input placeholder="Tomar UPI ID - 8595@oksbi" style={{width:'100%', padding:12, borderRadius:10, border:'none', background:'#2a2a2a', color:'white', marginTop:10}} />
-          <button onClick={handleWithdraw} style={{width:'100%', background:'#a855f7', border:'none', color:'white', padding:12, borderRadius:10, fontWeight:900, marginTop:10}}>Withdraw to Main Wallet</button>
-          <button onClick={()=>setShowWithdraw(false)} style={{width:'100%', background:'#333', border:'none', color:'white', padding:10, borderRadius:10, marginTop:8}}>Close</button>
-        </div>
-      </div>}
+          {/* Board */}
+          <div style={{background:'#1e1e1e',margin:8,borderRadius:12,padding:12,textAlign:'center'}}>
+            <div style={{height:100,background:'linear-gradient(45deg,#ff0050,#a855f7)',borderRadius:10,display:'flex',alignItems:'center',justifyContent:'center',position:'relative'}}>
+              <div style={{position:'absolute',left:`${myPos}%`,transition:'0.5s',background:'white',width:30,height:30,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center'}}>🐯</div>
+              <b>{myPos}/100</b>
+            </div>
+            <button onClick={roll} style={{marginTop:10,background:'#facc15',color:'black',border:'none',padding:'10px 24px',borderRadius:20,fontWeight:900}}>🎲 ROLL</button>
+          </div>
 
-      {/* Bottom Nav */}
-      <div style={{position:'fixed', bottom:0, left:'50%', transform:'translateX(-50%)', width:'100%', maxWidth:420, background:'black', borderTop:'1px solid #222', display:'flex', justifyContent:'space-around', padding:'8px 0'}}>
-        <div style={{textAlign:'center', color:'#a855f7'}}><div>🏠</div><span style={{fontSize:10}}>Home</span></div>
-        <div style={{textAlign:'center', color:'#666'}}><div>🧭</div><span style={{fontSize:10}}>Explorer</span></div>
-        <div style={{background:'#a855f7', width:44, height:44, borderRadius:12, display:'flex', alignItems:'center', justifyContent:'center', fontSize:22}}>+</div>
-        <div style={{textAlign:'center', color:'#666'}}><div>🔔</div><span style={{fontSize:10}}>Inbox</span></div>
-        <div style={{textAlign:'center', color:'#666'}}><div>👤</div><span style={{fontSize:10}}>Profile</span></div>
+          {/* Chat */}
+          <div style={{flex:1,background:'#121212',display:'flex',flexDirection:'column'}}>
+            <div style={{flex:1,overflowY:'auto',padding:8}}>
+              {chat.map((c,i)=><div key={i} style={{fontSize:12,marginBottom:4}}><b style={{color:'#a855f7'}}>{c.u}:</b> {c.m}</div>)}
+            </div>
+            <div style={{display:'flex',gap:6,padding:8}}>
+              <input value={msg} onChange={e=>setMsg(e.target.value)} placeholder="বলো..." style={{flex:1,background:'#1e1e1e',border:'none',padding:8,borderRadius:20,color:'white'}}/>
+              <button onClick={()=>{if(msg){setChat([...chat,{u:'Tumi',m:msg}]);setMsg('')}}} style={{background:'#a855f7',border:'none',color:'white',padding:'8px 14px',borderRadius:20}}>Send</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div style={{position:'fixed',bottom:0,left:'50%',transform:'translateX(-50%)',width:'100%',maxWidth:420,background:'black',display:'flex',justifyContent:'space-around',padding:8,borderTop:'1px solid #222'}}>
+        <span style={{color:'#ff0050'}}>🏠 হোম</span><span>🧭 এক্সপ্লোরার</span><span onClick={()=>setShowLudo(true)} style={{background:'#facc15',color:'black',padding:'6px 14px',borderRadius:10}}>🎲 Ludo</span><span>🔔 ইনবক্স</span><span>👤 প্রোফাইল</span>
       </div>
     </div>
   )
