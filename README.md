@@ -1,84 +1,35 @@
-# SOT TOK 
+# SOT TOK - SHORT TALK - FULL VIGO VIDEO ORIGINAL CLONE
 
-Build EXACT clone of SOT TOK app from screenshots. No feature skip. Tech: React + Tailwind + Firebase + MediaRecorder API.
+Build 100% EXACT Vigo Video Original 2018-2019 clone rebranded as SOT TOK. Keep ALL original Vigo UI, screens, flow, positions. Only change name to SOT TOK and colors to orange #ff7a00 to yellow #facc15. Tech: React + Tailwind + Firebase Auth Firestore Storage Realtime.
 
-**CRITICAL REQUIREMENTS - MUST INCLUDE ALL:**
+BRANDING RULE - MUST:
+App Name: SOT TOK everywhere, never show Vigo/Bigo
+Colors: Orange #ff7a00 to Yellow #facc15 gradient
+Logo: Fire logo orange-yellow square rounded 22px white play icon
+Slogan: নিজের পরিচয় নিজেই তৈরি করো yellow #facc15
 
-1.  **SPLASH SCREEN (Exact):**
-    - Full screen black to dark blue gradient radial-gradient(#1e2a8a to #000)
-    - Center: Fire logo orange-yellow gradient square with rounded 22px, white play icon inside, + big flame emoji behind. 
-    - Text: SOT TOK white 36px bold tracking 2px. 
-    - Slogan below yellow #facc15: নিজের পরিচয় নিজেই তৈরি করো
-    - Bottom: yellow progress bar animated 0-100% in 2 sec then auto navigate to login.
+BUILD ALL THESE SCREENS EXACT VIGO ORIGINAL:
 
-2.  **LOGIN + NEW GMAIL CREATION (Exact like screenshot):**
-    - Black background, back arrow top left.
-    - Center logo + SOT TOK blue #2a4bff + yellow slogan.
-    - Bengali paragraph: Gmail দিয়ে সাইন ইন করুন। নতুন অ্যাকাউন্টে একটি স্থায়ী SOT TOK আইডি তৈরি হবে এবং আপনার নাম সিস্টেমে সুরক্ষিত থাকবে।
-    - Badge: 100% Safe & Private green border.
-    - **Button 1:** Blue button #2a4bff, white G in circle, text: Gmail দিয়ে চালিয়ে যান -> on click use Firebase Google Auth (signInWithPopup). After login save user to Firestore.
-    - **Form 2 - Create New ID inside app (This is the NEW GMAIL system):**
-      Label: নতুন Gmail খুলতে চাই
-      3 inputs: পুরো নাম, নতুন gmail আইডি লিখুন (placeholder: sottok123 - this will become sottok123@sottok.com), পাসওয়ার্ড (min 6)
-      On submit: create user in Firebase Auth with email = input2 + '@sottok.com', save displayName. Show success. Then go to feed.
-    - Footer: Privacy Policy • Terms of Service.
+1. SPLASH SCREEN: Full black to dark blue radial gradient, center fire logo, SOT TOK 36px white bold, slogan yellow, bottom yellow progress bar 0-100% 2 sec then go to login.
 
-3.  **FOR YOU FEED (Exact):**
-    - Vertical snap scroll, full screen videos, loop, mute/unmute on tap, Tap for sound text top right.
-    - Top tabs: Following | For You (For You active bold white)
-    - Right actions: Creator profile circle with red + button, heart with 4.0K, comment 0, share 0, Save bookmark below. All icons white.
-    - Bottom: @creator username, 1.0M views, Original sound - SOT TOK Artist, Button: Use this sound with music icon.
-    - Use sample videos from /videos folder, Bangla kitchen cooking videos if possible.
+2. LOGIN PAGE (From video): Black bg, back arrow, center logo + SOT TOK blue #2a4bff + slogan yellow, Bengali text "Gmail দিয়ে সাইন ইন করুন। নতুন অ্যাকাউন্টে একটি স্থায়ী SOT TOK আইডি তৈরি হবে এবং আপনার নাম সিস্টেমে সুরক্ষিত থাকবে।" Badge 100% Safe & Private green, Blue button #2a4bff white G "Gmail দিয়ে চালিয়ে যান" -> Firebase Google Auth signInWithPopup, save user to Firestore users {uid, name, email, sotId: SOT_1234, pic, bio:"", coins:0, followers:0, following:0, likes:0, createdAt}. Auto generate SOT ID.
 
-4.  **EXPLORE PAGE (Exact):**
-    - White bg. Top Search bar with search icon.
-    - Pink banner #ffe3f0 rounded 24px: red badge SotTok with flame, big Bengali: নিজের সাথে ভুয়েট, pink small: প্রতি সপ্তাহে নতুন চ্যালেঞ্জ, black small: সেরা ১০ জন ক্রিয়েটর পাবেন বিশেষ পুরস্কার
-    - Tabs: Trending (active black bold with pink underline), Comedy, Food, Dance|Sing, Family, Beauty - horizontal scroll.
-    - Middle: gray text: এখনো কোনো ট্রেন্ডিং হ্যাশট্যাগ নেই।
-    - Bottom: Recommended Users + Show all pink right.
-    - Show 2-column user cards with Food category images.
+3. HOME FEED: Vertical swipe full screen videos, right side profile circle + follow button, heart like count, comment count, share, gift button, bottom username caption music scrolling, top tabs Following For You Trending, fetch Firestore videos orderBy createdAt desc autoplay loop muted tap to unmute.
 
-5.  **ACTIVITY PAGE (Exact):**
-    - Black bg. Header: back arrow + Activity title white.
-    - Tabs: All (active pink underline), Likes, Comments, Followers gray.
-    - Center: gray Bengali: এখনো কোনো অ্যাক্টিভিটি নেই।
-    - Bottom nav highlight on bell yellow.
+4. CAMERA PAGE /camera: Full preview getUserMedia user facing, top clean no text only right Flash Flip touch working, top center 00:15 Recording badge, left vertical Effects Beauty Filters blur rounded-2xl yellow border glow touch working, beauty slider 0-100 brightness filter, bottom Ready • Beauty level, bottom bar rounded-t-[32px] black/70 blur 5 buttons Beauty Stickers BIG RECORD Music Timer, BIG RECORD button SOT TOK gradient orange #ff7a00 to yellow #facc15 white inner circle hold to record release to stop scale animation yellow glow shadow, music picker bottom sheet trending songs, after stop preview + caption input + Upload button gradient -> upload Storage + save Firestore videos {id, userId, username, userPic, videoUrl, caption, likes:0, comments:0, gifts:0, musicName, createdAt}.
 
-6.  **NEW VIDEO - CAMERA RECORDING FULLY WORKING (Nothing missing):**
-    - Header: back arrow + নতুন ভিডিও title Bengali, 3 dots right.
-    - Tabs: Record active blue #2a4bff with video icon, Gallery with image icon.
-    - **CAMERA MUST WORK:** Request getUserMedia, show live camera preview in center rounded 24px, mirrored. If permission denied show black screen with "Camera access needed" button.
-    - Right side inside preview: Flash icon (toggle torch), Flip icon (switch front/back camera).
-    - Bottom controls: 15s and 30s pill selector, 15s active blue. Big blue record button #2a4bff with white border ring. On press start MediaRecorder, timer counting, on second press stop and save video to Firebase Storage, show preview and Post button. Left bottom small gallery thumbnail (last image from device), Right bottom Speed icon.
-    - After record: Add caption screen with Post button -> upload to Firestore feed.
+5. PROFILE PAGE /profile: Cover gradient orange-yellow, profile pic yellow border, SOT ID, name, bio, edit button, stats Videos Followers Following Likes touch to list, tabs Videos grid 3 cols thumbnails Liked, wallet button top right coins.
 
-**BOTTOM NAVIGATION (Exact Bengali):**
-Fixed bottom, black bg white icons, 5 items: হোম (home), এক্সপ্লোরার (compass), + blue button big (#2a4bff rounded-xl), ইনবক্স (bell), প্রোফাইল (user). Active state blue/yellow.
+6. GIFT SYSTEM: Gift button in feed, bottom sheet gifts list Rose 10 coins, Heart 50, Diamond 100, Crown 500, Car 1000, on send deduct sender users.coins, add to owner coins, save giftHistory, show animation.
 
-**SETUP:**
-Use Firebase config placeholder. Use react-router. Mobile width 420px centered. All text Bengali exact as described. Production ready, deployable.
+7. RECHARGE WALLET /wallet: Top balance card orange-yellow gradient big coins, recharge options 50 coins ₹0.5, 100 ₹1, 200 ₹2, 500 ₹5, 1000 ₹10, 5000 ₹50, UPI mock QR Pay button -> update users.coins, save rechargeHistory collection, history tabs.
 
-DO NOT SKIP CAMERA, DO NOT SKIP NEW GMAIL FORM. Everything must work.
+8. EXPLORE TRENDING /explore: Search bar users videos, tabs Trending Nearby New, grid videos views overlay, hashtags #trending #funny, orderBy likes desc.
 
-This project was built with [Lovable](https://lovable.dev).
+9. INBOX /inbox: Tabs Likes Comments Followers Gifts list from notifications collection.
 
-**Live app**: https://sottoksotvideo.lovable.app
+10. ADMIN PANEL /admin CRITICAL: Admin email protected login, dashboard with Firestore appConfig document realtime onSnapshot listener. All app screens listen to appConfig for colors, logo, texts, banners. Fields: appName, logoUrl, primaryColor, secondaryColor, slogan, loginText, bannerImage, maintenanceMode, trendingHashtags array, giftList array with name icon coins, rechargeRates array, musicList array. When admin edits and saves to appConfig, all user apps auto update instantly via onSnapshot. Admin can manage users ban/delete, manage videos delete, view recharge and gift transactions.
 
-## Build with Lovable
+BOTTOM NAV: 5 tabs Home Explore Camera center big orange-yellow + button Inbox Profile exact Vigo positions.
 
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/7bcd7f5b-07c3-4d21-815f-e59f44663b92).
-
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
-
-## Development
-
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
-
-```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
-npm run dev
-```
+RULES: Mobile first, all buttons onClick onTouchStart working, Firebase realtime, SOT TOK orange-yellow theme, no Vigo/Bigo text, fully working no dummy UI.
