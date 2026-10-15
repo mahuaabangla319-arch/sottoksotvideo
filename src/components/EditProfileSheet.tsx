@@ -1,5 +1,4 @@
 import { useRef, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import { Camera, Copy, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,7 +21,6 @@ export function EditProfileSheet({
   avatarUrl: string | null;
   onSaved: () => void;
 }) {
-  const queryClient = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
   const [username, setUsername] = useState(profile.username ?? "");
   const [fullName, setFullName] = useState(profile.full_name ?? "");
@@ -104,7 +102,6 @@ export function EditProfileSheet({
       return;
     }
     toast.success("প্রোফাইল আপডেট হয়েছে");
-    void queryClient.invalidateQueries({ queryKey: ["feed"] });
     onOpenChange(false);
     onSaved();
   };

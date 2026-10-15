@@ -16,8 +16,6 @@ export const Route = createFileRoute("/activity")({
       { name: "description", content: "আপনার লাইক, কমেন্ট, ফলোয়ার আর মেসেজের নোটিফিকেশন এক জায়গায়।" },
       { property: "og:title", content: "Activity — SOT TOK" },
       { property: "og:description", content: "আপনার লাইক, কমেন্ট, ফলোয়ার আর মেসেজের নোটিফিকেশন এক জায়গায়।" },
-       { property: "og:type", content: "website" },
-       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: ActivityPage,

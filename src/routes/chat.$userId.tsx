@@ -13,8 +13,6 @@ export const Route = createFileRoute("/chat/$userId")({
       { name: "description", content: "SOT TOK ইউজারের সাথে ব্যক্তিগত চ্যাট।" },
       { property: "og:title", content: "মেসেজ — SOT TOK" },
       { property: "og:description", content: "SOT TOK ইউজারের সাথে ব্যক্তিগত চ্যাট।" },
-       { property: "og:type", content: "website" },
-       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: ChatThread,

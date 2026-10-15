@@ -1,90 +1,58 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { useState } from 'react'
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import splash from "@/assets/mahalaya-splash.jpg.asset.json";
 
-export const Route = createFileRoute('/')({
-  component: HomePage,
-})
+export const Route = createFileRoute("/")({
+  head: () => ({
+    meta: [
+      { title: "SOT TOK — নিজের পরিচয় নিজেই তৈরি করো" },
+      {
+        name: "description",
+        content: "SOT TOK — ভারতের নাম্বার ওয়ান শর্ট ভিডিও অ্যাপ। ভিডিও বানাও, শেয়ার করো, নিজের পরিচয় তৈরি করো।",
+      },
+      { property: "og:title", content: "SOT TOK — নিজের পরিচয় নিজেই তৈরি করো" },
+      { property: "og:description", content: "ভারতের নাম্বার ওয়ান শর্ট ভিডিও অ্যাপ — রেকর্ড করো, শেয়ার করো, ট্রেন্ড করো।" },
+    ],
+  }),
+  component: Splash,
+});
 
-function HomePage() {
-  const [showGift, setShowGift] = useState(false)
-  const [myCoins, setMyCoins] = useState(1250)
+const DURATION = 5000;
 
-  // Demo video data
-  const video = { id: 1, userPic: "https://i.pravatar.cc/100", userId: "user1", likes: 125, comments: 12 }
+function Splash() {
+  const navigate = useNavigate();
+  const [progress, setProgress] = useState(0);
 
-  const followUser = (id:any) => alert("Followed "+id)
-  const likeVideo = (id:any) => alert("Liked!")
-  const sendGift = (g:any) => {
-    if(myCoins >= g.coins) {
-      setMyCoins(myCoins - g.coins)
-      setShowGift(false)
-      alert(g.name+" পাঠানো হলো!")
-    } else {
-      alert("Coins শেষ! Recharge করুন")
-    }
-  }
+  useEffect(() => {
+    const start = Date.now();
+    const id = window.setInterval(() => {
+      setProgress(Math.min(100, ((Date.now() - start) / DURATION) * 100));
+    }, 50);
+    const timeout = window.setTimeout(() => navigate({ to: "/feed" }), DURATION + 50);
+    return () => {
+      window.clearInterval(id);
+      window.clearTimeout(timeout);
+    };
+  }, [navigate]);
 
   return (
-    <div className="relative w-full h-screen bg-black overflow-hidden">
-      {/* VIDEO */}
-      <video className="w-full h-full object-cover" src="https://www.w3schools.com/html/mov_bbb.mp4" autoPlay loop muted playsInline />
-
-      {/* RIGHT SIDE - SMALL VIGO ORIGINAL - SOT TOK */}
-      <div className="absolute right-2 bottom-24 flex flex-col items-center gap-3 z-20">
-        <div className="relative mb-1">
-          <img src={video.userPic} className="w-9 h-9 rounded-full border-[1.5px] border-[#facc15] object-cover" />
-          <button onClick={()=>followUser(video.userId)} className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-4 h-4 bg-red-500 rounded-full text-[10px] text-white flex items-center justify-center">+</button>
+    <div className="relative flex min-h-screen w-full items-center justify-center bg-black">
+      <img
+        src={splash.url}
+        alt="শুভ মহালয়া — SOT TOK শর্ট ভিডিও অ্যাপ"
+        className="absolute inset-0 h-full w-full object-cover blur-2xl opacity-60"
+        aria-hidden
+      />
+      <img
+        src={splash.url}
+        alt="শুভ মহালয়া — SOT TOK শর্ট ভিডিও অ্যাপ"
+        className="relative z-10 w-full max-w-[420px] object-contain"
+      />
+      <div className="absolute bottom-12 z-10 w-full max-w-[420px] px-10">
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/25">
+          <div className="h-full rounded-full bg-gold transition-[width] duration-100 ease-linear" style={{ width: `${progress}%` }} />
         </div>
-
-        <button onClick={()=>likeVideo(video.id)} className="flex flex-col items-center">
-          <div className="w-8 h-8 bg-white/15 backdrop-blur rounded-full flex items-center justify-center text-[16px]">❤️</div>
-          <span className="text-[10px] text-white mt-0.5">{video.likes}</span>
-        </button>
-
-        <button className="flex flex-col items-center">
-          <div className="w-8 h-8 bg-white/15 backdrop-blur rounded-full flex items-center justify-center text-[14px]">💬</div>
-          <span className="text-[10px] text-white mt-0.5">{video.comments}</span>
-        </button>
-
-        <button className="flex flex-col items-center">
-          <div className="w-8 h-8 bg-white/15 backdrop-blur rounded-full flex items-center justify-center text-[14px]">↗</div>
-          <span className="text-[9px] text-white">Share</span>
-        </button>
-
-        <button onClick={()=>setShowGift(true)} className="flex flex-col items-center">
-          <div className="w-8 h-8 rounded-full flex items-center justify-center text-[14px]" style={{background:"linear-gradient(135deg,#ff7a00,#facc15)"}}>🎁</div>
-          <span className="text-[9px] text-[#facc15] mt-0.5">Gift</span>
-        </button>
       </div>
-
-      {/* GIFT SHEET */}
-      {showGift && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-end">
-          <div className="w-full bg-[#1a1a1a] rounded-t-[20px] p-4 border-t border-[#facc15]/20">
-            <div className="flex justify-between items-center mb-3">
-              <p className="text-white font-bold">Gift পাঠান <span className="text-[#facc15] text-sm">Coins: {myCoins}</span></p>
-              <button onClick={()=>setShowGift(false)} className="text-white">✕</button>
-            </div>
-            <div className="grid grid-cols-4 gap-3">
-              {[
-                {name:"Rose", icon:"🌹", coins:10},
-                {name:"Heart", icon:"💖", coins:50},
-                {name:"Diamond", icon:"💎", coins:100},
-                {name:"Crown", icon:"👑", coins:500},
-              ].map(g=>(
-                <button key={g.name} onClick={()=>sendGift(g)} className="bg-white/10 rounded-xl p-2 flex flex-col items-center border border-[#facc15]/20">
-                  <span className="text-xl">{g.icon}</span>
-                  <span className="text-[10px] text-white mt-1">{g.name}</span>
-                  <span className="text-[9px] text-[#facc15]">{g.coins}</span>
-                </button>
-              ))}
-            </div>
-            <button onClick={()=>window.location.href="/wallet"} className="w-full mt-4 py-3 rounded-full text-black font-bold" style={{background:"linear-gradient(90deg,#ff7a00,#facc15)"}}>
-              Recharge করুন
-            </button>
-          </div>
-        </div>
-      )}
     </div>
-  )
+  );
 }

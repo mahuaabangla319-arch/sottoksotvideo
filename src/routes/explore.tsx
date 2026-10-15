@@ -7,7 +7,6 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { BottomNav } from "@/components/BottomNav";
 import { PhoneShell } from "@/components/PhoneShell";
-import { DailyCreators } from "@/components/DailyCreators";
 
 export const Route = createFileRoute("/explore")({
   head: () => ({
@@ -16,8 +15,6 @@ export const Route = createFileRoute("/explore")({
       { name: "description", content: "ট্রেন্ডিং চ্যালেঞ্জ, ফুড, কমেডি আর নতুন ক্রিয়েটর খুঁজে নিন।" },
       { property: "og:title", content: "Explore — SOT TOK" },
       { property: "og:description", content: "ট্রেন্ডিং চ্যালেঞ্জ, ফুড, কমেডি আর নতুন ক্রিয়েটর খুঁজে নিন।" },
-       { property: "og:type", content: "website" },
-       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: ExplorePage,
@@ -77,13 +74,13 @@ function ExplorePage() {
           name: c.full_name || c.username,
           handle: "@" + c.username,
           sot: c.sottok_id,
-          img: c.avatar_url && c.avatar_url.startsWith("http") ? c.avatar_url : fallbackUsers[0]?.img ?? "",
+          img: c.avatar_url && c.avatar_url.startsWith("http") ? c.avatar_url : fallbackUsers[0]!.img,
         }))
       : fallbackUsers;
 
 
   return (
-    <PhoneShell className="bg-background text-foreground">
+    <PhoneShell className="bg-white">
       <div className="px-4 pt-5">
         <form
           onSubmit={submitSearch}
@@ -108,7 +105,6 @@ function ExplorePage() {
           />
         </div>
 
-        <DailyCreators />
         <div className="no-scrollbar mt-4 flex gap-5 overflow-x-auto border-b border-neutral-200">
           {tabs.map((t) => (
             <button
