@@ -1,8 +1,15 @@
 
 import { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom'
-
-const YELLOW = '#FFC700'
+// --- SOTTOK AdSense Start ---
+ if (typeof window !== 'undefined' && !document.querySelector('script[src*="adsbygoogle"]')) {
+   const s = document.createElement('script');
+   s.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9819877494340184';
+   s.async = true;
+   s.crossOrigin = 'anonymous';
+   document.head.appendChild(s);
+ }
+ // --- SOTTOK AdSense End ---const YELLOW = '#FFC700'
 const GREEN = '#00D26A'
 const GRAD = 'linear-gradient(90deg, #FFC700 0%, #FFD600 30%, #00D26A 100%)'
 
