@@ -9,7 +9,8 @@ import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-ro
    s.crossOrigin = 'anonymous';
    document.head.appendChild(s);
  }
- // --- SOTTOK AdSense End ---const YELLOW = '#FFC700'
+ // --- SOTTOK AdSense End ---const 
+YELLOW = '#FFC700'
 const GREEN = '#00D26A'
 const GRAD = 'linear-gradient(90deg, #FFC700 0%, #FFD600 30%, #00D26A 100%)'
 
