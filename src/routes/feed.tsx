@@ -217,22 +217,6 @@ function VideoCard({
       )}
 
       <div className="absolute bottom-28 right-3 flex flex-col items-center gap-5">
-        <div className="relative mb-1">
-          {item.sotId ? (
-            <Link to="/id/$sotId" params={{ sotId: item.sotId }} aria-label="প্রোফাইল দেখুন" className="block h-12 w-12 rounded-full border-2 border-white bg-flame" />
-          ) : (
-            <div className="h-12 w-12 rounded-full border-2 border-white bg-flame" />
-          )}
-          {!isMe && (
-            <button
-              onClick={onFollow}
-              aria-label={followed ? "আনফলো" : "ফলো"}
-              className={`absolute -bottom-2 left-1/2 flex h-5 w-5 -translate-x-1/2 items-center justify-center rounded-full ${followed ? "bg-white" : "bg-red-600"}`}
-            >
-              {followed ? <Check className="h-3.5 w-3.5 text-red-600" strokeWidth={3} /> : <Plus className="h-3.5 w-3.5 text-white" strokeWidth={3} />}
-            </button>
-          )}
-        </div>
         <button onClick={onToggleLike} className="flex flex-col items-center gap-1" aria-label="লাইক">
           <Heart className={`h-8 w-8 ${liked ? "fill-red-500 text-red-500" : "text-white"}`} />
           <span className="text-[11px] text-white">{formatCompact(item.likes)}</span>
@@ -263,11 +247,29 @@ function VideoCard({
       </div>
 
       <div className="absolute bottom-24 left-4 right-24">
-        {item.sotId ? (
-          <Link to="/id/$sotId" params={{ sotId: item.sotId }} className="text-[15px] font-semibold text-white">{item.username}</Link>
-        ) : (
-          <p className="text-[15px] font-semibold text-white">{item.username}</p>
-        )}
+        <div className="mb-2 flex items-center gap-2.5">
+          {item.sotId ? (
+            <Link to="/id/$sotId" params={{ sotId: item.sotId }} aria-label="প্রোফাইল দেখুন" className="block h-10 w-10 shrink-0 rounded-full border-2 border-white bg-flame" />
+          ) : (
+            <div className="h-10 w-10 shrink-0 rounded-full border-2 border-white bg-flame" />
+          )}
+          <div className="min-w-0">
+            {item.sotId ? (
+              <Link to="/id/$sotId" params={{ sotId: item.sotId }} className="block truncate text-[15px] font-semibold text-white">{item.username}</Link>
+            ) : (
+              <p className="truncate text-[15px] font-semibold text-white">{item.username}</p>
+            )}
+            <p className="text-[11px] text-white/60">Follower · Following</p>
+          </div>
+          {!isMe && (
+            <button
+              onClick={onFollow}
+              className={`shrink-0 rounded-full px-3.5 py-1 text-[12px] font-semibold text-white ${followed ? "bg-white/20" : "bg-red-600"}`}
+            >
+              {followed ? "Following" : "Follow"}
+            </button>
+          )}
+        </div>
         <p className="text-[12px] text-white/70">{formatCompact(item.views)} views</p>
         <p className="mt-1 text-[13px] text-white">{item.caption}</p>
         <p className="mt-1 text-[12px] text-white/80">{item.sound}</p>
