@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { downloadVideo, fetchFollowingSet, setFollow } from "@/lib/social";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { Heart, MessageCircle, Share2, Bookmark, Plus, Music2, Check, Download } from "lucide-react";
+import { Heart, MessageCircle, Share2, Bookmark, Music2, Download } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { BottomNav } from "@/components/BottomNav";
