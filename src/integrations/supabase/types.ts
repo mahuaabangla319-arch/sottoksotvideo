@@ -643,10 +643,12 @@ export type Database = {
         Args: { _price: number; _ring_key: string }
         Returns: string
       }
-      send_gift: {
-        Args: { _gift_type: string; _video_id: string }
-        Returns: string
-      }
+      send_gift:
+        | { Args: { _gift_type: string; _video_id: string }; Returns: string }
+        | {
+            Args: { _cost: number; _gift_type: string; _video_id: string }
+            Returns: number
+          }
     }
     Enums: {
       app_role: "admin" | "super_admin"

@@ -2,11 +2,12 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { downloadVideo, fetchFollowingSet, setFollow } from "@/lib/social";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { Heart, MessageCircle, Share2, Bookmark, Music2, Download } from "lucide-react";
+import { Heart, MessageCircle, Share2, Bookmark, Music2, Download, Gift } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { BottomNav } from "@/components/BottomNav";
 import { CommentsSheet } from "@/components/CommentsSheet";
+import { GiftSheet } from "@/components/GiftSheet";
 import { useAuth } from "@/lib/auth";
 import {
   countView,
@@ -166,6 +167,7 @@ function VideoCard({
   onToggleLike: () => void;
   commentCount: number;
   onOpenComments: () => void;
+  onOpenGift: () => void;
 }) {
   const ref = useRef<HTMLVideoElement>(null);
 
@@ -262,12 +264,23 @@ function VideoCard({
             <p className="text-[11px] text-white/60">Follower · Following</p>
           </div>
           {!isMe && (
-            <button
-              onClick={onFollow}
-              className={`shrink-0 rounded-full px-3.5 py-1 text-[12px] font-semibold text-white ${followed ? "bg-white/20" : "bg-red-600"}`}
-            >
-              {followed ? "Following" : "Follow"}
-            </button>
+            <div className="flex shrink-0 items-center gap-2">
+              <button
+                onClick={onFollow}
+                className={`rounded-full px-3.5 py-1 text-[12px] font-semibold text-white ${followed ? "bg-white/20" : "bg-red-600"}`}
+              >
+                {followed ? "Following" : "Follow"}
+              </button>
+              {item.userId && (
+                <button
+                  onClick={onOpenGift}
+                  className="flex items-center gap-1.5 rounded-full border border-white/30 bg-black/40 px-3 py-1 text-[12px] font-semibold text-white"
+                  aria-label="গিফট পাঠান"
+                >
+                  <Gift className="h-3.5 w-3.5 text-gold" /> Gift
+                </button>
+              )}
+            </div>
           )}
         </div>
         <p className="text-[12px] text-white/70">{formatCompact(item.views)} views</p>
@@ -291,6 +304,7 @@ function FeedPage() {
   const [likeDelta, setLikeDelta] = useState<Record<string, number>>({});
   const [commentDelta, setCommentDelta] = useState<Record<string, number>>({});
   const [openComments, setOpenComments] = useState<string | null>(null);
+  const [openGift, setOpenGift] = useState<string | null>(null);
   const [followSet, setFollowSet] = useState<Set<string>>(new Set());
   const scrollerRef = useRef<HTMLDivElement>(null);
 
@@ -410,6 +424,7 @@ function FeedPage() {
               onToggleLike={() => void toggleLike(item.id)}
               commentCount={Math.max(0, item.comments + (commentDelta[item.id] ?? 0))}
               onOpenComments={() => setOpenComments(item.id)}
+              onOpenGift={() => setOpenGift(item.id)}
               followed={!!item.userId && followSet.has(item.userId)}
               onFollow={() => void toggleFollow(item.userId)}
               isMe={!!user && item.userId === user.id}
@@ -426,6 +441,14 @@ function FeedPage() {
           onCountChange={(delta) =>
             setCommentDelta((d) => ({ ...d, [openComments]: (d[openComments] ?? 0) + delta }))
           }
+        />
+      )}
+
+      {openGift && (
+        <GiftSheet
+          videoId={openGift}
+          open
+          onClose={() => setOpenGift(null)}
         />
       )}
 
