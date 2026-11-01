@@ -2,12 +2,11 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { downloadVideo, fetchFollowingSet, setFollow } from "@/lib/social";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { Heart, MessageCircle, Share2, Bookmark, Music2, Download, Gift } from "lucide-react";
+import { Heart, MessageCircle, Share2, Bookmark, Plus, Music2, Check, Download } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { BottomNav } from "@/components/BottomNav";
 import { CommentsSheet } from "@/components/CommentsSheet";
-import { GiftSheet } from "@/components/GiftSheet";
 import { useAuth } from "@/lib/auth";
 import {
   countView,
@@ -167,7 +166,6 @@ function VideoCard({
   onToggleLike: () => void;
   commentCount: number;
   onOpenComments: () => void;
-  onOpenGift: () => void;
 }) {
   const ref = useRef<HTMLVideoElement>(null);
 
@@ -219,6 +217,22 @@ function VideoCard({
       )}
 
       <div className="absolute bottom-28 right-3 flex flex-col items-center gap-5">
+        <div className="relative mb-1">
+          {item.sotId ? (
+            <Link to="/id/$sotId" params={{ sotId: item.sotId }} aria-label="প্রোফাইল দেখুন" className="block h-12 w-12 rounded-full border-2 border-white bg-flame" />
+          ) : (
+            <div className="h-12 w-12 rounded-full border-2 border-white bg-flame" />
+          )}
+          {!isMe && (
+            <button
+              onClick={onFollow}
+              aria-label={followed ? "আনফলো" : "ফলো"}
+              className={`absolute -bottom-2 left-1/2 flex h-5 w-5 -translate-x-1/2 items-center justify-center rounded-full ${followed ? "bg-white" : "bg-red-600"}`}
+            >
+              {followed ? <Check className="h-3.5 w-3.5 text-red-600" strokeWidth={3} /> : <Plus className="h-3.5 w-3.5 text-white" strokeWidth={3} />}
+            </button>
+          )}
+        </div>
         <button onClick={onToggleLike} className="flex flex-col items-center gap-1" aria-label="লাইক">
           <Heart className={`h-8 w-8 ${liked ? "fill-red-500 text-red-500" : "text-white"}`} />
           <span className="text-[11px] text-white">{formatCompact(item.likes)}</span>
@@ -249,40 +263,11 @@ function VideoCard({
       </div>
 
       <div className="absolute bottom-24 left-4 right-24">
-        <div className="mb-2 flex items-center gap-2.5">
-          {item.sotId ? (
-            <Link to="/id/$sotId" params={{ sotId: item.sotId }} aria-label="প্রোফাইল দেখুন" className="block h-10 w-10 shrink-0 rounded-full border-2 border-white bg-flame" />
-          ) : (
-            <div className="h-10 w-10 shrink-0 rounded-full border-2 border-white bg-flame" />
-          )}
-          <div className="min-w-0">
-            {item.sotId ? (
-              <Link to="/id/$sotId" params={{ sotId: item.sotId }} className="block truncate text-[15px] font-semibold text-white">{item.username}</Link>
-            ) : (
-              <p className="truncate text-[15px] font-semibold text-white">{item.username}</p>
-            )}
-            <p className="text-[11px] text-white/60">Follower · Following</p>
-          </div>
-          {!isMe && (
-            <div className="flex shrink-0 items-center gap-2">
-              <button
-                onClick={onFollow}
-                className={`rounded-full px-3.5 py-1 text-[12px] font-semibold text-white ${followed ? "bg-white/20" : "bg-red-600"}`}
-              >
-                {followed ? "Following" : "Follow"}
-              </button>
-              {item.userId && (
-                <button
-                  onClick={onOpenGift}
-                  className="flex items-center gap-1.5 rounded-full border border-white/30 bg-black/40 px-3 py-1 text-[12px] font-semibold text-white"
-                  aria-label="গিফট পাঠান"
-                >
-                  <Gift className="h-3.5 w-3.5 text-gold" /> Gift
-                </button>
-              )}
-            </div>
-          )}
-        </div>
+        {item.sotId ? (
+          <Link to="/id/$sotId" params={{ sotId: item.sotId }} className="text-[15px] font-semibold text-white">{item.username}</Link>
+        ) : (
+          <p className="text-[15px] font-semibold text-white">{item.username}</p>
+        )}
         <p className="text-[12px] text-white/70">{formatCompact(item.views)} views</p>
         <p className="mt-1 text-[13px] text-white">{item.caption}</p>
         <p className="mt-1 text-[12px] text-white/80">{item.sound}</p>
@@ -304,7 +289,6 @@ function FeedPage() {
   const [likeDelta, setLikeDelta] = useState<Record<string, number>>({});
   const [commentDelta, setCommentDelta] = useState<Record<string, number>>({});
   const [openComments, setOpenComments] = useState<string | null>(null);
-  const [openGift, setOpenGift] = useState<string | null>(null);
   const [followSet, setFollowSet] = useState<Set<string>>(new Set());
   const scrollerRef = useRef<HTMLDivElement>(null);
 
@@ -424,7 +408,6 @@ function FeedPage() {
               onToggleLike={() => void toggleLike(item.id)}
               commentCount={Math.max(0, item.comments + (commentDelta[item.id] ?? 0))}
               onOpenComments={() => setOpenComments(item.id)}
-              onOpenGift={() => setOpenGift(item.id)}
               followed={!!item.userId && followSet.has(item.userId)}
               onFollow={() => void toggleFollow(item.userId)}
               isMe={!!user && item.userId === user.id}
@@ -441,14 +424,6 @@ function FeedPage() {
           onCountChange={(delta) =>
             setCommentDelta((d) => ({ ...d, [openComments]: (d[openComments] ?? 0) + delta }))
           }
-        />
-      )}
-
-      {openGift && (
-        <GiftSheet
-          videoId={openGift}
-          open
-          onClose={() => setOpenGift(null)}
         />
       )}
 
