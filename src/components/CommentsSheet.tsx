@@ -56,7 +56,20 @@ export function CommentsSheet({
     try {
       await addComment(videoId, user.id, content);
       setText("");
-      setRows(await fetchComments(videoId));
+      // Optimistic append — no extra round-trip to refetch the whole list.
+      setRows((r) => [
+        {
+          id: `tmp-${Date.now()}`,
+          content,
+          created_at: new Date().toISOString(),
+          user_id: user.id,
+          username:
+            (user.user_metadata?.user_name as string | undefined) ||
+            (user.email ? user.email.split("@")[0] : "") ||
+            "sottok",
+        },
+        ...r,
+      ]);
       onCountChange(1);
     } catch {
       toast.error("কমেন্ট পাঠানো যায়নি");
