@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Search } from "lucide-react";
 import ganeshContest from "@/assets/ganesh-contest.jpg.asset.json";
@@ -48,24 +48,31 @@ function ExplorePage() {
   const navigate = useNavigate();
   const [active, setActive] = useState("Trending");
   const [query, setQuery] = useState("");
+  const searching = useRef(false);
   const { data: creators } = useTopCreators();
 
   const submitSearch = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (searching.current) return; // ignore double submits while a lookup is in flight
     const q = query.trim().replace(/^@/, "");
     if (!q) return;
-    if (/^[0-9]{8}$/.test(q)) {
-      navigate({ to: "/id/$sotId", params: { sotId: q } });
-      return;
+    searching.current = true;
+    try {
+      if (/^[0-9]{8}$/.test(q)) {
+        navigate({ to: "/id/$sotId", params: { sotId: q } });
+        return;
+      }
+      const { data } = await supabase
+        .from("profiles")
+        .select("sottok_id")
+        .ilike("username", `%${q}%`)
+        .limit(1)
+        .maybeSingle();
+      if (data?.sottok_id) navigate({ to: "/id/$sotId", params: { sotId: data.sottok_id } });
+      else toast.error("কোনো ইউজার পাওয়া যায়নি");
+    } finally {
+      searching.current = false;
     }
-    const { data } = await supabase
-      .from("profiles")
-      .select("sottok_id")
-      .ilike("username", `%${q}%`)
-      .limit(1)
-      .maybeSingle();
-    if (data?.sottok_id) navigate({ to: "/id/$sotId", params: { sotId: data.sottok_id } });
-    else toast.error("কোনো ইউজার পাওয়া যায়নি");
   };
 
   const cards =
@@ -102,6 +109,7 @@ function ExplorePage() {
             alt="গণেশ চতুর্থী স্পেশাল কনটেস্ট — নিজের ক্যামেরায় ভিডিও বানাও"
             className="w-full object-cover"
             loading="lazy"
+            decoding="async"
           />
         </div>
 
@@ -131,7 +139,7 @@ function ExplorePage() {
         <div className="mt-3 grid grid-cols-2 gap-3">
           {cards.map((u) => (
             <div key={u.handle} className="overflow-hidden rounded-2xl border border-neutral-200">
-              <img src={u.img} alt={`${u.name} video cover`} className="h-28 w-full object-cover" loading="lazy" />
+              <img src={u.img} alt={`${u.name} video cover`} className="h-28 w-full object-cover" loading="lazy" decoding="async" />
               <div className="p-3">
                 <p className="text-[13px] font-semibold text-neutral-900">{u.name}</p>
                 <p className="text-[11px] text-neutral-500">{u.handle}</p>
