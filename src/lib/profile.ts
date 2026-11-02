@@ -70,9 +70,16 @@ export async function loadOwnProfile(userId: string, meta: Record<string, unknow
   return created;
 }
 
+/** Cache of signed avatar links so profile pages skip repeat signing requests. */
+const avatarCache = new Map<string, { url: string; exp: number }>();
+
 export async function avatarSrc(path: string | null): Promise<string | null> {
   if (!path) return null;
   if (path.startsWith("http")) return path;
+  const hit = avatarCache.get(path);
+  if (hit && hit.exp > Date.now()) return hit.url;
   const { data } = await supabase.storage.from("avatars").createSignedUrl(path, 60 * 60 * 24 * 7);
-  return data?.signedUrl ?? null;
+  const url = data?.signedUrl ?? null;
+  if (url) avatarCache.set(path, { url, exp: Date.now() + 6 * 60 * 60 * 24 * 1000 });
+  return url;
 }
