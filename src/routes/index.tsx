@@ -1,27 +1,40 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { createFileRoute } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/")({
-  component: Splash,
+  component: DiwaliPage,
 });
 
-function Splash() {
-  const navigate = useNavigate();
-  useEffect(() => {
-    const t = setTimeout(() => navigate({ to: "/home" }), 4000);
-    return () => clearTimeout(t);
-  }, [navigate]);
-
+function DiwaliPage() {
   return (
-    <div style={{minHeight:'100vh', background:'#1a1033', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'20px'}}>
-      <div onClick={()=>navigate({to:"/create"})} style={{width:'100%', maxWidth:'360px', background:'linear-gradient(to bottom right, #2d1b69, #1a1033)', border:'1px solid gold', borderRadius:'24px', padding:'20px', textAlign:'center'}}>
-        <h1 style={{color:'#FFD700', fontSize:'36px', fontWeight:'900'}}>SOT TOK</h1>
-        <p style={{color:'#ffeaa7', fontSize:'14px'}}>Happy Diwali Special Offer 2026</p>
-        <h2 style={{color:'white', marginTop:'15px', fontWeight:'bold'}}>দীপাবলি স্পেশাল কনটেস্ট<br/>নিজের ক্যামেরায় ভিডিও বানাও<br/><span style={{color:'#FFD700'}}>- জিতে নাও বিশেষ পুরস্কার</span></h2>
-        <div style={{marginTop:'15px', background:'#FFD700', color:'black', padding:'10px', borderRadius:'20px', fontWeight:'bold'}}>SOT TOK OFFICIAL - ক্লিক করো</div>
-        <p style={{color:'white', fontSize:'10px', marginTop:'10px'}}>🪔 🪔 🪔 ব্যানারে ক্লিক করো 🪔 🪔 🪔</p>
+    <div style={{ minHeight: "100vh", background: "#1a1033", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
+      <div style={{ width: "100%", maxWidth: "360px", background: "linear-gradient(135deg, #2d1b69, #1a1033)", border: "2px solid #FFD700", borderRadius: "24px", padding: "24px", textAlign: "center" }}>
+        <h1 style={{ color: "#FFD700", fontSize: "38px", fontWeight: "900", margin: "0" }}>SOT TOK</h1>
+        <p style={{ color: "#ffeaa7", fontSize: "14px", marginTop: "5px" }}>Happy Diwali Special Offer 2026</p>
+        
+        <h2 style={{ color: "white", fontSize: "20px", fontWeight: "bold", marginTop: "20px", lineHeight: "1.4" }}>
+          দীপাবলি স্পেশাল কনটেস্ট<br/>নিজের ক্যামেরায় ভিডিও বানাও<br/>
+          <span style={{ color: "#FFD700" }}>- জিতে নাও বিশেষ পুরস্কার</span>
+        </h2>
+
+        <div style={{ fontSize: "24px", marginTop: "15px" }}>🪔 ✨ 🪔 ✨ 🪔</div>
+
+        <div style={{ marginTop: "20px", background: "#FFD700", color: "black", padding: "12px", borderRadius: "30px", fontWeight: "bold" }}>
+          SOT TOK OFFICIAL
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "20px" }}>
+          <a href="/create" style={{ background: "#ff6a00", color: "white", padding: "12px", borderRadius: "12px", textDecoration: "none", fontWeight: "bold", display: "block" }}>
+            📹 ভিডিও বানাও
+          </a>
+          <a href="/home" style={{ background: "white", color: "black", padding: "12px", borderRadius: "12px", textDecoration: "none", fontWeight: "bold", display: "block" }}>
+            Trending দেখো
+          </a>
+        </div>
+
+        <p style={{ color: "rgba(255,255,255,0.5)", fontSize: "11px", marginTop: "15px" }}>
+          #HappyDiwali2026 #DiwaliOffer #SOTTOKDIWALI
+        </p>
       </div>
-      <button onClick={()=>navigate({to:"/home"})} style={{marginTop:'15px', background:'white', color:'black', padding:'10px 20px', borderRadius:'10px', fontWeight:'bold'}}>Trending ভিডিও দেখো</button>
     </div>
-  )
+  );
 }
