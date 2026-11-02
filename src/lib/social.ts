@@ -30,43 +30,10 @@ export async function fetchFollowingSet(me: string, ids: string[]) {
   return new Set((data ?? []).map((r) => r.following_id));
 }
 
-/** Cache of signed video links so repeat opens skip the signing request. */
-const videoUrlCache = new Map<string, { url: string; exp: number }>();
-const VIDEO_TTL_MS = 6 * 60 * 60 * 1000; // URLs live 8h; refresh before expiry
-
 export async function signVideo(path: string) {
   if (path.startsWith("http")) return path;
-  const hit = videoUrlCache.get(path);
-  if (hit && hit.exp > Date.now()) return hit.url;
   const { data } = await supabase.storage.from("videos").createSignedUrl(path, 60 * 60 * 8);
-  const url = data?.signedUrl ?? "";
-  if (url) videoUrlCache.set(path, { url, exp: Date.now() + VIDEO_TTL_MS });
-  return url;
-}
-
-/** Signs many video paths in one request, reusing cached links to cut API calls. */
-export async function signVideos(paths: string[]): Promise<Map<string, string>> {
-  const map = new Map<string, string>();
-  const fresh: string[] = [];
-  for (const p of paths) {
-    if (p.startsWith("http")) {
-      map.set(p, p);
-      continue;
-    }
-    const hit = videoUrlCache.get(p);
-    if (hit && hit.exp > Date.now()) map.set(p, hit.url);
-    else fresh.push(p);
-  }
-  if (fresh.length) {
-    const { data } = await supabase.storage.from("videos").createSignedUrls(fresh, 60 * 60 * 8);
-    (data ?? []).forEach((d) => {
-      if (d.path && d.signedUrl) {
-        map.set(d.path, d.signedUrl);
-        videoUrlCache.set(d.path, { url: d.signedUrl, exp: Date.now() + VIDEO_TTL_MS });
-      }
-    });
-  }
-  return map;
+  return data?.signedUrl ?? "";
 }
 
 /** Downloads a video file to the device; falls back to opening it in a new tab. */

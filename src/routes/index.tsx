@@ -1,30 +1,57 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import splash from "@/assets/mahalaya-splash.jpg.asset.json";
 
 export const Route = createFileRoute("/")({
-  component: KaliSplash,
+  head: () => ({
+    meta: [
+      { title: "SOT TOK — নিজের পরিচয় নিজেই তৈরি করো" },
+      {
+        name: "description",
+        content: "SOT TOK — ভারতের নাম্বার ওয়ান শর্ট ভিডিও অ্যাপ। ভিডিও বানাও, শেয়ার করো, নিজের পরিচয় তৈরি করো।",
+      },
+      { property: "og:title", content: "SOT TOK — নিজের পরিচয় নিজেই তৈরি করো" },
+      { property: "og:description", content: "ভারতের নাম্বার ওয়ান শর্ট ভিডিও অ্যাপ — রেকর্ড করো, শেয়ার করো, ট্রেন্ড করো।" },
+    ],
+  }),
+  component: Splash,
 });
 
-function KaliSplash() {
+const DURATION = 5000;
+
+function Splash() {
+  const navigate = useNavigate();
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    const start = Date.now();
+    const id = window.setInterval(() => {
+      setProgress(Math.min(100, ((Date.now() - start) / DURATION) * 100));
+    }, 50);
+    const timeout = window.setTimeout(() => navigate({ to: "/feed" }), DURATION + 50);
+    return () => {
+      window.clearInterval(id);
+      window.clearTimeout(timeout);
+    };
+  }, [navigate]);
+
   return (
-    <div 
-      onClick={() => window.location.href = "/home"}
-      style={{ 
-        minHeight: "100vh", 
-        background: "#000",
-        display: "flex", 
-        flexDirection: "column",
-        alignItems: "center", 
-        justifyContent: "center",
-        cursor: "pointer"
-      }}>
-      <img 
-        src="/kali.jpg" 
-        alt="Maa Kali" 
-        style={{ width: "100%", maxWidth: "450px", height: "100vh", objectFit: "cover" }} 
+    <div className="relative flex min-h-screen w-full items-center justify-center bg-black">
+      <img
+        src={splash.url}
+        alt="শুভ মহালয়া — SOT TOK শর্ট ভিডিও অ্যাপ"
+        className="absolute inset-0 h-full w-full object-cover blur-2xl opacity-60"
+        aria-hidden
       />
-      <div style={{ position: "absolute", bottom: "30px", background: "rgba(0,0,0,0.7)", padding: "15px 25px", borderRadius: "30px", border: "1px solid gold", textAlign: "center" }}>
-        <p style={{ color: "gold", fontWeight: "bold", margin: "0" }}>SOT TOK - Happy Diwali</p>
-        <p style={{ color: "white", fontSize: "12px", margin: "5px 0 0 0" }}>ট্যাপ করে Trending দেখো 🪔</p>
+      <img
+        src={splash.url}
+        alt="শুভ মহালয়া — SOT TOK শর্ট ভিডিও অ্যাপ"
+        className="relative z-10 w-full max-w-[420px] object-contain"
+      />
+      <div className="absolute bottom-12 z-10 w-full max-w-[420px] px-10">
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/25">
+          <div className="h-full rounded-full bg-gold transition-[width] duration-100 ease-linear" style={{ width: `${progress}%` }} />
+        </div>
       </div>
     </div>
   );
