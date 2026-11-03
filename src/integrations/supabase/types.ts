@@ -10,10 +10,91 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.17"
   }
   public: {
     Tables: {
+      admin_logs: {
+        Row: {
+          action: string
+          admin_id: string
+          created_at: string
+          id: string
+          target: string
+        }
+        Insert: {
+          action: string
+          admin_id: string
+          created_at?: string
+          id?: string
+          target?: string
+        }
+        Update: {
+          action?: string
+          admin_id?: string
+          created_at?: string
+          id?: string
+          target?: string
+        }
+        Relationships: []
+      }
+      app_filters: {
+        Row: {
+          created_at: string
+          css: string
+          enabled: boolean
+          id: string
+          name: string
+          sort: number
+        }
+        Insert: {
+          created_at?: string
+          css?: string
+          enabled?: boolean
+          id?: string
+          name: string
+          sort?: number
+        }
+        Update: {
+          created_at?: string
+          css?: string
+          enabled?: boolean
+          id?: string
+          name?: string
+          sort?: number
+        }
+        Relationships: []
+      }
+      app_settings: {
+        Row: {
+          announcement: string
+          app_name: string
+          id: number
+          logo_url: string | null
+          maintenance_mode: boolean
+          theme_color: string
+          updated_at: string
+        }
+        Insert: {
+          announcement?: string
+          app_name?: string
+          id?: number
+          logo_url?: string | null
+          maintenance_mode?: boolean
+          theme_color?: string
+          updated_at?: string
+        }
+        Update: {
+          announcement?: string
+          app_name?: string
+          id?: number
+          logo_url?: string | null
+          maintenance_mode?: boolean
+          theme_color?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       coin_transactions: {
         Row: {
           amount: number
@@ -84,6 +165,27 @@ export type Database = {
           },
         ]
       }
+      contest_hashtags: {
+        Row: {
+          contest_name: string | null
+          created_at: string | null
+          id: string
+          name: string | null
+        }
+        Insert: {
+          contest_name?: string | null
+          created_at?: string | null
+          id?: string
+          name?: string | null
+        }
+        Update: {
+          contest_name?: string | null
+          created_at?: string | null
+          id?: string
+          name?: string | null
+        }
+        Relationships: []
+      }
       follows: {
         Row: {
           created_at: string
@@ -104,6 +206,44 @@ export type Database = {
           id?: string
         }
         Relationships: []
+      }
+      gifts: {
+        Row: {
+          created_at: string
+          from_user: string
+          gift_type: string
+          gift_value: number
+          id: string
+          to_user: string
+          video_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          from_user: string
+          gift_type: string
+          gift_value: number
+          id?: string
+          to_user: string
+          video_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          from_user?: string
+          gift_type?: string
+          gift_value?: number
+          id?: string
+          to_user?: string
+          video_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gifts_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "videos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       messages: {
         Row: {
@@ -193,13 +333,17 @@ export type Database = {
           birth_date: string | null
           coins: number
           created_at: string
+          crown_badge: boolean
           followers_count: number
           following_count: number
           full_name: string
           gender: string | null
+          golden_frame: boolean
           id: string
+          is_blocked: boolean
           is_hidden: boolean
           level: number
+          level_badge: boolean
           likes_count: number
           location: string
           sottok_id: string
@@ -213,13 +357,17 @@ export type Database = {
           birth_date?: string | null
           coins?: number
           created_at?: string
+          crown_badge?: boolean
           followers_count?: number
           following_count?: number
           full_name?: string
           gender?: string | null
+          golden_frame?: boolean
           id: string
+          is_blocked?: boolean
           is_hidden?: boolean
           level?: number
+          level_badge?: boolean
           likes_count?: number
           location?: string
           sottok_id?: string
@@ -233,19 +381,62 @@ export type Database = {
           birth_date?: string | null
           coins?: number
           created_at?: string
+          crown_badge?: boolean
           followers_count?: number
           following_count?: number
           full_name?: string
           gender?: string | null
+          golden_frame?: boolean
           id?: string
+          is_blocked?: boolean
           is_hidden?: boolean
           level?: number
+          level_badge?: boolean
           likes_count?: number
           location?: string
           sottok_id?: string
           updated_at?: string
           username?: string
           verified?: boolean
+        }
+        Relationships: []
+      }
+      songs: {
+        Row: {
+          artist: string
+          audio_url: string
+          category: string
+          cover_url: string | null
+          created_at: string
+          id: string
+          is_hidden: boolean
+          plays: number
+          title: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          artist?: string
+          audio_url: string
+          category?: string
+          cover_url?: string | null
+          created_at?: string
+          id?: string
+          is_hidden?: boolean
+          plays?: number
+          title: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          artist?: string
+          audio_url?: string
+          category?: string
+          cover_url?: string | null
+          created_at?: string
+          id?: string
+          is_hidden?: boolean
+          plays?: number
+          title?: string
+          uploaded_by?: string | null
         }
         Relationships: []
       }
@@ -293,6 +484,24 @@ export type Database = {
           price?: number
           ring_key?: string
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
         }
         Relationships: []
@@ -369,11 +578,15 @@ export type Database = {
       }
       videos: {
         Row: {
+          admin_hidden: boolean
           caption: string
+          category: string
           comments_count: number
           created_at: string
+          gifts_count: number
           id: string
           is_deleted: boolean
+          is_pinned: boolean
           likes: number
           sound_name: string
           thumbnail_url: string | null
@@ -383,11 +596,15 @@ export type Database = {
           visibility: string
         }
         Insert: {
+          admin_hidden?: boolean
           caption?: string
+          category?: string
           comments_count?: number
           created_at?: string
+          gifts_count?: number
           id?: string
           is_deleted?: boolean
+          is_pinned?: boolean
           likes?: number
           sound_name?: string
           thumbnail_url?: string | null
@@ -397,11 +614,15 @@ export type Database = {
           visibility?: string
         }
         Update: {
+          admin_hidden?: boolean
           caption?: string
+          category?: string
           comments_count?: number
           created_at?: string
+          gifts_count?: number
           id?: string
           is_deleted?: boolean
+          is_pinned?: boolean
           likes?: number
           sound_name?: string
           thumbnail_url?: string | null
@@ -418,15 +639,38 @@ export type Database = {
     }
     Functions: {
       award_video_coins: { Args: { _video_id: string }; Returns: number }
+      can_read_song_object: { Args: { object_name: string }; Returns: boolean }
+      daily_creator_ranking: {
+        Args: never
+        Returns: {
+          sottok_id: string
+          total_likes: number
+          total_views: number
+          username: string
+          video_count: number
+        }[]
+      }
       generate_sot_id: { Args: never; Returns: string }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       increment_video_view: { Args: { _video_id: string }; Returns: undefined }
+      is_admin: { Args: { _user_id: string }; Returns: boolean }
       purchase_ring: {
         Args: { _price: number; _ring_key: string }
         Returns: string
       }
+      send_gift: {
+        Args: { _gift_type: string; _video_id: string }
+        Returns: string
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "super_admin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -553,6 +797,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "super_admin"],
+    },
   },
 } as const

@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Download, Heart, MessageCircle, X } from "lucide-react";
+import { Download, Gift, Heart, MessageCircle, X } from "lucide-react";
 import { toast } from "sonner";
 import { CommentsSheet } from "@/components/CommentsSheet";
+import { GiftAnimation } from "@/components/GiftAnimation";
+import { GiftSheet } from "@/components/GiftSheet";
 import { useAuth } from "@/lib/auth";
 import { countView, fetchMyLikes, formatCompact, likeVideo, unlikeVideo } from "@/lib/engagement";
 import { downloadVideo, signVideo } from "@/lib/social";
+import type { Gift } from "@/lib/gifts";
 
 export type ModalVideo = {
   id: string;
@@ -22,6 +25,8 @@ export function VideoModal({ video, onClose }: { video: ModalVideo; onClose: () 
   const [likes, setLikes] = useState(video.likes);
   const [comments, setComments] = useState(video.comments_count);
   const [showComments, setShowComments] = useState(false);
+  const [showGift, setShowGift] = useState(false);
+  const [giftAnim, setGiftAnim] = useState<Gift | null>(null);
 
   const { data: url } = useQuery({
     queryKey: ["signed", video.video_url],
@@ -62,6 +67,10 @@ export function VideoModal({ video, onClose }: { video: ModalVideo; onClose: () 
           <MessageCircle className="h-8 w-8 text-white" />
           <span className="text-[11px] text-white">{formatCompact(comments)}</span>
         </button>
+        <button onClick={() => setShowGift(true)} className="flex flex-col items-center gap-1" aria-label="গিফট পাঠান">
+          <Gift className="h-8 w-8 text-pink" />
+          <span className="text-[11px] text-white">Gift</span>
+        </button>
         <button
           onClick={() => {
             if (!url) return;
@@ -79,6 +88,8 @@ export function VideoModal({ video, onClose }: { video: ModalVideo; onClose: () 
         <p className="text-[12px] text-white/70">{formatCompact(video.views)} views</p>
         <p className="text-[13px] text-white">{video.caption}</p>
       </div>
+      {showGift && <GiftSheet videoId={video.id} open onClose={() => setShowGift(false)} onSent={setGiftAnim} />}
+      <GiftAnimation gift={giftAnim} onDone={() => setGiftAnim(null)} />
       {showComments && (
         <CommentsSheet videoId={video.id} open onClose={() => setShowComments(false)} onCountChange={(d) => setComments((c) => c + d)} />
       )}

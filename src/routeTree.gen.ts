@@ -17,6 +17,7 @@ import { Route as FeedRouteImport } from './routes/feed'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as SystemsRouteImport } from './routes/systems'
 import { Route as ChatIndexRouteImport } from './routes/chat.index'
 import { Route as ChatUserIdRouteImport } from './routes/chat.$userId'
 import { Route as IdSotIdRouteImport } from './routes/id.$sotId'
@@ -61,6 +62,11 @@ const SettingsRoute = SettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SystemsRoute = SystemsRouteImport.update({
+  id: '/systems',
+  path: '/systems',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ChatIndexRoute = ChatIndexRouteImport.update({
   id: '/chat/',
   path: '/chat/',
@@ -86,6 +92,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
   '/settings': typeof SettingsRoute
+  '/systems': typeof SystemsRoute
   '/chat/$userId': typeof ChatUserIdRoute
   '/id/$sotId': typeof IdSotIdRoute
   '/chat/': typeof ChatIndexRoute
@@ -99,6 +106,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
   '/settings': typeof SettingsRoute
+  '/systems': typeof SystemsRoute
   '/chat/$userId': typeof ChatUserIdRoute
   '/id/$sotId': typeof IdSotIdRoute
   '/chat': typeof ChatIndexRoute
@@ -113,6 +121,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
   '/settings': typeof SettingsRoute
+  '/systems': typeof SystemsRoute
   '/chat/$userId': typeof ChatUserIdRoute
   '/id/$sotId': typeof IdSotIdRoute
   '/chat/': typeof ChatIndexRoute
@@ -128,6 +137,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/profile'
     | '/settings'
+    | '/systems'
     | '/chat/$userId'
     | '/id/$sotId'
     | '/chat/'
@@ -141,6 +151,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/profile'
     | '/settings'
+    | '/systems'
     | '/chat/$userId'
     | '/id/$sotId'
     | '/chat'
@@ -154,6 +165,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/profile'
     | '/settings'
+    | '/systems'
     | '/chat/$userId'
     | '/id/$sotId'
     | '/chat/'
@@ -168,6 +180,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   ProfileRoute: typeof ProfileRoute
   SettingsRoute: typeof SettingsRoute
+  SystemsRoute: typeof SystemsRoute
   ChatUserIdRoute: typeof ChatUserIdRoute
   IdSotIdRoute: typeof IdSotIdRoute
   ChatIndexRoute: typeof ChatIndexRoute
@@ -231,6 +244,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/systems': {
+      id: '/systems'
+      path: '/systems'
+      fullPath: '/systems'
+      preLoaderRoute: typeof SystemsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/chat/': {
       id: '/chat/'
       path: '/chat'
@@ -264,6 +284,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   ProfileRoute: ProfileRoute,
   SettingsRoute: SettingsRoute,
+  SystemsRoute: SystemsRoute,
   ChatUserIdRoute: ChatUserIdRoute,
   IdSotIdRoute: IdSotIdRoute,
   ChatIndexRoute: ChatIndexRoute,
