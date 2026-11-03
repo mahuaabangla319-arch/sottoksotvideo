@@ -62,6 +62,7 @@ export const notifText: Record<string, string> = {
   comment: "আপনার ভিডিওতে কমেন্ট করেছে",
   follow: "আপনাকে ফলো করেছে",
   message: "আপনাকে মেসেজ পাঠিয়েছে",
+  gift: "আপনার ভিডিওতে গিফট পাঠিয়েছে",
 };
 
 export function notificationsEnabled() {
