@@ -22,7 +22,7 @@ export const Route = createFileRoute("/systems")({
 type Card = {
   label: string;
   Icon: typeof Heart;
-  to?: "/profile" | "/explore" | "/activity" | "/chat" | "/settings";
+  to?: "/profile" | "/explore" | "/activity" | "/chat" | "/settings" | "/feed";
   soon?: boolean;
 };
 

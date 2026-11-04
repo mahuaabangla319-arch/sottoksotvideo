@@ -346,6 +346,7 @@ export type Database = {
           level_badge: boolean
           likes_count: number
           location: string
+          referred_by: string | null
           sottok_id: string
           updated_at: string
           username: string
@@ -370,6 +371,7 @@ export type Database = {
           level_badge?: boolean
           likes_count?: number
           location?: string
+          referred_by?: string | null
           sottok_id?: string
           updated_at?: string
           username?: string
@@ -394,6 +396,7 @@ export type Database = {
           level_badge?: boolean
           likes_count?: number
           location?: string
+          referred_by?: string | null
           sottok_id?: string
           updated_at?: string
           username?: string
@@ -640,6 +643,7 @@ export type Database = {
     Functions: {
       award_video_coins: { Args: { _video_id: string }; Returns: number }
       can_read_song_object: { Args: { object_name: string }; Returns: boolean }
+      claim_referral: { Args: { _sot_id: string }; Returns: string }
       daily_creator_ranking: {
         Args: never
         Returns: {
