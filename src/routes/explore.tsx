@@ -1,8 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Search } from "lucide-react";
-import ganeshContest from "@/assets/ganesh-contest.jpg.asset.json";
+import { Play, Search } from "lucide-react";
+import kaliDiwali from "@/assets/kali-diwali.jpg";
+import { formatCompact } from "@/lib/engagement";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { BottomNav } from "@/components/BottomNav";
@@ -44,11 +45,40 @@ function useTopCreators() {
   });
 }
 
+function useViralVideos() {
+  return useQuery({
+    queryKey: ["viral-videos"],
+    staleTime: 2 * 60_000,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("videos")
+        .select("id, video_url, views")
+        .eq("visibility", "public")
+        .eq("is_deleted", false)
+        .order("views", { ascending: false })
+        .limit(9);
+      const rows = data ?? [];
+      const paths = rows.map((r) => r.video_url).filter((p) => p && !p.startsWith("http"));
+      const map = new Map<string, string>();
+      if (paths.length) {
+        const { data: signed } = await supabase.storage.from("videos").createSignedUrls(paths, 60 * 60 * 8);
+        (signed ?? []).forEach((s) => s.path && s.signedUrl && map.set(s.path, s.signedUrl));
+      }
+      return rows.map((r) => ({
+        id: r.id,
+        views: r.views ?? 0,
+        src: r.video_url?.startsWith("http") ? r.video_url : map.get(r.video_url) ?? "",
+      }));
+    },
+  });
+}
+
 function ExplorePage() {
   const navigate = useNavigate();
   const [active, setActive] = useState("Trending");
   const [query, setQuery] = useState("");
   const { data: creators } = useTopCreators();
+  const { data: viral } = useViralVideos();
 
   const submitSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,14 +126,23 @@ function ExplorePage() {
         </form>
 
 
-        <div className="mt-4 overflow-hidden rounded-[24px]">
-          <img
-            src={ganeshContest.url}
-            alt="গণেশ চতুর্থী স্পেশাল কনটেস্ট — নিজের ক্যামেরায় ভিডিও বানাও"
-            className="w-full object-cover"
-            loading="lazy"
-          />
-        </div>
+        <button
+          onClick={() => navigate({ to: "/create" })}
+          aria-label="কালীপূজা ও দেওয়ালি কনটেস্ট — ভিডিও করুন"
+          className="relative mt-4 block w-full overflow-hidden rounded-[24px] text-left"
+        >
+          <img src={kaliDiwali} alt="মা কালী — দেওয়ালি স্পেশাল কনটেস্ট" width={1280} height={768} className="w-full object-cover" />
+          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-3 pt-10">
+            <span className="inline-block rounded-full bg-yellow-400 px-2.5 py-0.5 text-[11px] font-bold text-black">🪔 দেওয়ালি অফার</span>
+            <p className="mt-1 text-[17px] font-extrabold text-white">কালীপূজা স্পেশাল কনটেস্ট</p>
+            <p className="text-[12px] text-white/85">ভিডিও বানাও, বেশি ভিউ পাও, জিতে নাও পুরস্কার</p>
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {["#KaliPuja", "#Diwali2026", "#দীপাবলি", "#SOTTOK"].map((h) => (
+                <span key={h} className="rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-semibold text-white">{h}</span>
+              ))}
+            </div>
+          </div>
+        </button>
 
         <div className="no-scrollbar mt-4 flex gap-5 overflow-x-auto border-b border-neutral-200">
           {tabs.map((t) => (
@@ -119,9 +158,25 @@ function ExplorePage() {
           ))}
         </div>
 
-        <p className="py-10 text-center text-[13px] text-neutral-400">
-          এখনো কোনো ট্রেন্ডিং হ্যাশট্যাগ নেই।
-        </p>
+        <h3 className="mt-4 text-[15px] font-semibold text-neutral-900">🔥 ভাইরাল ভিডিও</h3>
+        {viral && viral.length ? (
+          <div className="mb-5 mt-3 grid grid-cols-3 gap-1.5">
+            {viral.map((v) => (
+              <button
+                key={v.id}
+                onClick={() => navigate({ to: "/feed" })}
+                className="relative aspect-[9/16] overflow-hidden rounded-xl bg-neutral-900"
+              >
+                {v.src && <video src={v.src + "#t=0.5"} muted playsInline preload="metadata" className="h-full w-full object-cover" />}
+                <span className="absolute bottom-1 left-1 flex items-center gap-0.5 text-[11px] font-semibold text-white drop-shadow">
+                  <Play className="h-3 w-3 fill-current" /> {formatCompact(v.views)}
+                </span>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <p className="py-10 text-center text-[13px] text-neutral-400">এখনো কোনো ভাইরাল ভিডিও নেই।</p>
+        )}
 
         <div className="flex items-center justify-between">
           <h3 className="text-[15px] font-semibold text-neutral-900">Recommended Users</h3>
