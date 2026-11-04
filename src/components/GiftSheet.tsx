@@ -20,7 +20,7 @@ export function GiftSheet({
 }) {
   const { user } = useAuth();
   const qc = useQueryClient();
-  const [selected, setSelected] = useState<Gift>(GIFTS[0]);
+  const [selected, setSelected] = useState<Gift>(GIFTS[0]!);
   const [sending, setSending] = useState(false);
 
   const { data: coins = 0 } = useQuery({
@@ -96,7 +96,7 @@ export function GiftSheet({
           disabled={sending}
           className="flex flex-1 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-pink to-flame py-2.5 text-[14px] font-bold text-white disabled:opacity-60"
         >
-          <Gift className="h-4 w-4" /> {sending ? "পাঠানো হচ্ছে…" : "Send"}
+          <GiftIcon className="h-4 w-4" /> {sending ? "পাঠানো হচ্ছে…" : "Send"}
         </button>
       </div>
     </div>

@@ -95,7 +95,7 @@ function ReferralBox({ userId }: { userId: string }) {
     const { data, error } = await supabase.rpc("claim_referral", { _sot_id: code.trim() });
     setBusy(false);
     const r = error ? "error" : String(data);
-    if (r === "ok") { toast.success(REFER_MSG.ok); void qc.invalidateQueries({ queryKey: ["refer-me", userId] }); }
+    if (r === "ok") { toast.success(REFER_MSG["ok"]); void qc.invalidateQueries({ queryKey: ["refer-me", userId] }); }
     else toast.error(REFER_MSG[r] ?? "চেষ্টা ব্যর্থ হয়েছে");
   }
 
