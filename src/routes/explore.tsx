@@ -133,7 +133,7 @@ function ExplorePage() {
         >
           <img src={kaliDiwali} alt="মা কালী — দেওয়ালি স্পেশাল কনটেস্ট" width={1280} height={768} className="w-full object-cover" />
           <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-3 pt-10">
-            <span className="inline-block rounded-full bg-yellow px-2.5 py-0.5 text-[11px] font-bold text-black">🪔 দেওয়ালি অফার</span>
+            <span className="inline-block rounded-full bg-yellow-400 px-2.5 py-0.5 text-[11px] font-bold text-black">🪔 দেওয়ালি অফার</span>
             <p className="mt-1 text-[17px] font-extrabold text-white">কালীপূজা স্পেশাল কনটেস্ট</p>
             <p className="text-[12px] text-white/85">ভিডিও বানাও, বেশি ভিউ পাও, জিতে নাও পুরস্কার</p>
             <div className="mt-1.5 flex flex-wrap gap-1.5">
