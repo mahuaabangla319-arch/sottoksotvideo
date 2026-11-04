@@ -2,11 +2,13 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { downloadVideo, fetchFollowingSet, setFollow } from "@/lib/social";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { Heart, MessageCircle, Share2, Bookmark, Plus, Music2, Check, Download } from "lucide-react";
+import { Heart, MessageCircle, Share2, Bookmark, Plus, Music2, Check, Download, Gift as GiftIcon } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { BottomNav } from "@/components/BottomNav";
 import { CommentsSheet } from "@/components/CommentsSheet";
+import { GiftSheet } from "@/components/GiftSheet";
+import { GiftAnimation } from "@/components/GiftAnimation";
 import { useAuth } from "@/lib/auth";
 import {
   countView,
@@ -154,7 +156,9 @@ function VideoCard({
   followed,
   onFollow,
   isMe,
+  onOpenGift,
 }: {
+  onOpenGift: () => void;
   followed: boolean;
   onFollow: () => void;
   isMe: boolean;
@@ -241,6 +245,10 @@ function VideoCard({
           <MessageCircle className="h-8 w-8 text-white" />
           <span className="text-[11px] text-white">{formatCompact(commentCount)}</span>
         </button>
+        <button onClick={onOpenGift} className="flex flex-col items-center gap-1" aria-label="গিফট">
+          <GiftIcon className="h-8 w-8 text-yellow-400" />
+          <span className="text-[11px] text-white">গিফট</span>
+        </button>
         <button onClick={share} className="flex flex-col items-center gap-1" aria-label="শেয়ার">
           <Share2 className="h-8 w-8 text-white" />
           <span className="text-[11px] text-white">Share</span>
@@ -287,6 +295,8 @@ function FeedPage() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
   const [likeDelta, setLikeDelta] = useState<Record<string, number>>({});
+  const [openGift, setOpenGift] = useState<string | null>(null);
+  const [giftAnim, setGiftAnim] = useState<{ emoji: string; name: string } | null>(null);
   const [commentDelta, setCommentDelta] = useState<Record<string, number>>({});
   const [openComments, setOpenComments] = useState<string | null>(null);
   const [followSet, setFollowSet] = useState<Set<string>>(new Set());
@@ -411,6 +421,12 @@ function FeedPage() {
               followed={!!item.userId && followSet.has(item.userId)}
               onFollow={() => void toggleFollow(item.userId)}
               isMe={!!user && item.userId === user.id}
+              onOpenGift={() => {
+                if (!user) return void toast.error("গিফট পাঠাতে লগইন করুন");
+                if (item.id.startsWith("demo-")) return void toast.error("ডেমো ভিডিওতে গিফট পাঠানো যাবে না");
+                if (item.userId === user.id) return void toast.error("নিজের ভিডিওতে গিফট পাঠানো যাবে না");
+                setOpenGift(item.id);
+              }}
             />
           ))
         )}
@@ -426,6 +442,9 @@ function FeedPage() {
           }
         />
       )}
+
+      {openGift && <GiftSheet videoId={openGift} open onClose={() => setOpenGift(null)} onSent={setGiftAnim} />}
+      <GiftAnimation gift={giftAnim} onDone={() => setGiftAnim(null)} />
 
       <BottomNav />
     </div>
