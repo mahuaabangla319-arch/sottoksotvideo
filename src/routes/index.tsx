@@ -2,18 +2,16 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState, useEffect } from 'react'
 
 export const Route = createFileRoute('/')({
-  component: PlayLogin,
+  component: LoginAgerMoto,
 })
 
-function PlayLogin() {
+function LoginAgerMoto() {
   const navigate = useNavigate()
-  const [showGmail, setShowGmail] = useState(false)
   const [oldUsers, setOldUsers] = useState<any[]>([])
-  const [myGmail, setMyGmail] = useState('')
-  const [myName, setMyName] = useState('')
-  const [newName, setNewName] = useState('')
-  const [newId, setNewId] = useState('')
+  const [gmail, setGmail] = useState('')
+  const [name, setName] = useState('')
 
+  // আগের সব প্রোফাইল লোড করা - কিছু ডিলিট হবে না
   useEffect(() => {
     try {
       const list: any[] = []
@@ -31,59 +29,66 @@ function PlayLogin() {
     } catch {}
   }, [])
 
-  const openApp = (gmail: string, name?: string) => {
-    const finalName = name || gmail.split('@')[0]
-    const user = { name: finalName, email: gmail, id: gmail }
+  // ===== আগে যেমন ছিল - Gmail দিলেই সঙ্গে সঙ্গে প্রোফাইল খুলবে =====
+  const openProfile = (gmailInput: string, nameInput?: string) => {
+    let g = gmailInput.trim().toLowerCase()
+    if (!g) { alert('ভাই, Gmail টা লেখো'); return }
+    if (!g.includes('@')) g += '@gmail.com'
+    const finalName = nameInput || g.split('@')[0]
+    const user = { name: finalName, email: g, id: g, loginType: 'gmail' }
+
     localStorage.setItem('vigo_user_name', finalName)
-    localStorage.setItem('vigo_user_id', gmail)
-    localStorage.setItem('vigo_user_email', gmail)
+    localStorage.setItem('vigo_user_id', g)
+    localStorage.setItem('vigo_user_email', g)
     localStorage.setItem('sot_tok_user', JSON.stringify(user))
+    localStorage.setItem('google_user', JSON.stringify(user))
+
     const old = JSON.parse(localStorage.getItem('sot_tok_users') || '[]')
-    if (!old.find((x: any) => x.email === gmail)) localStorage.setItem('sot_tok_users', JSON.stringify([...old, user]))
+    if (!old.find((x: any) => x.email === g)) {
+      localStorage.setItem('sot_tok_users', JSON.stringify([...old, user]))
+    }
+    // সঙ্গে সঙ্গে Feed / প্রোফাইল খুলে যাবে
     navigate({ to: '/feed' })
   }
 
   return (
     <div style={{ background: '#000', color: '#fff', minHeight: '100vh', maxWidth: 480, margin: '0 auto', padding: '20px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-      <h1 style={{ fontSize: 36, color: '#4d7cff' }}>SOT TOK</h1>
-      <p style={{ color: '#ffcc00', fontSize: 18 }}>নিজের পরিচয় নিজেই তৈরি করো</p>
-      <p style={{ textAlign: 'center', color: '#aaa', fontSize: 14 }}>Gmail দিয়ে সাইন ইন করুন। নতুন অ্যাকাউন্টে একটি স্থায়ী SOT TOK আইডি তৈরি হবে।</p>
-      <div style={{ border: '1px solid #1f4d2e', background: '#0a1a0f', padding: '8px 16px', borderRadius: 20, fontSize: 13, color: '#4ade80', margin: '10px 0' }}>🛡️ 100% Safe & Private</div>
+      <div style={{ width: 80, height: 80, background: 'linear-gradient(135deg,#ff8a00,#ff3b5c)', borderRadius: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40, marginTop: 20 }}>▶️</div>
+      <h1 style={{ fontSize: 36, color: '#4d7cff', margin: '16px 0 0', letterSpacing: 2 }}>SOT TOK</h1>
+      <p style={{ color: '#ffcc00', fontSize: 18, margin: '6px 0 16px' }}>নিজের পরিচয় নিজেই তৈরি করো</p>
+      <p style={{ textAlign: 'center', color: '#aaa', fontSize: 14, lineHeight: 1.6 }}>Gmail দিয়ে সাইন ইন করুন। নতুন অ্যাকাউন্টে একটি স্থায়ী SOT TOK আইডি তৈরি হবে এবং আপনার নাম সিস্টেমে সুরক্ষিত থাকবে।</p>
+      <div style={{ border: '1px solid #1f4d2e', background: '#0a1a0f', padding: '8px 16px', borderRadius: 20, fontSize: 13, color: '#4ade80', margin: '10px 0 16px' }}>🛡️ 100% Safe & Private</div>
 
-      {!showGmail ? (
-        <button onClick={() => setShowGmail(true)} style={{ width: '100%', background: '#2b4bff', color: '#fff', border: 'none', padding: 15, borderRadius: 14, fontSize: 18, fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
-          <span style={{ background: '#fff', color: '#4285F4', width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>G</span>
-          Gmail দিয়ে চালিয়ে যান
-        </button>
-      ) : (
-        <div style={{ width: '100%', background: '#111', borderRadius: 16, padding: 16, border: '1px solid #222' }}>
-          <b>👇 তোমার Gmail চয়েস করো</b>
-          {oldUsers.length > 0 ? oldUsers.map((u: any, i: number) => (
-            <button key={i} onClick={() => openApp(u.email, u.name)} style={{ width: '100%', background: '#000', color: '#fff', border: '1px solid #333', padding: 12, borderRadius: 12, marginTop: 10, display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left' }}>
-              <span style={{ background: '#fff', color: '#4285F4', width: 36, height: 36, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>G</span>
+      {/* ===== আগে যেমন ছিল - তোমার প্রোফাইলগুলো ===== */}
+      {oldUsers.length > 0 && (
+        <div style={{ width: '100%', background: '#111', borderRadius: 16, padding: 16, border: '1px solid #222', marginBottom: 14 }}>
+          <b style={{ fontSize: 16 }}>👇 তোমার প্রোফাইলগুলো</b>
+          <p style={{ fontSize: 12, color: '#aaa', margin: '4px 0 0' }}>একটায় চাপ দিলেই সঙ্গে সঙ্গে খুলে যাবে</p>
+          {oldUsers.map((u: any, i: number) => (
+            <button key={i} onClick={() => openProfile(u.email, u.name)} style={{ width: '100%', background: '#000', color: '#fff', border: '1px solid #333', padding: 12, borderRadius: 12, marginTop: 10, display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left' }}>
+              <span style={{ background: '#4285F4', color: '#fff', width: 38, height: 38, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: 18 }}>G</span>
               <span style={{ flex: 1 }}><b style={{ display: 'block' }}>{u.name}</b><span style={{ fontSize: 12, color: '#aaa' }}>{u.email}</span></span>
               <span>→</span>
             </button>
-          )) : <p style={{ color: '#aaa', fontSize: 13, marginTop: 10 }}>নিচে তোমার Gmail লেখো, ক্লিক করলেই খুলবে</p>}
-          <input value={myName} onChange={e => setMyName(e.target.value)} placeholder="তোমার নাম" style={{ width: '100%', padding: 12, borderRadius: 10, background: '#000', color: '#fff', border: '1px solid #333', marginTop: 12, boxSizing: 'border-box' }} />
-          <input value={myGmail} onChange={e => setMyGmail(e.target.value)} placeholder="তোমার Gmail - rahul@gmail.com" style={{ width: '100%', padding: 12, borderRadius: 10, background: '#000', color: '#fff', border: '1px solid #333', marginTop: 8, boxSizing: 'border-box' }} />
-          <button onClick={() => { if (!myGmail.trim()) return alert('Gmail টা লেখো ভাই'); let g = myGmail.trim().toLowerCase(); if (!g.includes('@')) g += '@gmail.com'; openApp(g, myName || undefined) }} style={{ width: '100%', background: '#00c853', color: '#fff', border: 'none', padding: 13, borderRadius: 12, fontWeight: 'bold', marginTop: 10 }}>✅ এই Gmail দিয়ে ঢুকে যাও</button>
+          ))}
         </div>
       )}
 
-      <div style={{ display: 'flex', alignItems: 'center', width: '100%', gap: 10, margin: '18px 0' }}>
-        <div style={{ flex: 1, height: 1, background: '#333' }} />
-        <span style={{ color: '#888', fontSize: 13 }}>অথবা</span>
-        <div style={{ flex: 1, height: 1, background: '#333' }} />
+      {/* ===== Gmail দিয়ে চালিয়ে যান - আগে যেমন ছিল ===== */}
+      <div style={{ width: '100%', background: '#111', borderRadius: 16, padding: 16, border: '1px solid #222' }}>
+        <b style={{ fontSize: 17, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ background: '#fff', color: '#4285F4', width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>G</span>
+          Gmail দিয়ে চালিয়ে যান
+        </b>
+
+        <input value={name} onChange={e => setName(e.target.value)} placeholder="তোমার নাম" style={{ width: '100%', padding: 13, borderRadius: 10, background: '#000', color: '#fff', border: '1px solid #333', marginTop: 14, boxSizing: 'border-box', fontSize: 15 }} />
+        <input value={gmail} onChange={e => setGmail(e.target.value)} placeholder="তোমার Gmail - rahul@gmail.com" style={{ width: '100%', padding: 13, borderRadius: 10, background: '#000', color: '#fff', border: '1px solid #333', marginTop: 10, boxSizing: 'border-box', fontSize: 15 }} />
+
+        <button onClick={() => openProfile(gmail, name)} style={{ width: '100%', background: '#2b4bff', color: '#fff', border: 'none', padding: 14, borderRadius: 12, fontWeight: 'bold', marginTop: 12, fontSize: 17 }}>✅ এই Gmail দিয়ে ঢুকে যাও</button>
+        <p style={{ fontSize: 12, color: '#888', textAlign: 'center', margin: '8px 0 0' }}>Gmail দিলেই সঙ্গে সঙ্গে তোমার প্রোফাইল খুলে যাবে</p>
       </div>
 
-      <div style={{ width: '100%', background: '#111', borderRadius: 16, padding: 16, border: '1px solid #222' }}>
-        <b>নতুন Gmail খুলতে চাই</b>
-        <input value={newName} onChange={e => setNewName(e.target.value)} placeholder="পুরো নাম" style={{ width: '100%', padding: 13, borderRadius: 10, background: '#000', color: '#fff', border: '1px solid #333', marginTop: 12, boxSizing: 'border-box' }} />
-        <input value={newId} onChange={e => setNewId(e.target.value)} placeholder="sottok123" style={{ width: '100%', padding: 13, borderRadius: 10, background: '#000', color: '#fff', border: '1px solid #333', marginTop: 10, boxSizing: 'border-box' }} />
-        <p style={{ fontSize: 13, color: '#aaa' }}>তোমার ঠিকানা হবে<br /><span style={{ color: '#ffcc00' }}>{newId ? newId.toLowerCase().replace(/[^a-z0-9]/g, '') : 'sottok123'}@sottok.com</span></p>
-        <button onClick={() => { if (!newName.trim() || !newId.trim()) return alert('নাম + আইডি লেখো'); const clean = newId.toLowerCase().replace(/[^a-z0-9]/g, ''); openApp(clean + '@sottok.com', newName) }} style={{ width: '100%', background: '#ff3b5c', color: '#fff', border: 'none', padding: 13, borderRadius: 12, fontWeight: 'bold', marginTop: 12 }}>✅ অ্যাকাউন্ট বানিয়ে ঢুকে যাও</button>
-      </div>
+      <button onClick={() => openProfile('guest@sottok.com', 'Guest User')} style={{ width: '100%', background: 'transparent', color: '#aaa', border: '1px solid #333', padding: 12, borderRadius: 12, marginTop: 12 }}>👀 গেস্ট হিসেবে দেখে নাও</button>
     </div>
   )
 }
