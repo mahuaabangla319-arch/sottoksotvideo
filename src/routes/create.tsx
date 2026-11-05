@@ -1,353 +1,125 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  ArrowLeft,
-  MoreHorizontal,
-  Video,
-  Image as ImageIcon,
-  Zap,
-  ZapOff,
-  SwitchCamera,
-  Gauge,
-  Loader2,
-} from "lucide-react";
-import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-import { PhoneShell } from "@/components/PhoneShell";
-import { BottomNav } from "@/components/BottomNav";
-import { useAuth } from "@/lib/auth";
-import { awardVideoCoins } from "@/lib/coins";
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { useState, useRef, useEffect } from 'react'
 
-export const Route = createFileRoute("/create")({
-  head: () => ({
-    meta: [
-      { title: "নতুন ভিডিও — SOT TOK" },
-      { name: "description", content: "ক্যামেরা দিয়ে ১৫ বা ৩০ সেকেন্ডের ভিডিও রেকর্ড করে SOT TOK-এ পোস্ট করুন।" },
-      { property: "og:title", content: "নতুন ভিডিও — SOT TOK" },
-      { property: "og:description", content: "ক্যামেরা দিয়ে ১৫ বা ৩০ সেকেন্ডের ভিডিও রেকর্ড করে পোস্ট করুন।" },
-    ],
-  }),
-  component: CreatePage,
-});
+export const Route = createFileRoute('/camera')({
+  component: CameraChobirMoto,
+})
 
-function CreatePage() {
-  const navigate = useNavigate();
-  const { user } = useAuth();
+function CameraChobirMoto() {
+  const navigate = useNavigate()
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const [stream, setStream] = useState<MediaStream | null>(null)
+  const [mode, setMode] = useState<'Video' | 'Photo' | 'Live'>('Video')
+  const [quality, setQuality] = useState('720P')
+  const [flash, setFlash] = useState(false)
+  const [facing, setFacing] = useState<'user' | 'environment'>('user')
+  const [isRecording, setIsRecording] = useState(false)
+  const [recordTime, setRecordTime] = useState(0)
+  const [speed, setSpeed] = useState('1x')
+  const [beauty, setBeauty] = useState(50)
+  const [filter, setFilter] = useState('Normal')
+  const [timer, setTimer] = useState('Off')
+  const [countdown, setCountdown] = useState(0)
+  const [panel, setPanel] = useState<'none' | 'speed' | 'beauty' | 'filters' | 'timer' | 'more' | 'effects'>('none')
+  const [selectedEffect, setSelectedEffect] = useState('কোনো Effect নেই')
 
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const recorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<BlobPart[]>([]);
-  const timerRef = useRef<number | null>(null);
+  const filters = ['Normal', 'Sunset', 'Beauty', 'Cinematic', 'Vintage', 'B&W', 'Warm', 'Cool']
+  const speeds = ['0.5x', '1x', '1.5x', '2x']
+  const effects = ['😍 Love', '🔥 Fire', '🪔 Puja', '🌸 Flower', '👑 Crown', '😎 Cool', '✨ Sparkle', '🎃 Halloween']
+  const timers = ['Off', '3', '5', '10']
 
-  const [mode, setMode] = useState<"record" | "gallery">("record");
-  const [facing, setFacing] = useState<"user" | "environment">("user");
-  const [permission, setPermission] = useState<"idle" | "granted" | "denied">("idle");
-  const [torch, setTorch] = useState(false);
-  const [limit, setLimit] = useState<15 | 30>(15);
-  const [recording, setRecording] = useState(false);
-  const [elapsed, setElapsed] = useState(0);
-  const [blob, setBlob] = useState<Blob | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [caption, setCaption] = useState("");
-  const [uploading, setUploading] = useState(false);
-
-  const stopStream = useCallback(() => {
-    streamRef.current?.getTracks().forEach((t) => t.stop());
-    streamRef.current = null;
-  }, []);
-
-  const startCamera = useCallback(async () => {
+  const startCamera = async (face: any = facing) => {
     try {
-      stopStream();
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: facing, width: { ideal: 1080 }, height: { ideal: 1920 } },
-        audio: true,
-      });
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play().catch(() => {});
-      }
-      setPermission("granted");
-    } catch {
-      setPermission("denied");
-    }
-  }, [facing, stopStream]);
+      if (stream) stream.getTracks().forEach(t => t.stop())
+      const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: face, width: quality === '720P' ? 1280 : quality === '1080P' ? 1920 : 640 }, audio: true })
+      setStream(s)
+      if (videoRef.current) videoRef.current.srcObject = s
+    } catch { alert('ক্যামেরা পারমিশন দাও ভাই') }
+  }
 
-  useEffect(() => {
-    if (mode === "record" && !previewUrl) void startCamera();
-    return () => {
-      if (timerRef.current) window.clearInterval(timerRef.current);
-    };
-  }, [mode, facing, previewUrl, startCamera]);
+  useEffect(() => { startCamera(); return () => { if (stream) stream.getTracks().forEach(t => t.stop()) } }, [])
+  useEffect(() => { if (!isRecording) return; const t = setInterval(() => setRecordTime(r => r + 1), 1000); return () => clearInterval(t) }, [isRecording])
+  useEffect(() => { if (countdown <= 0) return; const t = setTimeout(() => setCountdown(countdown - 1), 1000); if (countdown === 1) setTimeout(() => { setIsRecording(true); setRecordTime(0) }, 1000); return () => clearTimeout(t) }, [countdown])
 
-  useEffect(() => stopStream, [stopStream]);
+  const handleRecord = () => {
+    if (mode === 'Live') { navigate({ to: '/live/ashtami' }); return }
+    if (mode === 'Photo') { alert('📸 ছবি তোলা হয়ে গেছে!'); return }
+    if (isRecording) { setIsRecording(false); alert(`✅ ভিডিও হয়ে গেছে!\nসময়: ${recordTime} সেকেন্ড\nফিল্টার: ${filter}\nস্পিড: ${speed}\nবিউটি: ${beauty}%\nEffect: ${selectedEffect}`); return }
+    if (timer !== 'Off') { setCountdown(parseInt(timer)); return }
+    setIsRecording(true); setRecordTime(0)
+  }
 
-  const toggleTorch = async () => {
-    const track = streamRef.current?.getVideoTracks()[0];
-    if (!track) return;
-    const caps = track.getCapabilities?.() as MediaTrackCapabilities & { torch?: boolean };
-    if (!caps?.torch) {
-      toast.error("এই ক্যামেরায় ফ্ল্যাশ সাপোর্ট করে না।");
-      return;
-    }
-    try {
-      await track.applyConstraints({
-        advanced: [{ torch: !torch }],
-      } as unknown as MediaTrackConstraints);
-
-      setTorch((t) => !t);
-    } catch {
-      toast.error("ফ্ল্যাশ চালু করা যায়নি।");
-    }
-  };
-
-  const stopRecording = useCallback(() => {
-    recorderRef.current?.state === "recording" && recorderRef.current.stop();
-    if (timerRef.current) window.clearInterval(timerRef.current);
-    setRecording(false);
-  }, []);
-
-  const startRecording = async () => {
-    if (!streamRef.current) {
-      await startCamera();
-      if (!streamRef.current) return;
-    }
-    chunksRef.current = [];
-    const mime = MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")
-      ? "video/webm;codecs=vp9,opus"
-      : MediaRecorder.isTypeSupported("video/webm")
-        ? "video/webm"
-        : "video/mp4";
-    const rec = new MediaRecorder(streamRef.current, { mimeType: mime });
-    recorderRef.current = rec;
-    rec.ondataavailable = (e) => {
-      if (e.data.size > 0) chunksRef.current.push(e.data);
-    };
-    rec.onstop = () => {
-      const out = new Blob(chunksRef.current, { type: mime });
-      setBlob(out);
-      setPreviewUrl(URL.createObjectURL(out));
-      stopStream();
-    };
-    rec.start();
-    setRecording(true);
-    setElapsed(0);
-    timerRef.current = window.setInterval(() => {
-      setElapsed((e) => {
-        const next = e + 1;
-        if (next >= limit) stopRecording();
-        return next;
-      });
-    }, 1000);
-  };
-
-  const pickFromGallery = (file: File) => {
-    setBlob(file);
-    setPreviewUrl(URL.createObjectURL(file));
-    stopStream();
-  };
-
-  const post = async () => {
-    if (!blob) return;
-    if (!user) {
-      toast.error("পোস্ট করতে সাইন ইন করুন।");
-      navigate({ to: "/login" });
-      return;
-    }
-    setUploading(true);
-    const ext = blob.type.includes("mp4") ? "mp4" : "webm";
-    const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
-    const { error: upErr } = await supabase.storage
-      .from("videos")
-      .upload(path, blob, { contentType: blob.type || "video/webm" });
-    if (upErr) {
-      setUploading(false);
-      toast.error("আপলোড ব্যর্থ হয়েছে: " + upErr.message);
-      return;
-    }
-    const { data: inserted, error } = await supabase
-      .from("videos")
-      .insert({
-        user_id: user.id,
-        caption,
-        video_url: path,
-      })
-      .select("id")
-      .single();
-    setUploading(false);
-    if (error) {
-      toast.error("পোস্ট করা যায়নি: " + error.message);
-      return;
-    }
-    toast.success("ভিডিও পোস্ট হয়েছে!");
-    if (inserted?.id) {
-      const coins = await awardVideoCoins(inserted.id);
-      if (coins > 0) toast.success(`🪙 ${coins} কয়েন পেয়েছেন! ওয়ালেটে জমা হয়েছে।`);
-      else toast("আজকের ৫০ কয়েন পাওয়া শেষ — ২৪ ঘণ্টা পর আবার পাবেন।");
-    }
-    navigate({ to: "/feed" });
-  };
-
-  const reset = () => {
-    setBlob(null);
-    setPreviewUrl(null);
-    setCaption("");
-    setElapsed(0);
-  };
+  const getFilterStyle = () => {
+    if (filter === 'Sunset') return 'sepia(0.5) saturate(1.5) hue-rotate(-20deg)'
+    if (filter === 'B&W') return 'grayscale(1)'
+    if (filter === 'Vintage') return 'sepia(0.6) contrast(1.1)'
+    if (filter === 'Warm') return 'sepia(0.3) saturate(1.4)'
+    if (filter === 'Cool') return 'hue-rotate(180deg) saturate(1.2)'
+    if (filter === 'Cinematic') return 'contrast(1.2) brightness(0.9) saturate(1.3)'
+    if (filter === 'Beauty') return 'brightness(1.1) saturate(1.2) contrast(0.95)'
+    return 'none'
+  }
 
   return (
-    <PhoneShell className="bg-black text-white">
-      <header className="flex items-center justify-between px-4 pt-5">
-        <button onClick={() => navigate({ to: "/feed" })} aria-label="পিছনে">
-          <ArrowLeft className="h-6 w-6 text-white" />
-        </button>
-        <h1 className="text-[17px] font-semibold">নতুন ভিডিও</h1>
-        <MoreHorizontal className="h-6 w-6 text-white" />
-      </header>
+    <div style={{ background: '#000', color: '#fff', minHeight: '100vh', maxWidth: 480, margin: '0 auto', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ background: 'linear-gradient(90deg,#7c4dff,#ff3b5c)', padding: '10px 12px', textAlign: 'center' }}>
+        <b style={{ fontSize: 18 }}>📷 Camera</b>
+        <div style={{ fontSize: 12, opacity: 0.9 }}>উন্নত ক্যামেরা দিয়ে ভিডিও রেকর্ড করুন সহজে</div>
+      </div>
 
-      {previewUrl ? (
-        <div className="px-4 pt-5">
-          <video src={previewUrl} controls className="aspect-[9/16] w-full rounded-[24px] bg-black object-cover" />
-          <textarea
-            value={caption}
-            onChange={(e) => setCaption(e.target.value)}
-            placeholder="ক্যাপশন লিখুন…"
-            rows={3}
-            className="mt-4 w-full rounded-xl border border-white/10 bg-white/5 p-3 text-sm text-white outline-none placeholder:text-white/35"
-          />
-          <div className="mt-3 flex gap-3">
-            <button onClick={reset} className="flex-1 rounded-xl border border-white/15 py-3 text-[14px]">
-              আবার রেকর্ড
-            </button>
-            <button
-              onClick={post}
-              disabled={uploading}
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand py-3 text-[14px] font-semibold text-white disabled:opacity-70"
-            >
-              {uploading && <Loader2 className="h-4 w-4 animate-spin" />} Post
-            </button>
-          </div>
+      <div style={{ position: 'relative', flex: 1, background: '#111', overflow: 'hidden' }}>
+        <video ref={videoRef} autoPlay muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover', transform: facing === 'user' ? 'scaleX(-1)' : 'none', filter: getFilterStyle() }} />
+
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <button onClick={() => navigate({ to: '/' })} style={{ background: 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', width: 36, height: 36, borderRadius: '50%', fontSize: 18 }}>✕</button>
+          <button onClick={() => setFlash(!flash)} style={{ background: flash ? '#ffb400' : 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', width: 36, height: 36, borderRadius: '50%', fontSize: 18 }}>⚡</button>
+          <select value={quality} onChange={e => { setQuality(e.target.value); setTimeout(() => startCamera(), 100) }} style={{ background: 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', padding: '8px 10px', borderRadius: 20, fontWeight: 'bold' }}>
+            <option>720P</option><option>1080P</option><option>480P</option>
+          </select>
+          <button onClick={() => { const n = facing === 'user' ? 'environment' : 'user'; setFacing(n); startCamera(n) }} style={{ background: 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', width: 36, height: 36, borderRadius: '50%', fontSize: 18 }}>🔄</button>
         </div>
-      ) : (
-        <>
-          <div className="mt-4 flex gap-3 px-4">
-            <button
-              onClick={() => setMode("record")}
-              className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-[14px] ${
-                mode === "record" ? "bg-brand font-semibold text-white" : "bg-white/10 text-white/70"
-              }`}
-            >
-              <Video className="h-4 w-4" /> Record
-            </button>
-            <label
-              className={`flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl py-2.5 text-[14px] ${
-                mode === "gallery" ? "bg-brand font-semibold text-white" : "bg-white/10 text-white/70"
-              }`}
-            >
-              <ImageIcon className="h-4 w-4" /> Gallery
-              <input
-                type="file"
-                accept="video/*"
-                className="hidden"
-                onChange={(e) => {
-                  setMode("gallery");
-                  const f = e.target.files?.[0];
-                  if (f) pickFromGallery(f);
-                }}
-              />
-            </label>
-          </div>
 
-          <div className="relative mx-4 mt-4 aspect-[9/16] overflow-hidden rounded-[24px] bg-black">
-            {permission === "denied" ? (
-              <div className="flex h-full flex-col items-center justify-center gap-4 bg-black px-6 text-center">
-                <p className="text-[14px] text-white/70">ক্যামেরা ব্যবহারের অনুমতি প্রয়োজন।</p>
-                <button
-                  onClick={() => void startCamera()}
-                  className="rounded-xl bg-brand px-5 py-2.5 text-[14px] font-semibold text-white"
-                >
-                  Camera access needed
-                </button>
-              </div>
-            ) : (
-              <video
-                ref={videoRef}
-                autoPlay
-                muted
-                playsInline
-                className="h-full w-full object-cover"
-                style={{ transform: facing === "user" ? "scaleX(-1)" : "none" }}
-              />
-            )}
+        <div style={{ position: 'absolute', top: 70, right: 12, display: 'flex', flexDirection: 'column', gap: 14, alignItems: 'center' }}>
+          <button onClick={() => setPanel(panel === 'speed' ? 'none' : 'speed')} style={{ background: 'transparent', border: 'none', color: '#fff', textAlign: 'center' }}><div style={{ fontSize: 26 }}>⏱️</div><span style={{ fontSize: 11 }}>Speed<br/>{speed}</span></button>
+          <button onClick={() => setPanel(panel === 'beauty' ? 'none' : 'beauty')} style={{ background: 'transparent', border: 'none', color: '#fff', textAlign: 'center' }}><div style={{ fontSize: 26 }}>🪄</div><span style={{ fontSize: 11 }}>Beauty<br/>{beauty}%</span></button>
+          <button onClick={() => setPanel(panel === 'filters' ? 'none' : 'filters')} style={{ background: 'transparent', border: 'none', color: '#fff', textAlign: 'center' }}><div style={{ fontSize: 26 }}>✨</div><span style={{ fontSize: 11 }}>Filters<br/>{filter}</span></button>
+          <button onClick={() => setPanel(panel === 'timer' ? 'none' : 'timer')} style={{ background: 'transparent', border: 'none', color: '#fff', textAlign: 'center' }}><div style={{ fontSize: 26 }}>⏰</div><span style={{ fontSize: 11 }}>Timer<br/>{timer === 'Off' ? 'Off' : `${timer}s`}</span></button>
+          <button onClick={() => setPanel(panel === 'more' ? 'none' : 'more')} style={{ background: 'transparent', border: 'none', color: '#fff', textAlign: 'center' }}><div style={{ fontSize: 26 }}>•••</div><span style={{ fontSize: 11 }}>More</span></button>
+        </div>
 
-            <div className="absolute right-3 top-3 flex flex-col gap-3">
-              <button
-                onClick={toggleTorch}
-                aria-label="Flash"
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-black/45"
-              >
-                {torch ? <Zap className="h-5 w-5 text-gold" /> : <ZapOff className="h-5 w-5 text-white" />}
-              </button>
-              <button
-                onClick={() => setFacing((f) => (f === "user" ? "environment" : "user"))}
-                aria-label="Flip camera"
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-black/45"
-              >
-                <SwitchCamera className="h-5 w-5 text-white" />
-              </button>
-            </div>
+        {isRecording && <div style={{ position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)', background: '#ff0000', padding: '5px 12px', borderRadius: 20, fontWeight: 'bold', fontSize: 12 }}>🔴 REC {recordTime}s • {quality} • {speed}</div>}
+        {countdown > 0 && <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 100, fontWeight: 'bold' }}>{countdown}</div>}
+        <div style={{ position: 'absolute', bottom: 12, left: 12, background: 'rgba(0,0,0,0.5)', padding: '7px 10px', borderRadius: 10, fontSize: 11 }}>
+          <div>ফিল্টার: {filter} • বিউটি: {beauty}% • Effect: {selectedEffect}</div>
+        </div>
+      </div>
 
-            {recording && (
-              <span className="absolute left-1/2 top-3 -translate-x-1/2 rounded-full bg-red-600 px-3 py-1 text-[12px] font-semibold text-white">
-                {String(Math.floor(elapsed / 60)).padStart(2, "0")}:{String(elapsed % 60).padStart(2, "0")}
-              </span>
-            )}
-          </div>
+      <div style={{ background: '#000', padding: '12px 14px 16px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <button onClick={() => setPanel('effects')} style={{ background: 'transparent', border: 'none', color: '#fff', textAlign: 'center' }}><div style={{ fontSize: 28 }}>😊</div><span style={{ fontSize: 12 }}>Effects</span></button>
+          <button onClick={handleRecord} style={{ width: 72, height: 72, borderRadius: '50%', background: isRecording ? '#fff' : '#ff0000', border: '4px solid #fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 'bold', color: isRecording ? '#ff0000' : '#fff' }}>{isRecording ? 'STOP' : mode === 'Photo' ? '📸' : mode === 'Live' ? 'LIVE' : '●'}</button>
+          <button onClick={() => alert('গ্যালারি থেকে ভিডিও / ছবি বেছে নাও')} style={{ background: 'transparent', border: 'none', color: '#fff', textAlign: 'center' }}><div style={{ fontSize: 28 }}>🖼️</div><span style={{ fontSize: 12 }}>Upload</span></button>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 24 }}>
+          {(['Video', 'Photo', 'Live'] as const).map(m => (
+            <button key={m} onClick={() => setMode(m)} style={{ background: 'none', border: 'none', color: mode === m ? '#ffb400' : '#aaa', fontWeight: 'bold', fontSize: 14, borderBottom: mode === m ? '2px solid #ffb400' : 'none', paddingBottom: 4 }}>{m}</button>
+          ))}
+        </div>
+        <p style={{ textAlign: 'center', fontSize: 12, color: '#aaa', margin: '8px 0 0' }}><b style={{ color: '#fff', fontSize: 16 }}>SOT <span style={{ color: '#ff3b5c' }}>TOK</span></b> | Create • Share</p>
+      </div>
 
-          <div className="mt-4 flex justify-center gap-2">
-            {([15, 30] as const).map((s) => (
-              <button
-                key={s}
-                onClick={() => setLimit(s)}
-                className={`rounded-full px-4 py-1.5 text-[12px] ${
-                  limit === s ? "bg-brand font-semibold text-white" : "bg-white/10 text-white/70"
-                }`}
-              >
-                {s}s
-              </button>
-            ))}
-          </div>
-
-          <div className="mt-4 flex items-center justify-between px-10">
-            <div className="h-11 w-11 overflow-hidden rounded-lg border border-white/20 bg-white/10">
-              <img
-                src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=100&q=50"
-                alt="সর্বশেষ গ্যালারি ছবি"
-                className="h-full w-full object-cover"
-                loading="lazy"
-              />
-            </div>
-            <button
-              onClick={() => (recording ? stopRecording() : void startRecording())}
-              aria-label={recording ? "রেকর্ড বন্ধ" : "রেকর্ড শুরু"}
-              className="flex h-[76px] w-[76px] items-center justify-center rounded-full border-4 border-white"
-            >
-              <span
-                className={`bg-brand transition-all ${
-                  recording ? "h-7 w-7 rounded-md" : "h-[58px] w-[58px] rounded-full"
-                }`}
-              />
-            </button>
-            <button aria-label="Speed" className="flex h-11 w-11 items-center justify-center rounded-full bg-white/10">
-              <Gauge className="h-5 w-5 text-white" />
-            </button>
-          </div>
-        </>
+      {panel !== 'none' && (
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: '#111b21', borderRadius: '20px 20px 0 0', padding: 16, zIndex: 50 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}><b>{panel === 'speed' ? '⏱️ Speed' : panel === 'beauty' ? '🪄 Beauty' : panel === 'filters' ? '✨ Filters' : panel === 'timer' ? '⏰ Timer' : panel === 'more' ? '••• More' : '😊 Effects'}</b><button onClick={() => setPanel('none')} style={{ background: '#202c33', color: '#fff', border: 'none', borderRadius: '50%', width: 28, height: 28 }}>✕</button></div>
+          {panel === 'speed' && <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>{speeds.map(s => <button key={s} onClick={() => setSpeed(s)} style={{ padding: '10px 18px', borderRadius: 20, background: speed === s ? '#ff3b5c' : '#202c33', color: '#fff', border: 'none', fontWeight: 'bold' }}>{s}</button>)}</div>}
+          {panel === 'beauty' && <div style={{ marginTop: 12 }}><input type="range" min="0" max="100" value={beauty} onChange={e => setBeauty(Number(e.target.value))} style={{ width: '100%' }} /><p style={{ textAlign: 'center', fontSize: 12 }}>Beauty: {beauty}% - মুখ সুন্দর দেখাবে, দাগ মুছে যাবে</p></div>}
+          {panel === 'filters' && <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>{filters.map(f => <button key={f} onClick={() => setFilter(f)} style={{ padding: '8px 14px', borderRadius: 20, background: filter === f ? '#ff3b5c' : '#202c33', color: '#fff', border: 'none' }}>{f}</button>)}</div>}
+          {panel === 'timer' && <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>{timers.map(t => <button key={t} onClick={() => setTimer(t)} style={{ padding: '10px 18px', borderRadius: 20, background: timer === t ? '#ff3b5c' : '#202c33', color: '#fff', border: 'none', fontWeight: 'bold' }}>{t === 'Off' ? 'Off' : `${t}s`}</button>)}</div>}
+          {panel === 'more' && <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginTop: 12, textAlign: 'center' }}>{[{ t: '🎵 Music', d: 'গান যোগ করো' }, { t: '✍️ Text', d: 'লেখা যোগ করো' }, { t: '🖼️ Sticker', d: 'স্টিকার' }, { t: '🪞 Mirror', d: 'আয়না' }, { t: '📐 Grid', d: 'গ্রিড' }, { t: '🌙 Night', d: 'রাতের মোড' }].map(x => <div key={x.t} style={{ background: '#202c33', padding: 12, borderRadius: 12 }}><b>{x.t}</b><div style={{ fontSize: 11, color: '#aaa' }}>{x.d}</div></div>)}</div>}
+          {panel === 'effects' && <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>{effects.map(e => <button key={e} onClick={() => { setSelectedEffect(e); setPanel('none') }} style={{ padding: '10px 14px', borderRadius: 20, background: '#202c33', color: '#fff', border: 'none' }}>{e}</button>)}</div>}
+          <button onClick={() => setPanel('none')} style={{ width: '100%', marginTop: 12, background: '#ff3b5c', color: '#fff', border: 'none', padding: 12, borderRadius: 20, fontWeight: 'bold' }}>✅ হয়ে গেছে</button>
+        </div>
       )}
-
-      <BottomNav />
-    </PhoneShell>
-  );
+    </div>
+  )
 }
