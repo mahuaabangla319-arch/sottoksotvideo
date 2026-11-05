@@ -8,7 +8,7 @@ import { PhoneShell } from "@/components/PhoneShell";
 import type { RoomKind } from "@/lib/rooms";
 
 export const Route = createFileRoute("/rooms/create")({
-  validateSearch: (s: Record<string, unknown>): { kind?: RoomKind } => ({ kind: s.kind === "audio" ? "audio" : "group" }),
+  validateSearch: (s: Record<string, unknown>): { kind?: RoomKind } => ({ kind: s['kind'] === "audio" ? "audio" : "group" }),
   head: () => ({
     meta: [
       { title: "নতুন রুম তৈরি — SOT TOK" },
@@ -43,7 +43,7 @@ function CreateRoom() {
 
   const create = async () => {
     if (!user) return;
-    if (!title.trim()) return toast.error("রুমের নাম দিন");
+    if (!title.trim()) { toast.error("রুমের নাম দিন"); return; }
     setBusy(true);
     let cover: string | null = null;
     if (file) {
@@ -57,7 +57,7 @@ function CreateRoom() {
       .select("id")
       .single();
     setBusy(false);
-    if (error || !data) return toast.error("রুম তৈরি হয়নি, আবার চেষ্টা করুন");
+    if (error || !data) { toast.error("রুম তৈরি হয়নি, আবার চেষ্টা করুন"); return; }
     toast.success("রুম তৈরি হয়েছে!");
     navigate({ to: "/rooms/$roomId", params: { roomId: data.id } });
   };

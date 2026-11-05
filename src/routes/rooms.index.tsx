@@ -10,7 +10,7 @@ import { coverSrc, gradientFor, loadProfiles, type MiniProfile, type Room, type 
 type Search = { kind?: RoomKind };
 
 export const Route = createFileRoute("/rooms/")({
-  validateSearch: (s: Record<string, unknown>): Search => ({ kind: s.kind === "audio" ? "audio" : "group" }),
+  validateSearch: (s: Record<string, unknown>): Search => ({ kind: s['kind'] === "audio" ? "audio" : "group" }),
   head: () => ({
     meta: [
       { title: "রুম — SOT TOK গ্রুপ চ্যাট ও অডিও রুম" },
@@ -61,8 +61,9 @@ function RoomsHub() {
   const joinByCode = async () => {
     const c = code.trim().toUpperCase();
     if (!c) return;
+    void 0;
     const { data } = await supabase.from("rooms").select("id").eq("code", c).maybeSingle();
-    if (!data) return toast.error("এই রুম আইডি পাওয়া যায়নি");
+    if (!data) { toast.error("এই রুম আইডি পাওয়া যায়নি"); return; }
     navigate({ to: "/rooms/$roomId", params: { roomId: data.id } });
   };
 

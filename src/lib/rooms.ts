@@ -52,12 +52,12 @@ export async function coverSrc(path: string | null) {
 export const RTC_CONFIG: RTCConfiguration = {
   iceServers: [
     { urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] },
-    ...(import.meta.env.VITE_TURN_URL
+    ...(import.meta.env['VITE_TURN_URL']
       ? [
           {
-            urls: import.meta.env.VITE_TURN_URL as string,
-            username: import.meta.env.VITE_TURN_USERNAME as string,
-            credential: import.meta.env.VITE_TURN_CREDENTIAL as string,
+            urls: import.meta.env['VITE_TURN_URL'] as string,
+            username: import.meta.env['VITE_TURN_USERNAME'] as string,
+            credential: import.meta.env['VITE_TURN_CREDENTIAL'] as string,
           },
         ]
       : []),
