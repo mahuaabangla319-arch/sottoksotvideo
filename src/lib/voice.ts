@@ -21,6 +21,7 @@ export function useVoiceMesh(opts: {
   const amSeated = !!me && seated.includes(me);
   const [micError, setMicError] = useState<string | null>(null);
   const [connected, setConnected] = useState<string[]>([]);
+  const [micReady, setMicReady] = useState(false);
   const local = useRef<MediaStream | null>(null);
   const pcs = useRef(new Map<string, RTCPeerConnection>());
   const audios = useRef(new Map<string, HTMLAudioElement>());
@@ -69,6 +70,7 @@ export function useVoiceMesh(opts: {
           if (cancelled) return s.getTracks().forEach((t) => t.stop());
           s.getAudioTracks().forEach((t) => (t.enabled = !muted));
           local.current = s;
+          setMicReady(true);
           setMicError(null);
           // rebuild links so the new track is sent
           [...pcs.current.keys()].forEach(closePeer);
@@ -78,6 +80,7 @@ export function useVoiceMesh(opts: {
     if (!amSeated && local.current) {
       local.current.getTracks().forEach((t) => t.stop());
       local.current = null;
+      setMicReady(false);
       [...pcs.current.keys()].forEach(closePeer);
     }
     return () => {
@@ -125,7 +128,7 @@ export function useVoiceMesh(opts: {
   }, [channel, me]);
 
   // Maintain peer set
-  const wantKey = online.slice().sort().join(",") + "|" + seated.slice().sort().join(",") + "|" + String(!!local.current);
+  const wantKey = online.slice().sort().join(",") + "|" + seated.slice().sort().join(",") + "|" + String(micReady);
   useEffect(() => {
     if (!channel || !me) return;
     if (amSeated && !local.current) return; // wait for mic
