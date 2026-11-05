@@ -651,6 +651,121 @@ export type Database = {
         }
         Relationships: []
       }
+      room_members: {
+        Row: {
+          banned: boolean
+          force_muted: boolean
+          joined_at: string
+          muted: boolean
+          role: string
+          room_id: string
+          seat: number | null
+          user_id: string
+        }
+        Insert: {
+          banned?: boolean
+          force_muted?: boolean
+          joined_at?: string
+          muted?: boolean
+          role?: string
+          room_id: string
+          seat?: number | null
+          user_id: string
+        }
+        Update: {
+          banned?: boolean
+          force_muted?: boolean
+          joined_at?: string
+          muted?: boolean
+          role?: string
+          room_id?: string
+          seat?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_members_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      room_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          kind: string
+          room_id: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          kind?: string
+          room_id: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          room_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_messages_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rooms: {
+        Row: {
+          code: string
+          cover_url: string | null
+          created_at: string
+          description: string
+          id: string
+          is_active: boolean
+          kind: string
+          member_count: number
+          owner_id: string
+          title: string
+        }
+        Insert: {
+          code?: string
+          cover_url?: string | null
+          created_at?: string
+          description?: string
+          id?: string
+          is_active?: boolean
+          kind: string
+          member_count?: number
+          owner_id: string
+          title: string
+        }
+        Update: {
+          code?: string
+          cover_url?: string | null
+          created_at?: string
+          description?: string
+          id?: string
+          is_active?: boolean
+          kind?: string
+          member_count?: number
+          owner_id?: string
+          title?: string
+        }
+        Relationships: []
+      }
       songs: {
         Row: {
           artist: string
@@ -911,14 +1026,28 @@ export type Database = {
       }
       increment_video_view: { Args: { _video_id: string }; Returns: undefined }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      join_room: { Args: { _room: string }; Returns: string }
+      leave_room: { Args: { _room: string }; Returns: undefined }
+      leave_seat: { Args: { _room: string }; Returns: undefined }
+      moderate_room: {
+        Args: { _action: string; _room: string; _target: string }
+        Returns: string
+      }
       purchase_ring: {
         Args: { _price: number; _ring_key: string }
         Returns: string
       }
+      room_role: { Args: { _room: string; _uid: string }; Returns: string }
       send_gift: {
         Args: { _gift_type: string; _video_id: string }
         Returns: string
       }
+      send_room_gift: {
+        Args: { _gift: string; _room: string; _to: string }
+        Returns: string
+      }
+      set_my_mute: { Args: { _muted: boolean; _room: string }; Returns: string }
+      take_seat: { Args: { _room: string; _seat: number }; Returns: string }
     }
     Enums: {
       app_role: "admin" | "super_admin"
