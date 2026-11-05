@@ -19,7 +19,7 @@ function SOTTOKLiveRoom() {
   const [showWallet, setShowWallet] = useState(false)
   const [showBank, setShowBank] = useState(false)
 
-  // ===== WALLET + টাকা + ব্যাংক সিস্টেম - আগের ফর্মের সাথে জোড়া =====
+  // ===== WALLET + টাকা + ব্যাংক সিস্টেম - আগের ফর্মের সাথে জোড়া =====<SottokBankWallet userId={profile?.id || profile?.sotId || 'me'} coins={profile?.coins || 0} todayCoins={profile?.todayCoins || 0} />
   const [coins, setCoins] = useState(110) // 110 কয়েন = $1.10 - টেস্টের জন্য
   const [bankLinked, setBankLinked] = useState(false)
   const [bankInfo, setBankInfo] = useState('')
