@@ -245,6 +245,253 @@ export type Database = {
           },
         ]
       }
+      live_room_gifts: {
+        Row: {
+          coin_amount: number
+          created_at: string | null
+          gift_icon: string | null
+          gift_name: string | null
+          id: string
+          receiver_id: string | null
+          receiver_username: string | null
+          room_id: string | null
+          sender_id: string | null
+          sender_username: string | null
+        }
+        Insert: {
+          coin_amount: number
+          created_at?: string | null
+          gift_icon?: string | null
+          gift_name?: string | null
+          id?: string
+          receiver_id?: string | null
+          receiver_username?: string | null
+          room_id?: string | null
+          sender_id?: string | null
+          sender_username?: string | null
+        }
+        Update: {
+          coin_amount?: number
+          created_at?: string | null
+          gift_icon?: string | null
+          gift_name?: string | null
+          id?: string
+          receiver_id?: string | null
+          receiver_username?: string | null
+          room_id?: string | null
+          sender_id?: string | null
+          sender_username?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_room_gifts_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "live_rooms"
+            referencedColumns: ["room_id"]
+          },
+        ]
+      }
+      live_room_messages: {
+        Row: {
+          created_at: string | null
+          id: string
+          message: string | null
+          room_id: string | null
+          type: string | null
+          user_id: string | null
+          username: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          message?: string | null
+          room_id?: string | null
+          type?: string | null
+          user_id?: string | null
+          username?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          message?: string | null
+          room_id?: string | null
+          type?: string | null
+          user_id?: string | null
+          username?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_room_messages_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "live_rooms"
+            referencedColumns: ["room_id"]
+          },
+        ]
+      }
+      live_room_moderators: {
+        Row: {
+          added_by: string | null
+          id: string
+          room_id: string | null
+          user_id: string | null
+          username: string | null
+        }
+        Insert: {
+          added_by?: string | null
+          id?: string
+          room_id?: string | null
+          user_id?: string | null
+          username?: string | null
+        }
+        Update: {
+          added_by?: string | null
+          id?: string
+          room_id?: string | null
+          user_id?: string | null
+          username?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_room_moderators_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "live_rooms"
+            referencedColumns: ["room_id"]
+          },
+        ]
+      }
+      live_room_participants: {
+        Row: {
+          avatar_url: string | null
+          id: string
+          is_camera_off: boolean | null
+          is_muted: boolean | null
+          joined_at: string | null
+          role: string | null
+          room_id: string | null
+          seat_number: number | null
+          user_id: string | null
+          username: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          id?: string
+          is_camera_off?: boolean | null
+          is_muted?: boolean | null
+          joined_at?: string | null
+          role?: string | null
+          room_id?: string | null
+          seat_number?: number | null
+          user_id?: string | null
+          username?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          id?: string
+          is_camera_off?: boolean | null
+          is_muted?: boolean | null
+          joined_at?: string | null
+          role?: string | null
+          room_id?: string | null
+          seat_number?: number | null
+          user_id?: string | null
+          username?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_room_participants_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "live_rooms"
+            referencedColumns: ["room_id"]
+          },
+        ]
+      }
+      live_room_requests: {
+        Row: {
+          created_at: string | null
+          id: string
+          room_id: string | null
+          status: string | null
+          user_id: string | null
+          username: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          room_id?: string | null
+          status?: string | null
+          user_id?: string | null
+          username?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          room_id?: string | null
+          status?: string | null
+          user_id?: string | null
+          username?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_room_requests_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "live_rooms"
+            referencedColumns: ["room_id"]
+          },
+        ]
+      }
+      live_rooms: {
+        Row: {
+          cover_url: string | null
+          created_at: string | null
+          description: string | null
+          ended_at: string | null
+          host_id: string | null
+          host_username: string | null
+          id: string
+          name: string
+          room_id: string
+          status: string | null
+          type: string
+          viewer_count: number | null
+          visibility: string | null
+        }
+        Insert: {
+          cover_url?: string | null
+          created_at?: string | null
+          description?: string | null
+          ended_at?: string | null
+          host_id?: string | null
+          host_username?: string | null
+          id?: string
+          name: string
+          room_id: string
+          status?: string | null
+          type: string
+          viewer_count?: number | null
+          visibility?: string | null
+        }
+        Update: {
+          cover_url?: string | null
+          created_at?: string | null
+          description?: string | null
+          ended_at?: string | null
+          host_id?: string | null
+          host_username?: string | null
+          id?: string
+          name?: string
+          room_id?: string
+          status?: string | null
+          type?: string
+          viewer_count?: number | null
+          visibility?: string | null
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           content: string
