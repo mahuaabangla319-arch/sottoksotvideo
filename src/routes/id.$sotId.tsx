@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import SottokBankWallet from '../components/SottokBankWallet'import { createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react'
 
 export const Route = createFileRoute('/live/$roomId')({
