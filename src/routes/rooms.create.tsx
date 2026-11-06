@@ -59,7 +59,7 @@ function CreateRoom() {
     setBusy(false);
     if (error || !data) { toast.error("রুম তৈরি হয়নি, আবার চেষ্টা করুন"); return; }
     toast.success("রুম তৈরি হয়েছে!");
-    navigate({ to: "/rooms/$roomId", params: { roomId: data.id } });
+    navigate({ to: "/live/$roomId", params: { roomId: data.id } });
   };
 
   return (
