@@ -1,4 +1,4 @@
- import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState, useRef, useEffect } from 'react'
 
 export const Route = createFileRoute('/create')({
@@ -38,6 +38,11 @@ function CameraAllWorking() {
   const [night, setNight] = useState(false)
   const [zoom, setZoom] = useState(1)
 
+  // ===== নতুন - গ্যালারি গান + Lip-Sync =====
+  const [galleryMusic, setGalleryMusic] = useState('')
+  const [galleryMusicUrl, setGalleryMusicUrl] = useState('')
+  const musicAudioRef = useRef<HTMLAudioElement | null>(null)
+
   const filters = ['Normal', 'Sunset', 'Beauty', 'Cinematic', 'Vintage', 'B&W', 'Warm', 'Cool']
   const speeds = ['0.5x', '1x', '1.5x', '2x']
   const effects = ['😍 Love', '🔥 Fire', '🪔 Puja', '🌸 Flower', '👑 Crown', '😎 Cool', '✨ Sparkle', '🎃 Halloween']
@@ -49,7 +54,33 @@ function CameraAllWorking() {
     return localStorage.getItem('vigo_user_name') || localStorage.getItem('sot_tok_user') || 'Tumi'
   }
 
-  // ===== ক্যামেরা চালু - কোয়ালিটি অনুযায়ী =====
+  // ===== গ্যালারি থেকে গান নিলে - গান বাজবে =====
+  const pickGalleryMusic = (e: any) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const url = URL.createObjectURL(file)
+    setGalleryMusic(file.name)
+    setGalleryMusicUrl(url)
+    setMusic(`🎵 ${file.name}`)
+    if (musicAudioRef.current) {
+      musicAudioRef.current.src = url
+      musicAudioRef.current.play().catch(()=>{})
+    }
+    alert(`🎵 গান লাগানো হয়েছে: ${file.name}\nএবার গান বাজবে, তুমি মুখ মিলিয়ে ভিডিও করো!`)
+    setPanel('none')
+  }
+
+  const playMusicForRecord = () => {
+    if (galleryMusicUrl && musicAudioRef.current) {
+      musicAudioRef.current.currentTime = 0
+      musicAudioRef.current.play().catch(()=>{})
+    }
+  }
+  const stopMusicForRecord = () => {
+    if (musicAudioRef.current) musicAudioRef.current.pause()
+  }
+
+  // ===== ক্যামেরা চালু =====
   const startCamera = async (face: any = facing, q: string = quality) => {
     try {
       setCameraError('')
@@ -63,7 +94,6 @@ function CameraAllWorking() {
       })
       setStream(s)
       if (videoRef.current) videoRef.current.srcObject = s
-      // Flash চালু থাকলে torch চালু করো
       try {
         const track: any = s.getVideoTracks()[0]
         const caps: any = track.getCapabilities ? track.getCapabilities() : {}
@@ -78,11 +108,8 @@ function CameraAllWorking() {
   useEffect(() => { startCamera(); return () => { if (stream) stream.getTracks().forEach(t => t.stop()) } }, [])
   useEffect(() => { if (!isRecording) return; const t = setInterval(() => setRecordTime(r => r + 1), 1000); return () => clearInterval(t) }, [isRecording])
   useEffect(() => { if (countdown <= 0) return; const t = setTimeout(() => setCountdown(countdown - 1), 1000); if (countdown === 1) setTimeout(() => startRecordNow(), 1000); return () => clearTimeout(t) }, [countdown])
-
-  // Flash বদলালে ক্যামেরায় সত্যি লাগাও
   useEffect(() => { if (stream) startCamera() }, [flash])
 
-  // ===== ফিল্টার + বিউটি + নাইট - সত্যি ভিডিওতে লাগবে =====
   const getFilterStyle = () => {
     let f = ''
     if (filter === 'Sunset') f = 'sepia(0.5) saturate(1.5) hue-rotate(-20deg)'
@@ -93,9 +120,7 @@ function CameraAllWorking() {
     if (filter === 'Cinematic') f = 'contrast(1.2) brightness(0.9) saturate(1.3)'
     if (filter === 'Beauty') f = 'brightness(1.1) saturate(1.2) contrast(0.95)'
     if (filter === 'Normal') f = 'none'
-    // Beauty - 0 থেকে 100 পর্যন্ত সত্যি কাজ করবে
     const beautyFilter = `brightness(${1 + beauty / 200}) saturate(${1 + beauty / 200}) contrast(${1 - beauty / 500})`
-    // Night Mode
     const nightFilter = night ? 'brightness(1.4) contrast(1.2)' : ''
     if (f === 'none') return `${beautyFilter} ${nightFilter}`
     return `${f} ${beautyFilter} ${nightFilter}`
@@ -114,6 +139,7 @@ function CameraAllWorking() {
         setPanel('post')
       }
       rec.start()
+      playMusicForRecord()
       setIsRecording(true)
       setRecordTime(0)
     } catch { alert('এই ফোনে রেকর্ড সাপোর্ট করছে না, Photo তোলো') }
@@ -122,12 +148,12 @@ function CameraAllWorking() {
   const stopRecordNow = () => {
     try { if (mediaRecorderRef.current) mediaRecorderRef.current.stop() } catch {}
     setIsRecording(false)
+    stopMusicForRecord()
   }
 
   const handleRecord = () => {
     if (mode === 'Live') { navigate({ to: '/live/create' }); return }
     if (mode === 'Photo') {
-      // Photo সত্যি তুলবে
       try {
         const canvas = document.createElement('canvas')
         if (videoRef.current) {
@@ -151,7 +177,6 @@ function CameraAllWorking() {
     startRecordNow()
   }
 
-  // ===== Speed - ভিডিও সত্যি স্লো / ফাস্ট হবে =====
   const getSpeedValue = () => {
     if (speed === '0.5x') return 0.5
     if (speed === '1.5x') return 1.5
@@ -159,6 +184,7 @@ function CameraAllWorking() {
     return 1
   }
 
+  // ===== পোস্ট - সবার Home + Viral এ যাবে + সঙ্গে সঙ্গে =====
   const fastUpload = async () => {
     if (!recordedBlob && !photoUrl) { alert('আগে ভিডিও / ছবি তোলো ভাই'); return }
     setIsUploading(true)
@@ -169,21 +195,28 @@ function CameraAllWorking() {
     }
     let videoUrl = ''
     if (recordedBlob) videoUrl = URL.createObjectURL(recordedBlob)
+    const finalMusic = galleryMusic ? `🎵 ${galleryMusic}` : music
     const newPost = {
       id: Date.now().toString(),
       user: getUserName(),
+      owner: getUserName(),
+      ownerPic: '🧡',
       email: localStorage.getItem('vigo_user_email') || '',
       videoUrl: videoUrl || photoUrl,
       photoUrl: photoUrl,
       caption: caption || `SOT TOK Video 🔥 ${selectedEffect} ${sticker}`,
+      title: caption || `SOT TOK Video 🔥 ${selectedEffect} ${sticker}`,
       likes: 0,
       comments: [],
+      views: 0,
       time: 'এখনই',
+      createdAt: Date.now(),
       filter: filter,
       speed: speed,
       beauty: beauty,
       effect: selectedEffect,
-      music: music,
+      music: finalMusic,
+      musicUrl: galleryMusicUrl,
       textOverlay: textOverlay,
       sticker: sticker,
     }
@@ -191,14 +224,24 @@ function CameraAllWorking() {
     const newFeed = [newPost, ...oldFeed]
     localStorage.setItem('sot_tok_feed', JSON.stringify(newFeed))
     localStorage.setItem('vigo_feed', JSON.stringify(newFeed))
+    // GLOBAL - সবার Home + Viral
+    const globalFeed = JSON.parse(localStorage.getItem('sottok_global_feed') || '[]')
+    globalFeed.unshift(newPost)
+    localStorage.setItem('sottok_global_feed', JSON.stringify(globalFeed))
+    const viralFeed = JSON.parse(localStorage.getItem('sottok_viral_feed') || '[]')
+    viralFeed.unshift(newPost)
+    localStorage.setItem('sottok_viral_feed', JSON.stringify(viralFeed))
+
     setIsUploading(false)
     setUploadProgress(100)
-    alert(`✅ পোস্ট হয়ে গেছে!\nফিল্টার: ${filter} • Speed: ${speed} • Beauty: ${beauty}% • Effect: ${selectedEffect} • গান: ${music}`)
+    stopMusicForRecord()
+    alert(`✅ পোস্ট হয়ে গেছে! সবার Home + Viral এ চলে গেছে!\nফিল্টার: ${filter} • গান: ${finalMusic}`)
     navigate({ to: '/' })
   }
 
   return (
     <div style={{ background: '#000', color: '#fff', minHeight: '100vh', maxWidth: 480, margin: '0 auto', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+      <audio ref={musicAudioRef} style={{ display: 'none' }} />
       <div style={{ background: 'linear-gradient(90deg,#7c4dff,#ff3b5c)', padding: '10px 12px', textAlign: 'center' }}>
         <b style={{ fontSize: 18 }}>📷 Camera - সব অপশন কাজ করবে</b>
         <div style={{ fontSize: 12, opacity: 0.9 }}>Speed, Beauty, Filter, Timer, Effects - সব চালু</div>
@@ -207,28 +250,18 @@ function CameraAllWorking() {
 
       <div style={{ position: 'relative', flex: 1, background: '#111', overflow: 'hidden' }}>
         <video ref={videoRef} autoPlay muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover', transform: `${mirror && facing === 'user' ? 'scaleX(-1)' : ''} scale(${zoom})`, filter: getFilterStyle() }} />
-
-        {/* Grid - সত্যি দেখাবে */}
         {grid && <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}><div style={{ position: 'absolute', left: '33%', top: 0, bottom: 0, width: 1, background: 'rgba(255,255,255,0.4)' }} /><div style={{ position: 'absolute', left: '66%', top: 0, bottom: 0, width: 1, background: 'rgba(255,255,255,0.4)' }} /><div style={{ position: 'absolute', top: '33%', left: 0, right: 0, height: 1, background: 'rgba(255,255,255,0.4)' }} /><div style={{ position: 'absolute', top: '66%', left: 0, right: 0, height: 1, background: 'rgba(255,255,255,0.4)' }} /></div>}
-
-        {/* Text Overlay - সত্যি ভিডিওতে দেখাবে */}
         {textOverlay && <div style={{ position: 'absolute', top: 70, left: '50%', transform: 'translateX(-50%)', fontSize: 24, fontWeight: 'bold', textShadow: '2px 2px 4px #000', background: 'rgba(0,0,0,0.4)', padding: '4px 12px', borderRadius: 10 }}>{textOverlay}</div>}
-
-        {/* Sticker + Effect - সত্যি ভিডিওতে দেখাবে */}
         {(sticker || selectedEffect) && <div style={{ position: 'absolute', bottom: 60, left: '50%', transform: 'translateX(-50%)', fontSize: 48, textAlign: 'center' }}><div>{sticker}</div><div style={{ fontSize: 14, background: 'rgba(0,0,0,0.5)', padding: '4px 10px', borderRadius: 10 }}>{selectedEffect}</div></div>}
-
-        {/* Music - সত্যি দেখাবে */}
         {music !== 'কোনো গান নেই' && music !== '🎵 কোনো গান নেই' && <div style={{ position: 'absolute', top: 60, left: 12, background: 'rgba(0,0,0,0.6)', padding: '6px 10px', borderRadius: 20, fontSize: 12 }}>🎵 {music} • Speed: {speed}</div>}
+        {galleryMusic && <div style={{ position: 'absolute', top: 90, left: 12, background: '#ff3b5c', padding: '6px 10px', borderRadius: 20, fontSize: 12 }}>🎵 গ্যালারি গান: {galleryMusic} - Lip-Sync চালু</div>}
 
         <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <button onClick={() => navigate({ to: '/' })} style={{ background: 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', width: 36, height: 36, borderRadius: '50%', fontSize: 18 }}>✕</button>
-          {/* Flash - চাপ দিলে সত্যি জ্বলবে */}
           <button onClick={() => setFlash(!flash)} style={{ background: flash ? '#ffb400' : 'rgba(0,0,0,0.5)', color: flash ? '#000' : '#fff', border: 'none', width: 36, height: 36, borderRadius: '50%', fontSize: 18 }}>{flash ? '💡' : '⚡'}</button>
-          {/* Quality - চাপ দিলে সত্যি বদলাবে */}
           <select value={quality} onChange={e => { setQuality(e.target.value); setTimeout(() => startCamera(facing, e.target.value), 100) }} style={{ background: 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', padding: '8px 10px', borderRadius: 20, fontWeight: 'bold' }}>
             <option>720P</option><option>1080P</option><option>480P</option>
           </select>
-          {/* Flip - চাপ দিলে সত্যি ক্যামেরা বদলাবে */}
           <button onClick={() => { const n = facing === 'user' ? 'environment' : 'user'; setFacing(n); startCamera(n, quality) }} style={{ background: 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', width: 36, height: 36, borderRadius: '50%', fontSize: 18 }}>🔄</button>
         </div>
 
@@ -266,9 +299,9 @@ function CameraAllWorking() {
         <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: '#111b21', borderRadius: '20px 20px 0 0', padding: 16, zIndex: 50, maxHeight: '70vh', overflowY: 'auto' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}><b>{panel === 'speed' ? '⏱️ Speed - সত্যি কাজ করবে' : panel === 'beauty' ? '🪄 Beauty - মুখে লাগবে' : panel === 'filters' ? '✨ Filters - ভিডিওতে লাগবে' : panel === 'timer' ? '⏰ Timer - কাউন্টডাউন হবে' : panel === 'more' ? '••• More - সব চালু' : panel === 'post' ? '📝 পোস্ট করো' : panel === 'music' ? '🎵 Music' : panel === 'text' ? '✍️ Text' : '😊 Effects - ভিডিওতে দেখাবে'}</b><button onClick={() => setPanel('none')} style={{ background: '#202c33', color: '#fff', border: 'none', borderRadius: '50%', width: 28, height: 28 }}>✕</button></div>
 
-          {panel === 'speed' && <div><div style={{ display: 'flex', gap: 8, marginTop: 12 }}>{speeds.map(s => <button key={s} onClick={() => { setSpeed(s); alert(`Speed ${s} লাগানো হয়েছে! ভিডিও এখন ${s} এ হবে।`) }} style={{ padding: '10px 18px', borderRadius: 20, background: speed === s ? '#ff3b5c' : '#202c33', color: '#fff', border: 'none', fontWeight: 'bold' }}>{s}</button>)}</div><p style={{ fontSize: 12, color: '#aaa', marginTop: 8 }}>0.5x = স্লো মোশন, 2x = ফাস্ট মোশন</p></div>}
+          {panel === 'speed' && <div><div style={{ display: 'flex', gap: 8, marginTop: 12 }}>{speeds.map(s => <button key={s} onClick={() => { setSpeed(s); alert(`Speed ${s} লাগানো হয়েছে!`) }} style={{ padding: '10px 18px', borderRadius: 20, background: speed === s ? '#ff3b5c' : '#202c33', color: '#fff', border: 'none', fontWeight: 'bold' }}>{s}</button>)}</div><p style={{ fontSize: 12, color: '#aaa', marginTop: 8 }}>0.5x = স্লো মোশন, 2x = ফাস্ট মোশন</p></div>}
 
-          {panel === 'beauty' && <div style={{ marginTop: 12 }}><input type="range" min="0" max="100" value={beauty} onChange={e => setBeauty(Number(e.target.value))} style={{ width: '100%' }} /><p style={{ textAlign: 'center' }}>Beauty: {beauty}% - সরাসরি মুখে দেখতে পাবে</p><div style={{ display: 'flex', gap: 8 }}><button onClick={() => setBeauty(0)} style={{ flex: 1, padding: 10, borderRadius: 10, background: '#202c33', color: '#fff', border: 'none' }}>0% - বন্ধ</button><button onClick={() => setBeauty(50)} style={{ flex: 1, padding: 10, borderRadius: 10, background: '#202c33', color: '#fff', border: 'none' }}>50% - মিডিয়াম</button><button onClick={() => setBeauty(100)} style={{ flex: 1, padding: 10, borderRadius: 10, background: '#ff3b5c', color: '#fff', border: 'none' }}>100% - ফুল</button></div></div>}
+          {panel === 'beauty' && <div style={{ marginTop: 12 }}><input type="range" min="0" max="100" value={beauty} onChange={e => setBeauty(Number(e.target.value))} style={{ width: '100%' }} /><p style={{ textAlign: 'center' }}>Beauty: {beauty}%</p><div style={{ display: 'flex', gap: 8 }}><button onClick={() => setBeauty(0)} style={{ flex: 1, padding: 10, borderRadius: 10, background: '#202c33', color: '#fff', border: 'none' }}>0%</button><button onClick={() => setBeauty(50)} style={{ flex: 1, padding: 10, borderRadius: 10, background: '#202c33', color: '#fff', border: 'none' }}>50%</button><button onClick={() => setBeauty(100)} style={{ flex: 1, padding: 10, borderRadius: 10, background: '#ff3b5c', color: '#fff', border: 'none' }}>100%</button></div></div>}
 
           {panel === 'filters' && <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>{filters.map(f => <button key={f} onClick={() => setFilter(f)} style={{ padding: '10px 14px', borderRadius: 20, background: filter === f ? '#ff3b5c' : '#202c33', color: '#fff', border: 'none' }}>{f}</button>)}</div>}
 
@@ -280,10 +313,18 @@ function CameraAllWorking() {
             <div onClick={() => { const s = prompt('Sticker চয়েস করো: 😍 🔥 🪔 🌸 👑 ✨ ❤️'); if (s) setSticker(s); setPanel('none') }} style={{ background: '#202c33', padding: 12, borderRadius: 12 }}><b>🖼️ Sticker</b><div style={{ fontSize: 11, color: '#aaa' }}>{sticker || 'স্টিকার'}</div></div>
             <div onClick={() => { setMirror(!mirror); alert(mirror ? 'Mirror বন্ধ' : 'Mirror চালু') }} style={{ background: mirror ? '#ff3b5c' : '#202c33', padding: 12, borderRadius: 12 }}><b>🪞 Mirror</b><div style={{ fontSize: 11, color: '#aaa' }}>{mirror ? 'চালু' : 'বন্ধ'}</div></div>
             <div onClick={() => { setGrid(!grid); alert(grid ? 'Grid বন্ধ' : 'Grid চালু') }} style={{ background: grid ? '#ff3b5c' : '#202c33', padding: 12, borderRadius: 12 }}><b>📐 Grid</b><div style={{ fontSize: 11, color: '#aaa' }}>{grid ? 'চালু' : 'বন্ধ'}</div></div>
-            <div onClick={() => { setNight(!night); alert(night ? 'Night বন্ধ' : 'Night চালু - আলো বাড়বে') }} style={{ background: night ? '#ff3b5c' : '#202c33', padding: 12, borderRadius: 12 }}><b>🌙 Night</b><div style={{ fontSize: 11, color: '#aaa' }}>{night ? 'চালু' : 'বন্ধ'}</div></div>
+            <div onClick={() => { setNight(!night); alert(night ? 'Night বন্ধ' : 'Night চালু') }} style={{ background: night ? '#ff3b5c' : '#202c33', padding: 12, borderRadius: 12 }}><b>🌙 Night</b><div style={{ fontSize: 11, color: '#aaa' }}>{night ? 'চালু' : 'বন্ধ'}</div></div>
           </div>}
 
-          {panel === 'music' && <div style={{ marginTop: 12 }}>{musics.map(m => <button key={m} onClick={() => { setMusic(m); setPanel('none'); alert(`গান লাগানো হয়েছে: ${m}`) }} style={{ width: '100%', padding: 12, borderRadius: 10, background: music === m ? '#ff3b5c' : '#202c33', color: '#fff', border: 'none', marginTop: 6, textAlign: 'left' }}>{m}</button>)}</div>}
+          {panel === 'music' && <div style={{ marginTop: 12 }}>
+            <label style={{ display: 'block', width: '100%', padding: 14, borderRadius: 12, background: '#ff3b5c', color: '#fff', textAlign: 'center', fontWeight: 'bold', cursor: 'pointer', boxSizing: 'border-box' }}>
+              📁 গ্যালারি থেকে গান নাও - নিজের গান
+              <input type="file" accept="audio/*" onChange={pickGalleryMusic} style={{ display: 'none' }} />
+            </label>
+            {galleryMusic && <p style={{ fontSize: 13, color: '#4caf50', marginTop: 8 }}>✅ লাগানো গান: {galleryMusic} - এবার গান বাজিয়ে মুখ মিলিয়ে ভিডিও করো</p>}
+            <p style={{ fontSize: 12, color: '#aaa', marginTop: 6 }}>👆 উপরে চাপো → গ্যালারি খুলবে → গান চয়েস করো → গান বাজবে → Lip-Sync ভিডিও করো</p>
+            {musics.map(m => <button key={m} onClick={() => { setMusic(m); setGalleryMusic(''); setGalleryMusicUrl(''); setPanel('none'); alert(`গান লাগানো হয়েছে: ${m}`) }} style={{ width: '100%', padding: 12, borderRadius: 10, background: music === m ? '#ff3b5c' : '#202c33', color: '#fff', border: 'none', marginTop: 6, textAlign: 'left' }}>{m}</button>)}
+          </div>}
 
           {panel === 'text' && <div style={{ marginTop: 12 }}><input value={textOverlay} onChange={e => setTextOverlay(e.target.value)} placeholder="ভিডিওতে কি লেখা দেখাবে? যেমন শুভ অষ্টমী 🙏" style={{ width: '100%', padding: 12, borderRadius: 10, background: '#202c33', color: '#fff', border: 'none', boxSizing: 'border-box' }} /><button onClick={() => setPanel('none')} style={{ width: '100%', marginTop: 10, padding: 12, borderRadius: 10, background: '#ff3b5c', color: '#fff', border: 'none', fontWeight: 'bold' }}>✅ লেখা লাগাও</button></div>}
 
@@ -292,6 +333,8 @@ function CameraAllWorking() {
           {panel === 'post' && (
             <div style={{ marginTop: 12 }}>
               <p style={{ fontSize: 13 }}>✅ ভিডিও রেডি! {recordTime} সেকেন্ড • ফিল্টার: {filter} • Speed: {speed} • Beauty: {beauty}% • Effect: {selectedEffect} • গান: {music}</p>
+              {galleryMusic && <p style={{ fontSize: 13, color: '#4caf50' }}>🎵 গ্যালারির গান: {galleryMusic} - এই গান সহ পোস্ট হবে</p>}
+              <p style={{ fontSize: 12, color: '#aaa' }}>📢 পোস্ট করলেই সবার Home + Viral এ চলে যাবে</p>
               {photoUrl && <img src={photoUrl} style={{ width: '100%', borderRadius: 10, marginBottom: 8 }} />}
               <input value={caption} onChange={e => setCaption(e.target.value)} placeholder="Caption লেখো... শুভ অষ্টমী 🙏" style={{ width: '100%', padding: 12, borderRadius: 10, background: '#202c33', color: '#fff', border: 'none', boxSizing: 'border-box' }} />
               {isUploading && <div style={{ marginTop: 12 }}><div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}><span>আপলোড হচ্ছে...</span><span>{uploadProgress}%</span></div><div style={{ background: '#202c33', height: 8, borderRadius: 10, marginTop: 6, overflow: 'hidden' }}><div style={{ width: `${uploadProgress}%`, background: '#ff3b5c', height: '100%' }} /></div></div>}
