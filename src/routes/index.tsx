@@ -45,7 +45,7 @@ function SOTTOKFinal() {
     const user = { name: finalName, email: g, id: g, coins: 100, followers: 0, following: 0 }
     localStorage.setItem('sot_tok_user', JSON.stringify(user))
     localStorage.setItem('sot_tok_users', JSON.stringify([user]))
-    localStorage.setItem('vigo_user_name', finalName)
+    localStorage.setItem('vigo_user_name', finalName || '')
     localStorage.setItem('vigo_user_email', g)
     localStorage.setItem('vigo_user_id', g)
     setMe(user); setScreen('feed')
