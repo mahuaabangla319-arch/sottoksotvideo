@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { timeAgo } from "@/lib/engagement";
 import { notifText } from "@/lib/social";
+import { getMyNotifs, markNotifsRead, type LocalNotif } from "@/lib/localNotify";
 
 export const Route = createFileRoute("/activity")({
   head: () => ({
@@ -35,6 +36,13 @@ function ActivityPage() {
   const { user } = useAuth();
   const qc = useQueryClient();
   const [active, setActive] = useState<(typeof tabs)[number]["k"]>("All");
+  const [localNotifs, setLocalNotifs] = useState<LocalNotif[]>([]);
+  const [playing, setPlaying] = useState<string | null>(null);
+  useEffect(() => {
+    if (user) localStorage.setItem("sottok_uid", user.id);
+    setLocalNotifs(getMyNotifs());
+    markNotifsRead();
+  }, [user]);
 
   const { data: items } = useQuery({
     queryKey: ["notifications", user?.id],
@@ -95,7 +103,36 @@ function ActivityPage() {
         ))}
       </div>
 
-      {!user ? (
+      {localNotifs.length > 0 && (active === "All") && (
+        <ul className="divide-y divide-white/5 border-b border-white/10">
+          {localNotifs.map((n) => (
+            <li key={n.id} className="flex items-center gap-3 px-4 py-3">
+              {n.actorPic ? (
+                <img src={n.actorPic} alt="" className="h-10 w-10 rounded-full object-cover ring-2 ring-orange-500" />
+              ) : (
+                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-yellow-400 font-bold">
+                  {n.actorName.slice(0, 1).toUpperCase()}
+                </span>
+              )}
+              <span className="flex-1">
+                <span className="block text-[13px]">🔔 <b>@{n.actorName}</b> নতুন ভিডিও দিয়েছে</span>
+                <span className="block text-[11px] text-white/40">{timeAgo(new Date(n.createdAt).toISOString())}</span>
+              </span>
+              <button onClick={() => setPlaying(n.videoUrl)} className="rounded-full bg-orange-500 px-3 py-1.5 text-[12px] font-semibold text-black">
+                ভিডিও দেখো
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {playing && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black" onClick={() => setPlaying(null)}>
+          <video src={playing} autoPlay controls playsInline loop className="max-h-full w-full max-w-md" onClick={(e) => e.stopPropagation()} />
+          <button className="absolute right-4 top-4 rounded-full bg-white/15 px-3 py-1 text-white">✕</button>
+        </div>
+      )}
+
+      {!user && localNotifs.length > 0 ? null : !user ? (
         <div className="flex h-[60vh] flex-col items-center justify-center gap-3 px-6">
           <p className="text-center text-[14px] text-white/45">নোটিফিকেশন দেখতে লগইন করুন।</p>
           <Link to="/login" className="rounded-xl bg-brand px-5 py-2 text-[13px] font-semibold">লগইন</Link>
