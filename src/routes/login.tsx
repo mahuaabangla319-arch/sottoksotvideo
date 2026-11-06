@@ -24,7 +24,7 @@ function emailFrom(input: string) {
   return v.includes("@") ? v : `${v.replace(/[^a-z0-9._-]/g, "")}@sottok.com`;
 }
 
-function authErrorBn(error: { message: string; code?: string }) {
+function authErrorBn(error: { message: string; code?: string | undefined }) {
   const m = error.message.toLowerCase();
   if (error.code === "weak_password" || m.includes("weak"))
     return "পাসওয়ার্ড খুব সহজ। অক্ষর, সংখ্যা ও চিহ্ন মিলিয়ে শক্ত পাসওয়ার্ড দিন।";
