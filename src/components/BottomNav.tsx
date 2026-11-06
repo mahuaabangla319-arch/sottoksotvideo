@@ -1,5 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Home, Compass, Bell, User, Plus, Radio } from "lucide-react";
+import { useEffect, useState } from "react";
+import { getMyNotifs } from "@/lib/localNotify";
 
 const items = [
   { to: "/feed", label: "হোম", Icon: Home },
@@ -14,6 +16,14 @@ const right = [
 
 export function BottomNav() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const [dot, setDot] = useState(false);
+  useEffect(() => {
+    const check = () => setDot(getMyNotifs().some((n) => !n.read));
+    check();
+    window.addEventListener("sottok-notif", check);
+    window.addEventListener("storage", check);
+    return () => { window.removeEventListener("sottok-notif", check); window.removeEventListener("storage", check); };
+  }, [pathname]);
 
   const cell = (to: string, label: string, Icon: typeof Home) => {
     const active = pathname === to || (to === "/live" && pathname.startsWith("/live"));
@@ -23,7 +33,10 @@ export function BottomNav() {
         to={to}
         className={`flex flex-col items-center gap-0.5 w-14 py-1.5 rounded-xl ${active ? "text-pink-500" : "text-gray-400"}`}
       >
-        <Icon size={22} strokeWidth={active ? 2.5 : 2} />
+        <span className="relative">
+          <Icon size={22} strokeWidth={active ? 2.5 : 2} />
+          {to === "/activity" && dot && <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-black" />}
+        </span>
         <span className={`text-[11px] font-bold ${active ? "text-pink-500" : "text-gray-400"}`}>{label}</span>
         {active && <span className="w-1 h-1 bg-pink-500 rounded-full" />}
       </Link>
