@@ -1,5 +1,8 @@
  import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState, useRef, useEffect } from 'react'
+import { supabase } from '@/integrations/supabase/client'
+import { avatarSrc } from '@/lib/profile'
+import { saveLocalPost, localUserId, blobToDataUrl } from '@/lib/localNotify'
 
 export const Route = createFileRoute('/create')({
   component: CameraAllWorking,
@@ -191,6 +194,19 @@ function CameraAllWorking() {
     const newFeed = [newPost, ...oldFeed]
     localStorage.setItem('sot_tok_feed', JSON.stringify(newFeed))
     localStorage.setItem('vigo_feed', JSON.stringify(newFeed))
+    try {
+      let ownerId = localUserId(), ownerPic = '', ownerSotId = '', ownerName = getUserName()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        ownerId = user.id
+        localStorage.setItem('sottok_uid', user.id)
+        const { data: p } = await supabase.from('profiles').select('username, sottok_id, avatar_url').eq('id', user.id).maybeSingle()
+        if (p) { ownerName = p.username || ownerName; ownerSotId = p.sottok_id; ownerPic = (await avatarSrc(p.avatar_url ?? null)) || '' }
+      }
+      let stored = videoUrl || photoUrl
+      if (recordedBlob && recordedBlob.size < 3_000_000) stored = (await blobToDataUrl(recordedBlob)) || stored
+      saveLocalPost({ id: newPost.id, ownerId, ownerName, ownerPic, ownerSotId, videoUrl: stored, caption: newPost.caption, createdAt: Date.now(), camera: facing === 'user' ? 'Front' : 'Back' })
+    } catch {}
     setIsUploading(false)
     setUploadProgress(100)
     alert(`✅ পোস্ট হয়ে গেছে!\nফিল্টার: ${filter} • Speed: ${speed} • Beauty: ${beauty}% • Effect: ${selectedEffect} • গান: ${music}`)
