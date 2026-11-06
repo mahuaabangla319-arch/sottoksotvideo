@@ -111,7 +111,7 @@ function SOTTOKLiveCreateForm() {
     setTimeout(() => {
       alert(`Live Toiri Hoye Geche! 🎉\n\nHost: ${userName}\nTitle: ${title}\nCategory: ${category}\n\nEkhon sobai dekhbe + Notification geche!`)
       // 8. LIVE ROOM E NIYE JAO
-      navigate({ to: '/live/$roomId', params: { roomId: '1' } })
+      navigate({ to: '/live/1' })
     }, 500)
   }
 

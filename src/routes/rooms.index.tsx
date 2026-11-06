@@ -64,7 +64,7 @@ function RoomsHub() {
     void 0;
     const { data } = await supabase.from("rooms").select("id").eq("code", c).maybeSingle();
     if (!data) { toast.error("এই রুম আইডি পাওয়া যায়নি"); return; }
-    navigate({ to: "/live/$roomId", params: { roomId: data.id } });
+    navigate({ to: "/rooms/$roomId", params: { roomId: data.id } });
   };
 
   const shown = rooms.filter((r) => !q || r.title.toLowerCase().includes(q.toLowerCase()) || r.code.includes(q.toUpperCase()));
@@ -136,7 +136,7 @@ function RoomsHub() {
         {shown.map((r) => (
           <Link
             key={r.id}
-            to="/live/$roomId"
+            to="/rooms/$roomId"
             params={{ roomId: r.id }}
             className="overflow-hidden rounded-2xl border border-white/10 bg-white/5"
           >
