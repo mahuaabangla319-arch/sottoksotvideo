@@ -1,38 +1,114 @@
-FIX FULL APP - Make Everything REAL. Do NOT delete any existing design. Remove ALL fake/demo data.
+import { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { supabase } from "../../lib/supabase";
 
-1. REAL PROFILE - ON TAP ANY USER:
-When I tap on ANY user's avatar / name / username anywhere (Feed, Explore, Comments, Live, Search), it MUST open that user's REAL profile page /profile/$userId
-Show:
-- Real avatar, real name, username, bio from profiles table
-- Real followers count from follows table, following count, total likes from videos table
-- If it's MY profile -> Show Edit Profile button
-- If it's OTHER user's profile -> Show Follow / Unfollow button + Message button. NO Edit button.
-- Follow button: On tap, insert into follows table (follower_id = my id, following_id = this profile id). Unfollow = delete that row. Update count instantly.
-- Videos Grid: Fetch from videos table where user_id = this profile user_id, order newest first, 3-column TikTok grid. Tap any video -> open full video player with real like, comment, share. If no videos -> Show "No videos yet"
+export default function UserProfile() {
+  const { sotId } = useParams();
+  const navigate = useNavigate();
+  const [profile, setProfile] = useState<any>(null);
+  const [videos, setVideos] = useState<any[]>([]);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followersCount, setFollowersCount] = useState(0);
+  const [isLive, setIsLive] = useState(false);
+  const [myId, setMyId] = useState("");
 
-2. REAL VIDEOS - NO FAKE:
-Remove all Unsplash images, hardcoded videos, demo posts.
-Feed, Explore, Profile MUST fetch ONLY from videos table in Supabase.
-Video must show: real video_url, real caption, real owner profile, real likes count, real comments count.
-Upload from Create/Camera MUST insert into videos table with user_id, video_url, title, created_at. Then it must appear instantly in my Profile + Feed + Explore for everyone.
+  useEffect(() => {
+    loadAll();
+  }, [sotId]);
 
-3. REAL LIVE - NO FAKE:
-Remove ALL hardcoded data from id.$sotId.tsx and live files: NO viewers=1245, NO likes=3881, NO fake comments like @priya_12, @rahul_asansol, NO Unsplash image as video.
-Make REAL LIVE:
-- Host starts live -> create row in live_streams table (host_id, room_id, is_live=true)
-- Viewer joins live -> insert into live_viewers, show REAL viewers count
-- Like button -> insert into live_likes, show REAL likes count
-- Comment -> insert into live_comments table, show REAL comments instantly to all viewers
-- Gift -> insert into live_gifts, update coins
-- If user is LIVE, show RED LIVE badge on his Profile + Feed + Explore. Tap LIVE badge -> join his REAL live room.
-- If user is NOT live -> Show "User is not live now" + Show his videos + Follow button.
-- Use REAL camera stream for host, NOT image.
+  async function loadAll() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) setMyId(user.id);
 
-4. REAL ACCOUNTS - NO FAKE USERS:
-Remove all fake users. Show ONLY real users from profiles table (Supabase Auth).
-Search must search real users only.
-Comments must show real commenter's avatar + name from profiles table.
+    // 1. Profile load - Real user
+    const { data: prof } = await supabase.from("profiles").select("*").eq("id", sotId).single();
+    setProfile(prof);
 
-5. REAL LIKE / COMMENT EVERYWHERE:
-Like on Video / Live -> Save in likes table, count must update for everyone.
-Comment -> Save in comments table, show instantly.
+    // 2. Videos load - Real videos of this user
+    const { data: vids } = await supabase.from("videos").select("*").eq("user_id", sotId).order("created_at", { ascending: false });
+    setVideos(vids || []);
+
+    // 3. Followers count
+    const { count } = await supabase.from("follows").select("*", { count: "exact", head: true }).eq("following_id", sotId);
+    setFollowersCount(count || 0);
+
+    // 4. Am I following?
+    if (user) {
+      const { data: follow } = await supabase.from("follows").select("*").eq("follower_id", user.id).eq("following_id", sotId).single();
+      setIsFollowing(!!follow);
+    }
+
+    // 5. Is Live?
+    const { data: live } = await supabase.from("live_streams").select("*").eq("host_id", sotId).eq("is_live", true).single();
+    setIsLive(!!live);
+  }
+
+  async function toggleFollow() {
+    if (!myId) return alert("Login koro age");
+    if (isFollowing) {
+      await supabase.from("follows").delete().eq("follower_id", myId).eq("following_id", sotId);
+      setIsFollowing(false);
+      setFollowersCount(c => c - 1);
+    } else {
+      await supabase.from("follows").insert({ follower_id: myId, following_id: sotId });
+      setIsFollowing(true);
+      setFollowersCount(c => c + 1);
+    }
+  }
+
+  function goMessage() {
+    navigate(`/chat/${sotId}`);
+  }
+
+  if (!profile) return <div style={{ padding: 20, color: "#fff", background: "#000", height: "100vh" }}>Loading profile...</div>;
+
+  const isMyProfile = myId === sotId;
+
+  return (
+    <div style={{ background: "#000", color: "#fff", minHeight: "100vh", padding: 16 }}>
+      {/* TOP - Profile Info */}
+      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+        <img src={profile.avatar_url || "https://via.placeholder.com/100"} style={{ width: 90, height: 90, borderRadius: "50%", objectFit: "cover" }} />
+        <div>
+          <h2 style={{ margin: 0 }}>{profile.full_name || profile.username}</h2>
+          <p style={{ margin: 0, opacity: 0.7 }}>@{profile.username}</p>
+          <p style={{ margin: "6px 0" }}>{profile.bio || ""}</p>
+          <p style={{ margin: 0, fontWeight: "bold" }}>{followersCount} Followers • {videos.length} Videos</p>
+          {isLive && <div style={{ background: "red", display: "inline-block", padding: "4px 10px", borderRadius: 6, marginTop: 6, fontWeight: "bold" }}>● LIVE NOW</div>}
+        </div>
+      </div>
+
+      {/* BUTTONS - Follow / Message / Live */}
+      {!isMyProfile ? (
+        <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+          <button onClick={toggleFollow} style={{ flex: 1, padding: 12, borderRadius: 10, background: isFollowing ? "#333" : "#ff3b5c", color: "#fff", border: "none", fontWeight: "bold", fontSize: 16 }}>
+            {isFollowing ? "Following ✓" : "Follow"}
+          </button>
+          <button onClick={goMessage} style={{ flex: 1, padding: 12, borderRadius: 10, background: "#222", color: "#fff", border: "1px solid #444", fontWeight: "bold", fontSize: 16 }}>
+            Message
+          </button>
+        </div>
+      ) : (
+        <button onClick={() => navigate("/profile/edit")} style={{ width: "100%", padding: 12, marginTop: 16, borderRadius: 10, background: "#222", color: "#fff", border: "1px solid #444" }}>Edit Profile</button>
+      )}
+
+      {isLive && !isMyProfile && (
+        <button onClick={() => navigate(`/live/${sotId}`)} style={{ width: "100%", padding: 14, marginTop: 10, borderRadius: 10, background: "red", color: "#fff", border: "none", fontWeight: "bold", fontSize: 16 }}>
+          ▶ Join LIVE
+        </button>
+      )}
+
+      {/* VIDEOS GRID */}
+      <h3 style={{ marginTop: 24 }}>Videos</h3>
+      {videos.length === 0 ? (
+        <p style={{ opacity: 0.6, textAlign: "center", marginTop: 20 }}>No videos yet</p>
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 4 }}>
+          {videos.map((v: any) => (
+            <video key={v.id} src={v.video_url} onClick={() => navigate(`/video/${v.id}`)} style={{ width: "100%", height: 160, objectFit: "cover", borderRadius: 8 }} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
