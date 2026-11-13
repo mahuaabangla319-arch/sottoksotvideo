@@ -21,26 +21,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, next) => {
-      setSession(next);
-      setLoading(false);
-    });
+    // ১. প্রথমে এখন Session আছে কিনা দেখো
     supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
+      setSession(data.session ?? null);
       setLoading(false);
     });
-    return () => sub.subscription.unsubscribe();
+
+    // ২. Login / Logout হলে অটো আপডেট হবে
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      setSession(newSession);
+      setLoading(false);
+    });
+
+    // ৩. ৮ সেকেন্ডের বেশি Loading হলে জোর করে বন্ধ করো - এটাই Google Loading আটকানো ঠিক করবে
+    const timeout = setTimeout(() => {
+      setLoading(false);
+    }, 8000);
+
+    return () => {
+      listener.subscription.unsubscribe();
+      clearTimeout(timeout);
+    };
   }, []);
+
+  const signOut = async () => {
+    setLoading(true);
+    try {
+      await supabase.auth.signOut();
+    } catch (e) {
+      console.error("SignOut error", e);
+    } finally {
+      setSession(null);
+      setLoading(false);
+    }
+  };
 
   return (
     <AuthContext.Provider
       value={{
-        session,
         user: session?.user ?? null,
+        session,
         loading,
-        signOut: async () => {
-          await supabase.auth.signOut();
-        },
+        signOut,
       }}
     >
       {children}
@@ -48,6 +70,4 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useAuth() {
-  return useContext(AuthContext);
-}
+export const useAuth = () => useContext(AuthContext);
