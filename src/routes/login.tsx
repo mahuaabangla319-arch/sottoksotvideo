@@ -19,22 +19,6 @@ export const Route = createFileRoute("/login")({
   component: LoginPage,
 });
 
-function emailFrom(input: string) {
-  const v = input.trim().toLowerCase();
-  return v.includes("@") ? v : `${v.replace(/[^a-z0-9._-]/g, "")}@sottok.com`;
-}
-
-function authErrorBn(error: { message: string; code?: string | undefined }) {
-  const m = error.message.toLowerCase();
-  if (error.code === "weak_password" || m.includes("weak"))
-    return "পাসওয়ার্ড খুব সহজ। অক্ষর, সংখ্যা ও চিহ্ন মিলিয়ে শক্ত পাসওয়ার্ড দিন।";
-  if (m.includes("already")) return "এই আইডি আগে থেকেই আছে। 'লগইন' ট্যাবে গিয়ে লগইন করুন।";
-  if (m.includes("invalid login")) return "আইডি বা পাসওয়ার্ড ভুল।";
-  if (m.includes("not confirmed")) return "আগে ইমেইলের লিংকে ক্লিক করে অ্যাকাউন্ট চালু করুন।";
-  if (m.includes("invalid") && m.includes("email")) return "সঠিক Gmail ঠিকানা লিখুন।";
-  return error.message;
-}
-
 function LoginPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -43,7 +27,6 @@ function LoginPage() {
   const [fullName, setFullName] = useState("");
   const [gmailId, setGmailId] = useState("");
   const [password, setPassword] = useState("");
-  const [mode, setMode] = useState<"signup" | "signin">("signup");
 
   useEffect(() => {
     if (user) navigate({ to: "/feed" });
@@ -65,20 +48,7 @@ function LoginPage() {
 
   const createId = async (e: React.FormEvent) => {
     e.preventDefault();
-    const id = gmailId.trim().toLowerCase().replace(/[^a-z0-9._@-]/g, "");
-    if (mode === "signin") {
-      if (id.length < 3 || password.length < 6) {
-        toast.error("আইডি/Gmail এবং পাসওয়ার্ড ঠিকভাবে লিখুন।");
-        return;
-      }
-      setCreating(true);
-      const { error } = await supabase.auth.signInWithPassword({ email: emailFrom(id), password });
-      setCreating(false);
-      if (error) return void toast.error(authErrorBn(error));
-      toast.success("লগইন সফল হয়েছে");
-      navigate({ to: "/feed" });
-      return;
-    }
+    const id = gmailId.trim().toLowerCase().replace(/[^a-z0-9._-]/g, "");
     if (!fullName.trim()) {
       toast.error("পুরো নাম লিখুন।");
       return;
@@ -94,22 +64,22 @@ function LoginPage() {
 
 
     setCreating(true);
-    const email = emailFrom(gmailId);
-    const { data, error } = await supabase.auth.signUp({
+    const email = `${id}@sottok.com`;
+    const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         emailRedirectTo: window.location.origin,
-        data: { full_name: fullName.trim(), username: id.split("@")[0] },
+        data: { full_name: fullName.trim(), username: id },
       },
     });
     setCreating(false);
     if (error) {
-      toast.error(authErrorBn(error));
-      return;
-    }
-    if (!data.session) {
-      toast.success("আপনার ইমেইলে পাঠানো লিংকে ক্লিক করে অ্যাকাউন্ট চালু করুন।");
+      toast.error(
+        error.message.includes("already")
+          ? "এই আইডি আগে থেকেই আছে। অন্য আইডি চেষ্টা করুন।"
+          : error.message,
+      );
       return;
     }
     toast.success(`আইডি তৈরি হয়েছে: ${email}`);
@@ -167,36 +137,23 @@ function LoginPage() {
       </div>
 
       <form onSubmit={createId} className="rounded-2xl border border-white/10 bg-white/5 p-4">
-        <div className="mb-3 grid grid-cols-2 gap-1 rounded-xl bg-black p-1">
-          {(["signup", "signin"] as const).map((m) => (
-            <button
-              key={m}
-              type="button"
-              onClick={() => setMode(m)}
-              className={`rounded-lg py-2 text-[13px] font-semibold ${mode === m ? "bg-brand text-white" : "text-white/50"}`}
-            >
-              {m === "signup" ? "নতুন Gmail খুলতে চাই" : "লগইন"}
-            </button>
-          ))}
-        </div>
-        {mode === "signup" && (
+        <p className="mb-3 text-[14px] font-semibold text-white">নতুন Gmail খুলতে চাই</p>
         <input
           value={fullName}
           onChange={(e) => setFullName(e.target.value)}
           placeholder="পুরো নাম"
           className="mb-3 w-full rounded-xl border border-white/10 bg-black px-4 py-3 text-sm text-white outline-none placeholder:text-white/35 focus:border-brand"
         />
-        )}
         <input
           value={gmailId}
           onChange={(e) => setGmailId(e.target.value)}
-          placeholder="sottok123 অথবা name@gmail.com"
+          placeholder="sottok123"
           autoCapitalize="none"
           className="w-full rounded-xl border border-white/10 bg-black px-4 py-3 text-sm text-white outline-none placeholder:text-white/35 focus:border-brand"
         />
         <p className="mb-3 mt-1.5 text-[11px] text-white/45">
-          আইডি অথবা আসল Gmail লিখুন — ঠিকানা হবে{" "}
-          <span className="text-gold">{emailFrom(gmailId || "sottok123")}</span>
+          নতুন gmail আইডি লিখুন — আপনার ঠিকানা হবে{" "}
+          <span className="text-gold">{(gmailId || "sottok123").toLowerCase()}@sottok.com</span>
         </p>
         <input
           value={password}
@@ -211,7 +168,7 @@ function LoginPage() {
           className="flex w-full items-center justify-center gap-2 rounded-xl bg-gold py-3 text-[15px] font-bold text-black disabled:opacity-70"
         >
           {creating && <Loader2 className="h-4 w-4 animate-spin" />}
-          {mode === "signup" ? "নতুন আইডি তৈরি করুন" : "লগইন করুন"}
+          নতুন আইডি তৈরি করুন
         </button>
       </form>
 
