@@ -1,121 +1,58 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useState, useEffect } from 'react'
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import splash from "@/assets/mahalaya-splash.jpg.asset.json";
 
-export const Route = createFileRoute('/')({
-  component: LoginAgerMoto,
-})
+export const Route = createFileRoute("/")({
+  head: () => ({
+    meta: [
+      { title: "SOT TOK — নিজের পরিচয় নিজেই তৈরি করো" },
+      {
+        name: "description",
+        content: "SOT TOK — ভারতের নাম্বার ওয়ান শর্ট ভিডিও অ্যাপ। ভিডিও বানাও, শেয়ার করো, নিজের পরিচয় তৈরি করো।",
+      },
+      { property: "og:title", content: "SOT TOK — নিজের পরিচয় নিজেই তৈরি করো" },
+      { property: "og:description", content: "ভারতের নাম্বার ওয়ান শর্ট ভিডিও অ্যাপ — রেকর্ড করো, শেয়ার করো, ট্রেন্ড করো।" },
+    ],
+  }),
+  component: Splash,
+});
 
-function LoginAgerMoto() {
-  const navigate = useNavigate()
-  const [oldUsers, setOldUsers] = useState<any[]>([])
-  const [gmail, setGmail] = useState('')
-  const [name, setName] = useState('')
+const DURATION = 5000;
 
-  // ===== STEP 1 - গ্যালারি + মিউজিক এর জন্য =====
-  const [video, setVideo] = useState("")
-  const [music, setMusic] = useState("")
-  const [start, setStart] = useState(0)
-  const [end, setEnd] = useState(15)
-  const [cap, setCap] = useState("")
+function Splash() {
+  const navigate = useNavigate();
+  const [progress, setProgress] = useState(0);
 
   useEffect(() => {
-    try {
-      const list: any[] = []
-      ;['sot_tok_users', 'vigo_users', 'sot_tok_user', 'google_user'].forEach(k => {
-        const v = localStorage.getItem(k)
-        if (v) {
-          try {
-            const p = JSON.parse(v)
-            if (Array.isArray(p)) list.push(...p)
-            else if (p.email) list.push(p)
-          } catch {}
-        }
-      })
-      setOldUsers(list.filter((u, i, a) => a.findIndex(x => x.email === u.email) === i && u.email))
-    } catch {}
-  }, [])
-
-  const openProfile = (gmailInput: string, nameInput?: string) => {
-    let g = gmailInput.trim().toLowerCase()
-    if (!g) { alert('ভাই, Gmail টা লেখো'); return }
-    if (!g.includes('@')) g += '@gmail.com'
-    const finalName = nameInput || g.split('@')[0]
-    const user = { name: finalName, email: g, id: g, loginType: 'gmail' }
-    localStorage.setItem('vigo_user_name', finalName)
-    localStorage.setItem('vigo_user_id', g)
-    localStorage.setItem('vigo_user_email', g)
-    localStorage.setItem('sot_tok_user', JSON.stringify(user))
-    localStorage.setItem('google_user', JSON.stringify(user))
-    const old = JSON.parse(localStorage.getItem('sot_tok_users') || '[]')
-    if (!old.find((x: any) => x.email === g)) {
-      localStorage.setItem('sot_tok_users', JSON.stringify([...old, user]))
-    }
-    navigate({ to: '/feed' })
-  }
-
-  // ===== নতুনটা - পাবলিক পোস্ট =====
-  const postVideo = () => {
-    if (!video) return alert("আগে গ্যালারি থেকে ভিডিও নাও")
-    const myName = name || localStorage.getItem('vigo_user_name') || 'Tumi'
-    const myEmail = gmail || localStorage.getItem('vigo_user_email') || 'tumi@sottok.com'
-    const old = JSON.parse(localStorage.getItem("sottok_videos") || "[]")
-    old.unshift({ id: Date.now(), user: myName, email: myEmail, video, music, start, end, cap: cap || "#SOTTOK", likes: 0, comments: [] })
-    localStorage.setItem("sottok_videos", JSON.stringify(old))
-    alert("পাবলিক হয়ে গেছে! এখন হোম + প্রোফাইলে দেখা যাবে")
-    navigate({ to: '/feed' })
-  }
+    const start = Date.now();
+    const id = window.setInterval(() => {
+      setProgress(Math.min(100, ((Date.now() - start) / DURATION) * 100));
+    }, 50);
+    const timeout = window.setTimeout(() => navigate({ to: "/feed" }), DURATION + 50);
+    return () => {
+      window.clearInterval(id);
+      window.clearTimeout(timeout);
+    };
+  }, [navigate]);
 
   return (
-    <div style={{ background: '#000', color: '#fff', minHeight: '100vh', maxWidth: 480, margin: '0 auto', padding: '20px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-      <div style={{ width: 80, height: 80, background: 'linear-gradient(135deg,#ff8a00,#ff3b5c)', borderRadius: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40, marginTop: 20 }}>▶️</div>
-      <h1 style={{ fontSize: 36, color: '#4d7cff', margin: '16px 0 0', letterSpacing: 2 }}>SOT TOK</h1>
-      <p style={{ color: '#ffcc00', fontSize: 18, margin: '6px 0 16px' }}>নিজের পরিচয় নিজেই তৈরি করো</p>
-      <p style={{ textAlign: 'center', color: '#aaa', fontSize: 14, lineHeight: 1.6 }}>Gmail দিয়ে সাইন ইন করুন। নতুন অ্যাকাউন্টে একটি স্থায়ী SOT TOK আইডি তৈরি হবে এবং আপনার নাম সিস্টেমে সুরক্ষিত থাকবে।</p>
-      <div style={{ border: '1px solid #1f4d2e', background: '#0a1a0f', padding: '8px 16px', borderRadius: 20, fontSize: 13, color: '#4ade80', margin: '10px 0 16px' }}>🛡️ 100% Safe & Private</div>
-
-      {oldUsers.length > 0 && (
-        <div style={{ width: '100%', background: '#111', borderRadius: 16, padding: 16, border: '1px solid #222', marginBottom: 14 }}>
-          <b style={{ fontSize: 16 }}>👇 তোমার প্রোফাইলগুলো</b>
-          <p style={{ fontSize: 12, color: '#aaa', margin: '4px 0 0' }}>একটায় চাপ দিলেই সঙ্গে সঙ্গে খুলে যাবে</p>
-          {oldUsers.map((u: any, i: number) => (
-            <button key={i} onClick={() => openProfile(u.email, u.name)} style={{ width: '100%', background: '#000', color: '#fff', border: '1px solid #333', padding: 12, borderRadius: 12, marginTop: 10, display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left' }}>
-              <span style={{ background: '#4285F4', color: '#fff', width: 38, height: 38, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: 18 }}>G</span>
-              <span style={{ flex: 1 }}><b style={{ display: 'block' }}>{u.name}</b><span style={{ fontSize: 12, color: '#aaa' }}>{u.email}</span></span>
-              <span>→</span>
-            </button>
-          ))}
+    <div className="relative flex min-h-screen w-full items-center justify-center bg-black">
+      <img
+        src={splash.url}
+        alt="শুভ মহালয়া — SOT TOK শর্ট ভিডিও অ্যাপ"
+        className="absolute inset-0 h-full w-full object-cover blur-2xl opacity-60"
+        aria-hidden
+      />
+      <img
+        src={splash.url}
+        alt="শুভ মহালয়া — SOT TOK শর্ট ভিডিও অ্যাপ"
+        className="relative z-10 w-full max-w-[420px] object-contain"
+      />
+      <div className="absolute bottom-12 z-10 w-full max-w-[420px] px-10">
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/25">
+          <div className="h-full rounded-full bg-gold transition-[width] duration-100 ease-linear" style={{ width: `${progress}%` }} />
         </div>
-      )}
-
-      <div style={{ width: '100%', background: '#111', borderRadius: 16, padding: 16, border: '1px solid #222' }}>
-        <b style={{ fontSize: 17, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ background: '#fff', color: '#4285F4', width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>G</span>
-          Gmail দিয়ে চালিয়ে যান
-        </b>
-        <input value={name} onChange={e => setName(e.target.value)} placeholder="তোমার নাম" style={{ width: '100%', padding: 13, borderRadius: 10, background: '#000', color: '#fff', border: '1px solid #333', marginTop: 14, boxSizing: 'border-box', fontSize: 15 }} />
-        <input value={gmail} onChange={e => setGmail(e.target.value)} placeholder="তোমার Gmail - rahul@gmail.com" style={{ width: '100%', padding: 13, borderRadius: 10, background: '#000', color: '#fff', border: '1px solid #333', marginTop: 10, boxSizing: 'border-box', fontSize: 15 }} />
-        <button onClick={() => openProfile(gmail, name)} style={{ width: '100%', background: '#2b4bff', color: '#fff', border: 'none', padding: 14, borderRadius: 12, fontWeight: 'bold', marginTop: 12, fontSize: 17 }}>✅ এই Gmail দিয়ে ঢুকে যাও</button>
-        <p style={{ fontSize: 12, color: '#888', textAlign: 'center', margin: '8px 0 0' }}>Gmail দিলেই সঙ্গে সঙ্গে তোমার প্রোফাইল খুলে যাবে</p>
-      </div>
-
-      <button onClick={() => openProfile('guest@sottok.com', 'Guest User')} style={{ width: '100%', background: 'transparent', color: '#aaa', border: '1px solid #333', padding: 12, borderRadius: 12, marginTop: 12 }}>👀 গেস্ট হিসেবে দেখে নাও</button>
-
-      {/* ===== STEP 1 - নতুন অ্যাড : গ্যালারি + মিউজিক কেটে ভিডিও ===== */}
-      <div style={{ width: '100%', background: '#111', borderRadius: 16, padding: 16, border: '1px solid #222', marginTop: 16 }}>
-        <h3>🎬 ভিডিও বানাও - গ্যালারি + মিউজিক</h3>
-        <p style={{ fontSize: 13, color: '#aaa', marginTop: 6 }}>1. গ্যালারি থেকে ভিডিও</p>
-        <input type="file" accept="video/*" onChange={(e: any) => e.target.files[0] && setVideo(URL.createObjectURL(e.target.files[0]))} style={{ width: '100%', marginTop: 6 }} />
-        <p style={{ fontSize: 13, color: '#aaa', marginTop: 10 }}>2. গ্যালারি থেকে মিউজিক</p>
-        <input type="file" accept="audio/*" onChange={(e: any) => e.target.files[0] && setMusic(URL.createObjectURL(e.target.files[0]))} style={{ width: '100%', marginTop: 6 }} />
-        <p style={{ fontSize: 13, color: '#aaa', marginTop: 10 }}>3. মিউজিক কেটে নাও</p>
-        <p>শুরু: {start}s <input type="range" min="0" max="60" value={start} onChange={(e) => setStart(Number(e.target.value))} style={{ width: '100%' }} /></p>
-        <p>শেষ: {end}s <input type="range" min="5" max="60" value={end} onChange={(e) => setEnd(Number(e.target.value))} style={{ width: '100%' }} /></p>
-        <input value={cap} onChange={e => setCap(e.target.value)} placeholder="ক্যাপশন লিখো #SOTTOK" style={{ width: '100%', padding: 11, borderRadius: 10, background: '#000', color: '#fff', border: '1px solid #333', marginTop: 8, boxSizing: 'border-box' }} />
-        {video && <video src={video} controls style={{ width: '100%', marginTop: 10, borderRadius: 10 }} />}
-        {music && <audio src={music} controls style={{ width: '100%', marginTop: 8 }} />}
-        <button onClick={postVideo} style={{ width: '100%', background: '#fe2c55', color: '#fff', border: 'none', padding: 13, borderRadius: 12, fontWeight: 'bold', marginTop: 10 }}>🚀 পাবলিক পোস্ট করো</button>
-        <p style={{ fontSize: 12, color: '#888', textAlign: 'center', marginTop: 6 }}>পোস্ট করলেই হোম + প্রোফাইলে চলে যাবে</p>
       </div>
     </div>
-  )
+  );
 }

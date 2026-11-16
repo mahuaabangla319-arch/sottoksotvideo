@@ -1,450 +1,353 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useState, useRef, useEffect } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/integrations/supabase/client'
-import { useAuth } from '@/lib/auth'
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  ArrowLeft,
+  MoreHorizontal,
+  Video,
+  Image as ImageIcon,
+  Zap,
+  ZapOff,
+  SwitchCamera,
+  Gauge,
+  Loader2,
+} from "lucide-react";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { PhoneShell } from "@/components/PhoneShell";
+import { BottomNav } from "@/components/BottomNav";
+import { useAuth } from "@/lib/auth";
+import { awardVideoCoins } from "@/lib/coins";
 
-const pickMime = (): string => {
-  if (typeof MediaRecorder === 'undefined') return ''
-  return ['video/webm;codecs=vp8,opus', 'video/webm', 'video/mp4'].find((m) => MediaRecorder.isTypeSupported(m)) ?? ''
-}
+export const Route = createFileRoute("/create")({
+  head: () => ({
+    meta: [
+      { title: "নতুন ভিডিও — SOT TOK" },
+      { name: "description", content: "ক্যামেরা দিয়ে ১৫ বা ৩০ সেকেন্ডের ভিডিও রেকর্ড করে SOT TOK-এ পোস্ট করুন।" },
+      { property: "og:title", content: "নতুন ভিডিও — SOT TOK" },
+      { property: "og:description", content: "ক্যামেরা দিয়ে ১৫ বা ৩০ সেকেন্ডের ভিডিও রেকর্ড করে পোস্ট করুন।" },
+    ],
+  }),
+  component: CreatePage,
+});
 
-export const Route = createFileRoute('/create')({
-  component: CameraAllWorking,
-})
+function CreatePage() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
 
-function CameraAllWorking() {
-  const navigate = useNavigate()
-  const { user } = useAuth()
-  const queryClient = useQueryClient()
-  const recCtxRef = useRef<AudioContext | null>(null)
-  const recAudioRef = useRef<HTMLAudioElement | null>(null)
-  const [galleryUrl, setGalleryUrl] = useState('')
-  const [galleryDuration, setGalleryDuration] = useState(0)
-  const [trimStart, setTrimStart] = useState(0)
-  const [trimEnd, setTrimEnd] = useState(0)
-  const [musicFileUrl, setMusicFileUrl] = useState('')
-  const [musicFileName, setMusicFileName] = useState('')
-  const [processing, setProcessing] = useState(false)
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
-  const chunksRef = useRef<Blob[]>([])
-  const [stream, setStream] = useState<MediaStream | null>(null)
-  const [mode, setMode] = useState<'Video' | 'Photo' | 'Live'>('Video')
-  const [quality, setQuality] = useState('720P')
-  const [flash, setFlash] = useState(false)
-  const [facing, setFacing] = useState<'user' | 'environment'>('user')
-  const [isRecording, setIsRecording] = useState(false)
-  const [recordTime, setRecordTime] = useState(0)
-  const [speed, setSpeed] = useState('1x')
-  const [beauty, setBeauty] = useState(50)
-  const [filter, setFilter] = useState('Normal')
-  const [timer, setTimer] = useState('Off')
-  const [countdown, setCountdown] = useState(0)
-  const [panel, setPanel] = useState<'none' | 'speed' | 'beauty' | 'filters' | 'timer' | 'more' | 'effects' | 'post' | 'music' | 'text' | 'gallery'>('none')
-  const [selectedEffect, setSelectedEffect] = useState('')
-  const [caption, setCaption] = useState('')
-  const [uploadProgress, setUploadProgress] = useState(0)
-  const [isUploading, setIsUploading] = useState(false)
-  const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null)
-  const [photoUrl, setPhotoUrl] = useState('')
-  const [cameraError, setCameraError] = useState('')
-  const [music, setMusic] = useState('কোনো গান নেই')
-  const [textOverlay, setTextOverlay] = useState('')
-  const [sticker, setSticker] = useState('')
-  const [mirror, setMirror] = useState(true)
-  const [grid, setGrid] = useState(false)
-  const [night, setNight] = useState(false)
-  const [zoom, setZoom] = useState(1)
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<BlobPart[]>([]);
+  const timerRef = useRef<number | null>(null);
 
-  const filters = ['Normal', 'Sunset', 'Beauty', 'Cinematic', 'Vintage', 'B&W', 'Warm', 'Cool']
-  const speeds = ['0.5x', '1x', '1.5x', '2x']
-  const effects = ['😍 Love', '🔥 Fire', '🪔 Puja', '🌸 Flower', '👑 Crown', '😎 Cool', '✨ Sparkle', '🎃 Halloween']
-  const timers = ['Off', '3', '5', '10']
-  const musics = ['🎵 কোনো গান নেই', '🎵 শুভ অষ্টমী', '🎵 ঢাকের তালে', '🎵 বলিউড হিট', '🎵 বাংলা গান', '🎵 ট্রেন্ডিং']
-  const stickers = ['', '😍', '🔥', '🪔', '🌸', '👑', '✨', '❤️', '🎃']
+  const [mode, setMode] = useState<"record" | "gallery">("record");
+  const [facing, setFacing] = useState<"user" | "environment">("user");
+  const [permission, setPermission] = useState<"idle" | "granted" | "denied">("idle");
+  const [torch, setTorch] = useState(false);
+  const [limit, setLimit] = useState<15 | 30>(15);
+  const [recording, setRecording] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+  const [blob, setBlob] = useState<Blob | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [caption, setCaption] = useState("");
+  const [uploading, setUploading] = useState(false);
 
-  const getUserName = () => {
-    return localStorage.getItem('vigo_user_name') || localStorage.getItem('sot_tok_user') || 'Tumi'
-  }
+  const stopStream = useCallback(() => {
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+  }, []);
 
-  // ===== ক্যামেরা চালু - কোয়ালিটি অনুযায়ী =====
-  const startCamera = async (face: any = facing, q: string = quality) => {
+  const startCamera = useCallback(async () => {
     try {
-      setCameraError('')
-      if (stream) stream.getTracks().forEach(t => t.stop())
-      let width = 1280, height = 720
-      if (q === '1080P') { width = 1920; height = 1080 }
-      if (q === '480P') { width = 854; height = 480 }
-      const s = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: face, width: { ideal: width }, height: { ideal: height } },
+      stopStream();
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: facing, width: { ideal: 1080 }, height: { ideal: 1920 } },
         audio: true,
-      })
-      setStream(s)
-      if (videoRef.current) videoRef.current.srcObject = s
-      // Flash চালু থাকলে torch চালু করো
-      try {
-        const track: any = s.getVideoTracks()[0]
-        const caps: any = track.getCapabilities ? track.getCapabilities() : {}
-        if (flash && caps.torch) await track.applyConstraints({ advanced: [{ torch: true }] })
-        if (!flash && caps.torch) await track.applyConstraints({ advanced: [{ torch: false }] })
-      } catch {}
+      });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play().catch(() => {});
+      }
+      setPermission("granted");
     } catch {
-      setCameraError('ক্যামেরা পারমিশন দাও ভাই, না হলে ভিডিও হবে না।')
+      setPermission("denied");
     }
-  }
+  }, [facing, stopStream]);
 
-  useEffect(() => { startCamera(); return () => { if (stream) stream.getTracks().forEach(t => t.stop()) } }, [])
-  useEffect(() => { if (!isRecording) return; const t = setInterval(() => setRecordTime(r => r + 1), 1000); return () => clearInterval(t) }, [isRecording])
-  useEffect(() => { if (countdown <= 0) return; const t = setTimeout(() => setCountdown(countdown - 1), 1000); if (countdown === 1) setTimeout(() => startRecordNow(), 1000); return () => clearTimeout(t) }, [countdown])
+  useEffect(() => {
+    if (mode === "record" && !previewUrl) void startCamera();
+    return () => {
+      if (timerRef.current) window.clearInterval(timerRef.current);
+    };
+  }, [mode, facing, previewUrl, startCamera]);
 
-  // Flash বদলালে ক্যামেরায় সত্যি লাগাও
-  useEffect(() => { if (stream) startCamera() }, [flash])
+  useEffect(() => stopStream, [stopStream]);
 
-  // ===== ফিল্টার + বিউটি + নাইট - সত্যি ভিডিওতে লাগবে =====
-  const getFilterStyle = () => {
-    let f = ''
-    if (filter === 'Sunset') f = 'sepia(0.5) saturate(1.5) hue-rotate(-20deg)'
-    if (filter === 'B&W') f = 'grayscale(1)'
-    if (filter === 'Vintage') f = 'sepia(0.6) contrast(1.1)'
-    if (filter === 'Warm') f = 'sepia(0.3) saturate(1.4)'
-    if (filter === 'Cool') f = 'hue-rotate(180deg) saturate(1.2)'
-    if (filter === 'Cinematic') f = 'contrast(1.2) brightness(0.9) saturate(1.3)'
-    if (filter === 'Beauty') f = 'brightness(1.1) saturate(1.2) contrast(0.95)'
-    if (filter === 'Normal') f = 'none'
-    // Beauty - 0 থেকে 100 পর্যন্ত সত্যি কাজ করবে
-    const beautyFilter = `brightness(${1 + beauty / 200}) saturate(${1 + beauty / 200}) contrast(${1 - beauty / 500})`
-    // Night Mode
-    const nightFilter = night ? 'brightness(1.4) contrast(1.2)' : ''
-    if (f === 'none') return `${beautyFilter} ${nightFilter}`
-    return `${f} ${beautyFilter} ${nightFilter}`
-  }
-
-  const startRecordNow = () => {
-    if (!stream) { alert('আগে ক্যামেরা চালু হতে দাও'); return }
-    try {
-      chunksRef.current = []
-      let recStream: MediaStream = stream
-      if (musicFileUrl) {
-        const ac = new AudioContext()
-        const dest = ac.createMediaStreamDestination()
-        if (stream.getAudioTracks().length) ac.createMediaStreamSource(stream).connect(dest)
-        const audioEl = new Audio(musicFileUrl)
-        const ms = ac.createMediaElementSource(audioEl)
-        ms.connect(dest)
-        ms.connect(ac.destination)
-        void ac.resume()
-        void audioEl.play().catch(() => {})
-        recCtxRef.current = ac
-        recAudioRef.current = audioEl
-        recStream = new MediaStream([...stream.getVideoTracks(), ...dest.stream.getAudioTracks()])
-      }
-      const mime = pickMime()
-      const rec = mime ? new MediaRecorder(recStream, { mimeType: mime }) : new MediaRecorder(recStream)
-      mediaRecorderRef.current = rec
-      rec.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data) }
-      rec.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: rec.mimeType || 'video/webm' })
-        recAudioRef.current?.pause()
-        void recCtxRef.current?.close().catch(() => {})
-        recAudioRef.current = null
-        recCtxRef.current = null
-        setRecordedBlob(blob)
-        setPanel('post')
-      }
-      rec.start()
-      setIsRecording(true)
-      setRecordTime(0)
-    } catch { alert('এই ফোনে রেকর্ড সাপোর্ট করছে না, Photo তোলো') }
-  }
-
-  const stopRecordNow = () => {
-    try { if (mediaRecorderRef.current) mediaRecorderRef.current.stop() } catch {}
-    setIsRecording(false)
-  }
-
-  const handleRecord = () => {
-    if (mode === 'Live') { navigate({ to: '/live/create' }); return }
-    if (mode === 'Photo') {
-      // Photo সত্যি তুলবে
-      try {
-        const canvas = document.createElement('canvas')
-        if (videoRef.current) {
-          canvas.width = videoRef.current.videoWidth
-          canvas.height = videoRef.current.videoHeight
-          const ctx = canvas.getContext('2d')
-          if (ctx) {
-            ctx.filter = getFilterStyle()
-            ctx.drawImage(videoRef.current, 0, 0)
-            const url = canvas.toDataURL('image/jpeg')
-            setPhotoUrl(url)
-            alert('📸 ছবি তোলা হয়ে গেছে! এখন পোস্ট করতে পারবে।')
-            setPanel('post')
-          }
-        }
-      } catch { alert('ছবি তুলতে পারলাম না') }
-      return
+  const toggleTorch = async () => {
+    const track = streamRef.current?.getVideoTracks()[0];
+    if (!track) return;
+    const caps = track.getCapabilities?.() as MediaTrackCapabilities & { torch?: boolean };
+    if (!caps?.torch) {
+      toast.error("এই ক্যামেরায় ফ্ল্যাশ সাপোর্ট করে না।");
+      return;
     }
-    if (isRecording) { stopRecordNow(); return }
-    if (timer !== 'Off') { setCountdown(parseInt(timer)); return }
-    startRecordNow()
-  }
-
-  // ===== Speed - ভিডিও সত্যি স্লো / ফাস্ট হবে =====
-  const getSpeedValue = () => {
-    if (speed === '0.5x') return 0.5
-    if (speed === '1.5x') return 1.5
-    if (speed === '2x') return 2
-    return 1
-  }
-
-  const onPickGalleryVideo = (file: File | undefined) => {
-    if (!file) return
-    if (galleryUrl) URL.revokeObjectURL(galleryUrl)
-    setGalleryUrl(URL.createObjectURL(file))
-    setTrimStart(0)
-    setTrimEnd(0)
-    setGalleryDuration(0)
-  }
-
-  const onPickMusicFile = (file: File | undefined) => {
-    if (!file) return
-    if (musicFileUrl) URL.revokeObjectURL(musicFileUrl)
-    setMusicFileUrl(URL.createObjectURL(file))
-    setMusicFileName(file.name)
-    setMusic('🎵 ' + file.name)
-    setPanel('none')
-  }
-
-  // গ্যালারির ভিডিও কেটে (trim) গান সহ নতুন ভিডিও বানায়
-  const processGallery = async () => {
-    if (!galleryUrl || processing) return
-    setProcessing(true)
     try {
-      const v = document.createElement('video')
-      v.src = galleryUrl
-      v.playsInline = true
-      await new Promise<void>((res, rej) => { v.onloadedmetadata = () => res(); v.onerror = () => rej(new Error('video')) })
-      const end = trimEnd > trimStart ? trimEnd : v.duration
-      v.currentTime = trimStart
-      await new Promise<void>((res) => { v.onseeked = () => res() })
-      const canvas = document.createElement('canvas')
-      canvas.width = v.videoWidth || 720
-      canvas.height = v.videoHeight || 1280
-      const c2 = canvas.getContext('2d')
-      if (!c2) throw new Error('canvas')
-      const ac = new AudioContext()
-      const dest = ac.createMediaStreamDestination()
-      let audioEl: HTMLAudioElement | null = null
-      if (musicFileUrl) {
-        v.muted = true
-        audioEl = new Audio(musicFileUrl)
-        ac.createMediaElementSource(audioEl).connect(dest)
-      } else {
-        ac.createMediaElementSource(v).connect(dest)
-      }
-      const out = new MediaStream([...canvas.captureStream(30).getVideoTracks(), ...dest.stream.getAudioTracks()])
-      const mime = pickMime()
-      const rec = mime ? new MediaRecorder(out, { mimeType: mime }) : new MediaRecorder(out)
-      const parts: Blob[] = []
-      rec.ondataavailable = (e) => { if (e.data.size > 0) parts.push(e.data) }
-      const finished = new Promise<Blob>((res) => { rec.onstop = () => res(new Blob(parts, { type: rec.mimeType || 'video/webm' })) })
-      await ac.resume()
-      rec.start()
-      await v.play()
-      if (audioEl) void audioEl.play().catch(() => {})
-      const draw = () => {
-        if (v.currentTime >= end || v.ended || rec.state !== 'recording') {
-          v.pause()
-          audioEl?.pause()
-          if (rec.state === 'recording') rec.stop()
-          return
-        }
-        c2.filter = getFilterStyle()
-        c2.drawImage(v, 0, 0, canvas.width, canvas.height)
-        requestAnimationFrame(draw)
-      }
-      draw()
-      const blob = await finished
-      void ac.close().catch(() => {})
-      setRecordedBlob(blob)
-      setRecordTime(Math.round(end - trimStart))
-      setPanel('post')
+      await track.applyConstraints({
+        advanced: [{ torch: !torch }],
+      } as unknown as MediaTrackConstraints);
+
+      setTorch((t) => !t);
     } catch {
-      alert('এই ভিডিও কাটা যায়নি, অন্য ভিডিও চেষ্টা করুন')
-    } finally {
-      setProcessing(false)
+      toast.error("ফ্ল্যাশ চালু করা যায়নি।");
     }
-  }
+  };
 
-  const fastUpload = async () => {
-    if (!recordedBlob) { alert('আগে ভিডিও রেকর্ড করুন বা গ্যালারি থেকে নিন'); return }
-    if (!user) { navigate({ to: '/login' }); return }
-    setIsUploading(true)
-    setUploadProgress(30)
-    try {
-      const ext = recordedBlob.type.includes('mp4') ? 'mp4' : 'webm'
-      const path = `${user.id}/${Date.now()}.${ext}`
-      const { error: upErr } = await supabase.storage.from('videos').upload(path, recordedBlob, { contentType: recordedBlob.type || 'video/webm' })
-      if (upErr) throw upErr
-      setUploadProgress(80)
-      const { error: insErr } = await supabase.from('videos').insert({
+  const stopRecording = useCallback(() => {
+    recorderRef.current?.state === "recording" && recorderRef.current.stop();
+    if (timerRef.current) window.clearInterval(timerRef.current);
+    setRecording(false);
+  }, []);
+
+  const startRecording = async () => {
+    if (!streamRef.current) {
+      await startCamera();
+      if (!streamRef.current) return;
+    }
+    chunksRef.current = [];
+    const mime = MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")
+      ? "video/webm;codecs=vp9,opus"
+      : MediaRecorder.isTypeSupported("video/webm")
+        ? "video/webm"
+        : "video/mp4";
+    const rec = new MediaRecorder(streamRef.current, { mimeType: mime });
+    recorderRef.current = rec;
+    rec.ondataavailable = (e) => {
+      if (e.data.size > 0) chunksRef.current.push(e.data);
+    };
+    rec.onstop = () => {
+      const out = new Blob(chunksRef.current, { type: mime });
+      setBlob(out);
+      setPreviewUrl(URL.createObjectURL(out));
+      stopStream();
+    };
+    rec.start();
+    setRecording(true);
+    setElapsed(0);
+    timerRef.current = window.setInterval(() => {
+      setElapsed((e) => {
+        const next = e + 1;
+        if (next >= limit) stopRecording();
+        return next;
+      });
+    }, 1000);
+  };
+
+  const pickFromGallery = (file: File) => {
+    setBlob(file);
+    setPreviewUrl(URL.createObjectURL(file));
+    stopStream();
+  };
+
+  const post = async () => {
+    if (!blob) return;
+    if (!user) {
+      toast.error("পোস্ট করতে সাইন ইন করুন।");
+      navigate({ to: "/login" });
+      return;
+    }
+    setUploading(true);
+    const ext = blob.type.includes("mp4") ? "mp4" : "webm";
+    const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
+    const { error: upErr } = await supabase.storage
+      .from("videos")
+      .upload(path, blob, { contentType: blob.type || "video/webm" });
+    if (upErr) {
+      setUploading(false);
+      toast.error("আপলোড ব্যর্থ হয়েছে: " + upErr.message);
+      return;
+    }
+    const { data: inserted, error } = await supabase
+      .from("videos")
+      .insert({
         user_id: user.id,
+        caption,
         video_url: path,
-        caption: caption || `SOT TOK Video ${selectedEffect} ${sticker}`.trim(),
-        sound_name: musicFileName || (music.includes('কোনো গান নেই') ? 'Original sound' : music),
-        visibility: 'public',
       })
-      if (insErr) throw insErr
-      setUploadProgress(100)
-      await queryClient.invalidateQueries({ queryKey: ['feed'] })
-      await queryClient.invalidateQueries({ queryKey: ['my-videos'] })
-      alert('✅ ভিডিও পোস্ট হয়ে গেছে! সবাই এখন দেখতে পারবে।')
-      navigate({ to: '/feed' })
-    } catch {
-      alert('আপলোড হয়নি, আবার চেষ্টা করুন')
-    } finally {
-      setIsUploading(false)
+      .select("id")
+      .single();
+    setUploading(false);
+    if (error) {
+      toast.error("পোস্ট করা যায়নি: " + error.message);
+      return;
     }
-  }
+    toast.success("ভিডিও পোস্ট হয়েছে!");
+    if (inserted?.id) {
+      const coins = await awardVideoCoins(inserted.id);
+      if (coins > 0) toast.success(`🪙 ${coins} কয়েন পেয়েছেন! ওয়ালেটে জমা হয়েছে।`);
+      else toast("আজকের ৫০ কয়েন পাওয়া শেষ — ২৪ ঘণ্টা পর আবার পাবেন।");
+    }
+    navigate({ to: "/feed" });
+  };
+
+  const reset = () => {
+    setBlob(null);
+    setPreviewUrl(null);
+    setCaption("");
+    setElapsed(0);
+  };
 
   return (
-    <div style={{ background: '#000', color: '#fff', minHeight: '100vh', maxWidth: 480, margin: '0 auto', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ background: 'linear-gradient(90deg,#7c4dff,#ff3b5c)', padding: '10px 12px', textAlign: 'center' }}>
-        <b style={{ fontSize: 18 }}>📷 Camera - সব অপশন কাজ করবে</b>
-        <div style={{ fontSize: 12, opacity: 0.9 }}>Speed, Beauty, Filter, Timer, Effects - সব চালু</div>
-      </div>
-      {cameraError && <div style={{ background: '#ff9800', color: '#000', padding: '8px 12px', fontSize: 12, textAlign: 'center' }}>{cameraError}</div>}
+    <PhoneShell className="bg-black text-white">
+      <header className="flex items-center justify-between px-4 pt-5">
+        <button onClick={() => navigate({ to: "/feed" })} aria-label="পিছনে">
+          <ArrowLeft className="h-6 w-6 text-white" />
+        </button>
+        <h1 className="text-[17px] font-semibold">নতুন ভিডিও</h1>
+        <MoreHorizontal className="h-6 w-6 text-white" />
+      </header>
 
-      <div style={{ position: 'relative', flex: 1, background: '#111', overflow: 'hidden' }}>
-        <video ref={videoRef} autoPlay muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover', transform: `${mirror && facing === 'user' ? 'scaleX(-1)' : ''} scale(${zoom})`, filter: getFilterStyle() }} />
-
-        {/* Grid - সত্যি দেখাবে */}
-        {grid && <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}><div style={{ position: 'absolute', left: '33%', top: 0, bottom: 0, width: 1, background: 'rgba(255,255,255,0.4)' }} /><div style={{ position: 'absolute', left: '66%', top: 0, bottom: 0, width: 1, background: 'rgba(255,255,255,0.4)' }} /><div style={{ position: 'absolute', top: '33%', left: 0, right: 0, height: 1, background: 'rgba(255,255,255,0.4)' }} /><div style={{ position: 'absolute', top: '66%', left: 0, right: 0, height: 1, background: 'rgba(255,255,255,0.4)' }} /></div>}
-
-        {/* Text Overlay - সত্যি ভিডিওতে দেখাবে */}
-        {textOverlay && <div style={{ position: 'absolute', top: 70, left: '50%', transform: 'translateX(-50%)', fontSize: 24, fontWeight: 'bold', textShadow: '2px 2px 4px #000', background: 'rgba(0,0,0,0.4)', padding: '4px 12px', borderRadius: 10 }}>{textOverlay}</div>}
-
-        {/* Sticker + Effect - সত্যি ভিডিওতে দেখাবে */}
-        {(sticker || selectedEffect) && <div style={{ position: 'absolute', bottom: 60, left: '50%', transform: 'translateX(-50%)', fontSize: 48, textAlign: 'center' }}><div>{sticker}</div><div style={{ fontSize: 14, background: 'rgba(0,0,0,0.5)', padding: '4px 10px', borderRadius: 10 }}>{selectedEffect}</div></div>}
-
-        {/* Music - সত্যি দেখাবে */}
-        {music !== 'কোনো গান নেই' && music !== '🎵 কোনো গান নেই' && <div style={{ position: 'absolute', top: 60, left: 12, background: 'rgba(0,0,0,0.6)', padding: '6px 10px', borderRadius: 20, fontSize: 12 }}>🎵 {music} • Speed: {speed}</div>}
-
-        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <button onClick={() => navigate({ to: '/' })} style={{ background: 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', width: 36, height: 36, borderRadius: '50%', fontSize: 18 }}>✕</button>
-          {/* Flash - চাপ দিলে সত্যি জ্বলবে */}
-          <button onClick={() => setFlash(!flash)} style={{ background: flash ? '#ffb400' : 'rgba(0,0,0,0.5)', color: flash ? '#000' : '#fff', border: 'none', width: 36, height: 36, borderRadius: '50%', fontSize: 18 }}>{flash ? '💡' : '⚡'}</button>
-          {/* Quality - চাপ দিলে সত্যি বদলাবে */}
-          <select value={quality} onChange={e => { setQuality(e.target.value); setTimeout(() => startCamera(facing, e.target.value), 100) }} style={{ background: 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', padding: '8px 10px', borderRadius: 20, fontWeight: 'bold' }}>
-            <option>720P</option><option>1080P</option><option>480P</option>
-          </select>
-          {/* Flip - চাপ দিলে সত্যি ক্যামেরা বদলাবে */}
-          <button onClick={() => { const n = facing === 'user' ? 'environment' : 'user'; setFacing(n); startCamera(n, quality) }} style={{ background: 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', width: 36, height: 36, borderRadius: '50%', fontSize: 18 }}>🔄</button>
+      {previewUrl ? (
+        <div className="px-4 pt-5">
+          <video src={previewUrl} controls className="aspect-[9/16] w-full rounded-[24px] bg-black object-cover" />
+          <textarea
+            value={caption}
+            onChange={(e) => setCaption(e.target.value)}
+            placeholder="ক্যাপশন লিখুন…"
+            rows={3}
+            className="mt-4 w-full rounded-xl border border-white/10 bg-white/5 p-3 text-sm text-white outline-none placeholder:text-white/35"
+          />
+          <div className="mt-3 flex gap-3">
+            <button onClick={reset} className="flex-1 rounded-xl border border-white/15 py-3 text-[14px]">
+              আবার রেকর্ড
+            </button>
+            <button
+              onClick={post}
+              disabled={uploading}
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand py-3 text-[14px] font-semibold text-white disabled:opacity-70"
+            >
+              {uploading && <Loader2 className="h-4 w-4 animate-spin" />} Post
+            </button>
+          </div>
         </div>
-
-        <div style={{ position: 'absolute', top: 70, right: 12, display: 'flex', flexDirection: 'column', gap: 14, alignItems: 'center' }}>
-          <button onClick={() => setPanel(panel === 'speed' ? 'none' : 'speed')} style={{ background: 'transparent', border: 'none', color: '#fff', textAlign: 'center' }}><div style={{ fontSize: 26 }}>⏱️</div><span style={{ fontSize: 11 }}>Speed<br />{speed}</span></button>
-          <button onClick={() => setPanel(panel === 'beauty' ? 'none' : 'beauty')} style={{ background: 'transparent', border: 'none', color: '#fff', textAlign: 'center' }}><div style={{ fontSize: 26 }}>🪄</div><span style={{ fontSize: 11 }}>Beauty<br />{beauty}%</span></button>
-          <button onClick={() => setPanel(panel === 'filters' ? 'none' : 'filters')} style={{ background: 'transparent', border: 'none', color: '#fff', textAlign: 'center' }}><div style={{ fontSize: 26 }}>✨</div><span style={{ fontSize: 11 }}>Filters<br />{filter}</span></button>
-          <button onClick={() => setPanel(panel === 'timer' ? 'none' : 'timer')} style={{ background: 'transparent', border: 'none', color: '#fff', textAlign: 'center' }}><div style={{ fontSize: 26 }}>⏰</div><span style={{ fontSize: 11 }}>Timer<br />{timer === 'Off' ? 'Off' : `${timer}s`}</span></button>
-          <button onClick={() => setPanel(panel === 'more' ? 'none' : 'more')} style={{ background: 'transparent', border: 'none', color: '#fff', textAlign: 'center' }}><div style={{ fontSize: 26 }}>•••</div><span style={{ fontSize: 11 }}>More</span></button>
-        </div>
-
-        {isRecording && <div style={{ position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)', background: '#ff0000', padding: '5px 12px', borderRadius: 20, fontWeight: 'bold', fontSize: 12 }}>🔴 REC {recordTime}s • {quality} • {speed} • {filter}</div>}
-        {countdown > 0 && <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 100, fontWeight: 'bold', textShadow: '4px 4px 10px #000' }}>{countdown}</div>}
-        <div style={{ position: 'absolute', bottom: 12, left: 12, background: 'rgba(0,0,0,0.6)', padding: '7px 10px', borderRadius: 10, fontSize: 11 }}>
-          <div>ফিল্টার: {filter} • বিউটি: {beauty}% • Speed: {speed} • Effect: {selectedEffect || 'নেই'} • গান: {music}</div>
-          <div>Zoom: <button onClick={() => setZoom(Math.max(1, zoom - 0.5))} style={{ background: '#333', color: '#fff', border: 'none', borderRadius: 5, padding: '2px 8px' }}>-</button> {zoom}x <button onClick={() => setZoom(Math.min(3, zoom + 0.5))} style={{ background: '#333', color: '#fff', border: 'none', borderRadius: 5, padding: '2px 8px' }}>+</button></div>
-        </div>
-      </div>
-
-      <div style={{ background: '#000', padding: '12px 14px 16px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <button onClick={() => setPanel('effects')} style={{ background: 'transparent', border: 'none', color: '#fff', textAlign: 'center' }}><div style={{ fontSize: 28 }}>😊</div><span style={{ fontSize: 12 }}>Effects</span></button>
-          <button onClick={handleRecord} style={{ width: 72, height: 72, borderRadius: '50%', background: isRecording ? '#fff' : '#ff0000', border: '4px solid #fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 'bold', color: isRecording ? '#ff0000' : '#fff' }}>{isRecording ? 'STOP' : mode === 'Photo' ? '📸' : mode === 'Live' ? 'LIVE' : '●'}</button>
-          <button onClick={() => setPanel('gallery')} style={{ background: 'transparent', border: 'none', color: '#fff', textAlign: 'center' }}><div style={{ fontSize: 28 }}>🖼️</div><span style={{ fontSize: 12 }}>Gallery</span></button>
-          <button onClick={() => setPanel('music')} style={{ background: 'transparent', border: 'none', color: '#fff', textAlign: 'center' }}><div style={{ fontSize: 28 }}>🎵</div><span style={{ fontSize: 12 }}>Music</span></button>
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 24 }}>
-          {(['Video', 'Photo', 'Live'] as const).map(m => (
-            <button key={m} onClick={() => setMode(m)} style={{ background: 'none', border: 'none', color: mode === m ? '#ffb400' : '#aaa', fontWeight: 'bold', fontSize: 14, borderBottom: mode === m ? '2px solid #ffb400' : 'none', paddingBottom: 4 }}>{m}</button>
-          ))}
-        </div>
-        <p style={{ textAlign: 'center', fontSize: 12, color: '#aaa', margin: '8px 0 0' }}><b style={{ color: '#fff', fontSize: 16 }}>SOT <span style={{ color: '#ff3b5c' }}>TOK</span></b> | Create • Share</p>
-      </div>
-
-      {panel !== 'none' && (
-        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: '#111b21', borderRadius: '20px 20px 0 0', padding: 16, zIndex: 50, maxHeight: '70vh', overflowY: 'auto' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}><b>{panel === 'speed' ? '⏱️ Speed - সত্যি কাজ করবে' : panel === 'beauty' ? '🪄 Beauty - মুখে লাগবে' : panel === 'filters' ? '✨ Filters - ভিডিওতে লাগবে' : panel === 'timer' ? '⏰ Timer - কাউন্টডাউন হবে' : panel === 'more' ? '••• More - সব চালু' : panel === 'post' ? '📝 পোস্ট করো' : panel === 'music' ? '🎵 Music' : panel === 'text' ? '✍️ Text' : panel === 'gallery' ? '🖼️ Gallery' : '😊 Effects - ভিডিওতে দেখাবে'}</b><button onClick={() => setPanel('none')} style={{ background: '#202c33', color: '#fff', border: 'none', borderRadius: '50%', width: 28, height: 28 }}>✕</button></div>
-
-          {panel === 'speed' && <div><div style={{ display: 'flex', gap: 8, marginTop: 12 }}>{speeds.map(s => <button key={s} onClick={() => { setSpeed(s); alert(`Speed ${s} লাগানো হয়েছে! ভিডিও এখন ${s} এ হবে।`) }} style={{ padding: '10px 18px', borderRadius: 20, background: speed === s ? '#ff3b5c' : '#202c33', color: '#fff', border: 'none', fontWeight: 'bold' }}>{s}</button>)}</div><p style={{ fontSize: 12, color: '#aaa', marginTop: 8 }}>0.5x = স্লো মোশন, 2x = ফাস্ট মোশন</p></div>}
-
-          {panel === 'beauty' && <div style={{ marginTop: 12 }}><input type="range" min="0" max="100" value={beauty} onChange={e => setBeauty(Number(e.target.value))} style={{ width: '100%' }} /><p style={{ textAlign: 'center' }}>Beauty: {beauty}% - সরাসরি মুখে দেখতে পাবে</p><div style={{ display: 'flex', gap: 8 }}><button onClick={() => setBeauty(0)} style={{ flex: 1, padding: 10, borderRadius: 10, background: '#202c33', color: '#fff', border: 'none' }}>0% - বন্ধ</button><button onClick={() => setBeauty(50)} style={{ flex: 1, padding: 10, borderRadius: 10, background: '#202c33', color: '#fff', border: 'none' }}>50% - মিডিয়াম</button><button onClick={() => setBeauty(100)} style={{ flex: 1, padding: 10, borderRadius: 10, background: '#ff3b5c', color: '#fff', border: 'none' }}>100% - ফুল</button></div></div>}
-
-          {panel === 'filters' && <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>{filters.map(f => <button key={f} onClick={() => setFilter(f)} style={{ padding: '10px 14px', borderRadius: 20, background: filter === f ? '#ff3b5c' : '#202c33', color: '#fff', border: 'none' }}>{f}</button>)}</div>}
-
-          {panel === 'timer' && <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>{timers.map(t => <button key={t} onClick={() => { setTimer(t); if (t !== 'Off') alert(`${t} সেকেন্ড পর রেকর্ড শুরু হবে`) }} style={{ padding: '10px 18px', borderRadius: 20, background: timer === t ? '#ff3b5c' : '#202c33', color: '#fff', border: 'none', fontWeight: 'bold' }}>{t === 'Off' ? 'Off' : `${t}s`}</button>)}</div>}
-
-          {panel === 'more' && <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginTop: 12, textAlign: 'center' }}>
-            <div onClick={() => setPanel('music')} style={{ background: '#202c33', padding: 12, borderRadius: 12 }}><b>🎵 Music</b><div style={{ fontSize: 11, color: '#aaa' }}>{music}</div></div>
-            <div onClick={() => setPanel('text')} style={{ background: '#202c33', padding: 12, borderRadius: 12 }}><b>✍️ Text</b><div style={{ fontSize: 11, color: '#aaa' }}>{textOverlay || 'লেখা যোগ করো'}</div></div>
-            <div onClick={() => { const s = prompt('Sticker চয়েস করো: 😍 🔥 🪔 🌸 👑 ✨ ❤️'); if (s) setSticker(s); setPanel('none') }} style={{ background: '#202c33', padding: 12, borderRadius: 12 }}><b>🖼️ Sticker</b><div style={{ fontSize: 11, color: '#aaa' }}>{sticker || 'স্টিকার'}</div></div>
-            <div onClick={() => { setMirror(!mirror); alert(mirror ? 'Mirror বন্ধ' : 'Mirror চালু') }} style={{ background: mirror ? '#ff3b5c' : '#202c33', padding: 12, borderRadius: 12 }}><b>🪞 Mirror</b><div style={{ fontSize: 11, color: '#aaa' }}>{mirror ? 'চালু' : 'বন্ধ'}</div></div>
-            <div onClick={() => { setGrid(!grid); alert(grid ? 'Grid বন্ধ' : 'Grid চালু') }} style={{ background: grid ? '#ff3b5c' : '#202c33', padding: 12, borderRadius: 12 }}><b>📐 Grid</b><div style={{ fontSize: 11, color: '#aaa' }}>{grid ? 'চালু' : 'বন্ধ'}</div></div>
-            <div onClick={() => { setNight(!night); alert(night ? 'Night বন্ধ' : 'Night চালু - আলো বাড়বে') }} style={{ background: night ? '#ff3b5c' : '#202c33', padding: 12, borderRadius: 12 }}><b>🌙 Night</b><div style={{ fontSize: 11, color: '#aaa' }}>{night ? 'চালু' : 'বন্ধ'}</div></div>
-          </div>}
-
-          {panel === 'gallery' && (
-            <div style={{ marginTop: 12 }}>
-              <label style={{ display: 'block', width: '100%', padding: 12, borderRadius: 10, background: '#ff3b5c', color: '#fff', textAlign: 'center', fontWeight: 'bold', boxSizing: 'border-box' }}>
-                📁 গ্যালারি থেকে ভিডিও বাছুন
-                <input type="file" accept="video/*" style={{ display: 'none' }} onChange={e => onPickGalleryVideo(e.target.files?.[0])} />
-              </label>
-              {galleryUrl && (
-                <div style={{ marginTop: 12 }}>
-                  <video src={galleryUrl} controls playsInline style={{ width: '100%', maxHeight: 220, borderRadius: 10, background: '#000' }} onLoadedMetadata={e => { const d = e.currentTarget.duration; setGalleryDuration(d); setTrimStart(0); setTrimEnd(Math.min(d, 60)) }} />
-                  {galleryDuration > 0 && (
-                    <div style={{ marginTop: 8, fontSize: 13 }}>
-                      <div>শুরু: {trimStart.toFixed(1)}s</div>
-                      <input type="range" min={0} max={galleryDuration} step={0.1} value={trimStart} onChange={e => { const s = Number(e.target.value); setTrimStart(Math.min(s, Math.max(0, trimEnd - 0.5))) }} style={{ width: '100%' }} />
-                      <div>শেষ: {trimEnd.toFixed(1)}s</div>
-                      <input type="range" min={0} max={galleryDuration} step={0.1} value={trimEnd} onChange={e => { const t = Number(e.target.value); setTrimEnd(Math.max(t, trimStart + 0.5)) }} style={{ width: '100%' }} />
-                      <p style={{ fontSize: 12, color: '#aaa' }}>কাটা অংশ: {Math.max(0, trimEnd - trimStart).toFixed(1)} সেকেন্ড{musicFileName ? ` • গান: ${musicFileName}` : ''}</p>
-                      <button onClick={() => setPanel('music')} style={{ width: '100%', padding: 10, borderRadius: 10, background: '#202c33', color: '#fff', border: 'none', marginBottom: 8 }}>🎵 গ্যালারি থেকে গান যোগ করুন</button>
-                      <button onClick={processGallery} disabled={processing} style={{ width: '100%', padding: 12, borderRadius: 10, background: '#ff3b5c', color: '#fff', border: 'none', fontWeight: 'bold' }}>{processing ? 'তৈরি হচ্ছে... অপেক্ষা করুন' : '✂️ কেটে ভিডিও তৈরি করুন'}</button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {panel === 'music' && <div style={{ marginTop: 12 }}>
-            <label style={{ display: 'block', width: '100%', padding: 12, borderRadius: 10, background: '#ff3b5c', color: '#fff', textAlign: 'center', fontWeight: 'bold', boxSizing: 'border-box' }}>
-              📁 গ্যালারি থেকে গান বাছুন
-              <input type="file" accept="audio/*" style={{ display: 'none' }} onChange={e => onPickMusicFile(e.target.files?.[0])} />
+      ) : (
+        <>
+          <div className="mt-4 flex gap-3 px-4">
+            <button
+              onClick={() => setMode("record")}
+              className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-[14px] ${
+                mode === "record" ? "bg-brand font-semibold text-white" : "bg-white/10 text-white/70"
+              }`}
+            >
+              <Video className="h-4 w-4" /> Record
+            </button>
+            <label
+              className={`flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl py-2.5 text-[14px] ${
+                mode === "gallery" ? "bg-brand font-semibold text-white" : "bg-white/10 text-white/70"
+              }`}
+            >
+              <ImageIcon className="h-4 w-4" /> Gallery
+              <input
+                type="file"
+                accept="video/*"
+                className="hidden"
+                onChange={(e) => {
+                  setMode("gallery");
+                  const f = e.target.files?.[0];
+                  if (f) pickFromGallery(f);
+                }}
+              />
             </label>
-            {musicFileName && <p style={{ fontSize: 12, color: '#aaa' }}>বাছা গান: {musicFileName}</p>}
-            {musics.map(m => <button key={m} onClick={() => { setMusic(m); setPanel('none'); alert(`গান লাগানো হয়েছে: ${m}`) }} style={{ width: '100%', padding: 12, borderRadius: 10, background: music === m ? '#ff3b5c' : '#202c33', color: '#fff', border: 'none', marginTop: 6, textAlign: 'left' }}>{m}</button>)}</div>}
+          </div>
 
-          {panel === 'text' && <div style={{ marginTop: 12 }}><input value={textOverlay} onChange={e => setTextOverlay(e.target.value)} placeholder="ভিডিওতে কি লেখা দেখাবে? যেমন শুভ অষ্টমী 🙏" style={{ width: '100%', padding: 12, borderRadius: 10, background: '#202c33', color: '#fff', border: 'none', boxSizing: 'border-box' }} /><button onClick={() => setPanel('none')} style={{ width: '100%', marginTop: 10, padding: 12, borderRadius: 10, background: '#ff3b5c', color: '#fff', border: 'none', fontWeight: 'bold' }}>✅ লেখা লাগাও</button></div>}
+          <div className="relative mx-4 mt-4 aspect-[9/16] overflow-hidden rounded-[24px] bg-black">
+            {permission === "denied" ? (
+              <div className="flex h-full flex-col items-center justify-center gap-4 bg-black px-6 text-center">
+                <p className="text-[14px] text-white/70">ক্যামেরা ব্যবহারের অনুমতি প্রয়োজন।</p>
+                <button
+                  onClick={() => void startCamera()}
+                  className="rounded-xl bg-brand px-5 py-2.5 text-[14px] font-semibold text-white"
+                >
+                  Camera access needed
+                </button>
+              </div>
+            ) : (
+              <video
+                ref={videoRef}
+                autoPlay
+                muted
+                playsInline
+                className="h-full w-full object-cover"
+                style={{ transform: facing === "user" ? "scaleX(-1)" : "none" }}
+              />
+            )}
 
-          {panel === 'effects' && <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>{effects.map(e => <button key={e} onClick={() => { setSelectedEffect(e); setPanel('none'); alert(`Effect লাগানো হয়েছে: ${e}`) }} style={{ padding: '10px 14px', borderRadius: 20, background: '#202c33', color: '#fff', border: 'none' }}>{e}</button>)}</div>}
-
-          {panel === 'post' && (
-            <div style={{ marginTop: 12 }}>
-              <p style={{ fontSize: 13 }}>✅ ভিডিও রেডি! {recordTime} সেকেন্ড • ফিল্টার: {filter} • Speed: {speed} • Beauty: {beauty}% • Effect: {selectedEffect} • গান: {music}</p>
-              {photoUrl && <img src={photoUrl} style={{ width: '100%', borderRadius: 10, marginBottom: 8 }} />}
-              <input value={caption} onChange={e => setCaption(e.target.value)} placeholder="Caption লেখো... শুভ অষ্টমী 🙏" style={{ fontSize: 16, width: '100%', padding: 12, borderRadius: 10, background: '#202c33', color: '#fff', border: 'none', boxSizing: 'border-box' }} />
-              {isUploading && <div style={{ marginTop: 12 }}><div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}><span>আপলোড হচ্ছে...</span><span>{uploadProgress}%</span></div><div style={{ background: '#202c33', height: 8, borderRadius: 10, marginTop: 6, overflow: 'hidden' }}><div style={{ width: `${uploadProgress}%`, background: '#ff3b5c', height: '100%' }} /></div></div>}
-              <button onClick={fastUpload} disabled={isUploading} style={{ width: '100%', marginTop: 12, background: '#ff3b5c', color: '#fff', border: 'none', padding: 13, borderRadius: 20, fontWeight: 'bold' }}>{isUploading ? `আপলোড হচ্ছে... ${uploadProgress}%` : '🚀 ফাস্ট পোস্ট করো'}</button>
-              <button onClick={() => setPanel('none')} style={{ width: '100%', marginTop: 8, background: '#202c33', color: '#fff', border: 'none', padding: 12, borderRadius: 20 }}>আবার রেকর্ড করো</button>
+            <div className="absolute right-3 top-3 flex flex-col gap-3">
+              <button
+                onClick={toggleTorch}
+                aria-label="Flash"
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-black/45"
+              >
+                {torch ? <Zap className="h-5 w-5 text-gold" /> : <ZapOff className="h-5 w-5 text-white" />}
+              </button>
+              <button
+                onClick={() => setFacing((f) => (f === "user" ? "environment" : "user"))}
+                aria-label="Flip camera"
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-black/45"
+              >
+                <SwitchCamera className="h-5 w-5 text-white" />
+              </button>
             </div>
-          )}
-          {panel !== 'post' && <button onClick={() => setPanel('none')} style={{ width: '100%', marginTop: 12, background: '#ff3b5c', color: '#fff', border: 'none', padding: 12, borderRadius: 20, fontWeight: 'bold' }}>✅ হয়ে গেছে</button>}
-        </div>
+
+            {recording && (
+              <span className="absolute left-1/2 top-3 -translate-x-1/2 rounded-full bg-red-600 px-3 py-1 text-[12px] font-semibold text-white">
+                {String(Math.floor(elapsed / 60)).padStart(2, "0")}:{String(elapsed % 60).padStart(2, "0")}
+              </span>
+            )}
+          </div>
+
+          <div className="mt-4 flex justify-center gap-2">
+            {([15, 30] as const).map((s) => (
+              <button
+                key={s}
+                onClick={() => setLimit(s)}
+                className={`rounded-full px-4 py-1.5 text-[12px] ${
+                  limit === s ? "bg-brand font-semibold text-white" : "bg-white/10 text-white/70"
+                }`}
+              >
+                {s}s
+              </button>
+            ))}
+          </div>
+
+          <div className="mt-4 flex items-center justify-between px-10">
+            <div className="h-11 w-11 overflow-hidden rounded-lg border border-white/20 bg-white/10">
+              <img
+                src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=100&q=50"
+                alt="সর্বশেষ গ্যালারি ছবি"
+                className="h-full w-full object-cover"
+                loading="lazy"
+              />
+            </div>
+            <button
+              onClick={() => (recording ? stopRecording() : void startRecording())}
+              aria-label={recording ? "রেকর্ড বন্ধ" : "রেকর্ড শুরু"}
+              className="flex h-[76px] w-[76px] items-center justify-center rounded-full border-4 border-white"
+            >
+              <span
+                className={`bg-brand transition-all ${
+                  recording ? "h-7 w-7 rounded-md" : "h-[58px] w-[58px] rounded-full"
+                }`}
+              />
+            </button>
+            <button aria-label="Speed" className="flex h-11 w-11 items-center justify-center rounded-full bg-white/10">
+              <Gauge className="h-5 w-5 text-white" />
+            </button>
+          </div>
+        </>
       )}
-    </div>
-  )
+
+      <BottomNav />
+    </PhoneShell>
+  );
 }
