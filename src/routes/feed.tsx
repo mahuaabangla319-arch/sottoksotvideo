@@ -2,10 +2,9 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { downloadVideo, fetchFollowingSet, setFollow } from "@/lib/social";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { Heart, MessageCircle, Share2, Bookmark, Plus, Music2, Check, Download, Gift as GiftIcon, X, Users, Play, Camera, Image as ImageIcon } from "lucide-react";
+import { Heart, MessageCircle, Share2, Bookmark, Plus, Music2, Check, Download, Gift as GiftIcon, X, Users, Play, Camera, Image as ImageIcon, Home, Compass, Bell, User, CircleDot } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { BottomNav } from "@/components/BottomNav";
 import { GiftSheet } from "@/components/GiftSheet";
 import { GiftAnimation } from "@/components/GiftAnimation";
 import { useAuth } from "@/lib/auth";
@@ -13,7 +12,7 @@ import { countView, fetchMyLikes, formatCompact, likeVideo, unlikeVideo } from "
 
 const DESC = "ভারতের শর্ট ভিডিও ফিড — ড্যান্স, কমেডি, রান্না আর ফ্যামিলি ভিডিও।";
 export const Route = createFileRoute("/feed")({
-  head: () => ({ meta: [{ title: "For You — SOT TOK" }, { name: "description", content: DESC }, { property: "og:title", content: "For You — SOT TOK" }, { property: "og:description", content: DESC }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" }] }),
+  head: () => ({ meta: [{ title: "For You — SOT TOK" }, { name: "description", content: DESC }] }),
   component: FeedPage,
 });
 
@@ -28,7 +27,6 @@ const getLocal = (k: string, d: any) => { try { return JSON.parse(localStorage.g
 const setLocal = (k: string, v: any) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
 const myName = () => localStorage.getItem("sottok_username") || localStorage.getItem("vigo_user_name") || localStorage.getItem("vigo_user_email")?.split("@")[0] || "Guest";
 const timeAgo = (t: number) => { const d = Date.now() - t; if (d < 60000) return "এখনই"; if (d < 3600000) return `${Math.floor(d / 60000)} মিনিট আগে`; if (d < 86400000) return `${Math.floor(d / 3600000)} ঘণ্টা আগে`; return `${Math.floor(d / 86400000)} দিন আগে`; };
-
 async function signBatch(paths: string[]): Promise<Map<string, string>> {
   const map = new Map<string, string>();
   const storagePaths = paths.filter((p) => !p.startsWith("http"));
@@ -37,7 +35,7 @@ async function signBatch(paths: string[]): Promise<Map<string, string>> {
   return map;
 }
 
-// ===== ডাউনলোড - শুধু ডাউনলোড করলেই Vigo-র মতো Watermark, প্লে করলে নয় =====
+// ===== ডাউনলোড - শুধু ডাউনলোড করলেই Vigo Watermark, প্লে করলে নয় =====
 async function downloadWithWatermark(item: FeedItem) {
   toast("ডাউনলোড হচ্ছে… Vigo স্টাইল Watermark বসানো হচ্ছে");
   try {
@@ -105,77 +103,67 @@ function UniversalComments({ video, open, onClose, onCountChange }: any) {
   );
 }
 
-// ===== FACEBOOK-এর মতো STATUS - সমস্ত মানুষ দিতে পারবে, সমস্ত মানুষ দেখতে পাবে =====
-function StatusBar({ statuses, onAdd, onOpen, onOpenProfile }: any) {
-  return (
-    <div className="bg-white text-black px-3 pt-3 pb-3 border-b border-zinc-200">
-      <div className="flex items-center gap-2">
-        <div className="h-10 w-10 shrink-0 rounded-full bg-gradient-to-br from-orange-500 to-pink-600 flex items-center justify-center font-bold text-white">{myName()[0].toUpperCase()}</div>
-        <button onClick={onAdd} className="flex-1 text-left bg-zinc-100 rounded-full px-4 py-2.5 text-[13px] text-zinc-500">তুমি কী ভাবছো? Status দাও... ✍️</button>
-        <button onClick={onAdd} className="bg-[#fe2c55] text-white text-[12px] font-bold px-3 py-2.5 rounded-full shrink-0">+ Status</button>
-      </div>
-      <div className="flex gap-2 mt-2">
-        <button onClick={onAdd} className="flex-1 bg-zinc-100 rounded-full py-2 text-[12px] font-bold flex items-center justify-center gap-1"><Camera className="h-3.5 w-3.5" /> ছবি Status</button>
-        <button onClick={onAdd} className="flex-1 bg-zinc-100 rounded-full py-2 text-[12px] font-bold">✍️ লেখা Status</button>
-      </div>
-      <div className="flex items-center justify-between mt-3">
-        <p className="text-[13px] font-bold">🟢 Status ({statuses.length} জন দিয়েছে) — সবাই দেখতে পাবে</p>
-      </div>
-      <div className="flex gap-3 overflow-x-auto no-scrollbar mt-2 pb-1">
-        <button onClick={onAdd} className="flex flex-col items-center shrink-0 w-[72px]">
-          <div className="relative h-[96px] w-[72px] rounded-xl bg-zinc-100 overflow-hidden flex items-center justify-center"><div className="h-10 w-10 rounded-full bg-gradient-to-br from-orange-500 to-pink-600 flex items-center justify-center font-bold text-white">{myName()[0].toUpperCase()}</div><span className="absolute bottom-1 left-1/2 -translate-x-1/2 bg-[#fe2c55] text-white text-[16px] font-bold h-6 w-6 rounded-full flex items-center justify-center">+</span></div>
-          <span className="text-[11px] font-medium mt-1">তোমার Status</span>
-        </button>
-        {statuses.map((s: any, i: number) => (
-          <button key={s.id} onClick={() => onOpen(i)} className="flex flex-col items-center shrink-0 w-[72px]">
-            <div className="relative h-[96px] w-[72px] rounded-xl overflow-hidden border-2 border-[#fe2c55]">
-              {s.image ? <img src={s.image} className="h-full w-full object-cover" alt="" /> : <div className="h-full w-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center p-2 text-center text-white text-[11px] font-bold leading-tight">{s.text}</div>}
-              <div className="absolute top-1 left-1 h-7 w-7 rounded-full bg-gradient-to-br from-orange-500 to-pink-600 flex items-center justify-center text-[11px] font-bold text-white border-2 border-white">{s.username[0].toUpperCase()}</div>
-            </div>
-            <span className="text-[11px] font-medium max-w-[72px] truncate mt-1">{s.username}</span>
-            <span className="text-[10px] text-zinc-500">{timeAgo(s.createdAt)}</span>
-          </button>
-        ))}
-        {statuses.length === 0 && <p className="text-[12px] text-zinc-500 self-center">এখনো কেউ Status দেয়নি — তুমিই প্রথম দাও 👆</p>}
-      </div>
-    </div>
-  );
-}
-
+// ===== STATUS - Add + Viewer =====
 function AddStatusSheet({ onClose, onAdded }: any) {
-  const [text, setText] = useState(""); const [file, setFile] = useState<any>(null); const [preview, setPreview] = useState("");
+  const [text, setText] = useState(""); const [preview, setPreview] = useState("");
   const bg = ["from-purple-500 to-pink-500", "from-blue-500 to-teal-500", "from-orange-500 to-red-500", "from-green-500 to-teal-600"][text.length % 4];
   const post = () => {
-    if (!text.trim() && !file) return toast.error("কিছু লিখো বা ছবি দাও");
+    if (!text.trim() && !preview) return toast.error("কিছু লিখো বা ছবি দাও");
     const s = { id: "st-" + Date.now(), username: myName(), text: text.trim() || "📸 ছবি Status", image: preview, createdAt: Date.now(), likes: 0 };
     const old = getLocal("sottok_status_list", []); setLocal("sottok_status_list", [s, ...old]); onAdded(s); toast.success("Status দেওয়া হয়ে গেছে ✅ সবাই দেখতে পাবে"); onClose();
   };
   return (
-    <div className="fixed inset-0 z-[106] bg-black/80 flex items-end justify-center" onClick={onClose}>
+    <div className="fixed inset-0 z-[120] bg-black/80 flex items-end justify-center" onClick={onClose}>
       <div className="w-full max-w-[420px] bg-white rounded-t-3xl p-4 text-black" onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-between"><b>✍️ Status দাও — সবাই দেখতে পাবে</b><button onClick={onClose} className="text-2xl px-2">×</button></div>
-        <div className={`mt-3 rounded-2xl p-4 min-h-[120px] bg-gradient-to-br ${bg} flex items-center justify-center`}>
-          {preview ? <img src={preview} className="max-h-[160px] rounded-xl object-cover" alt="" /> : <textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="তুমি কী ভাবছো? লিখো... ❤️" className="w-full bg-transparent text-white placeholder-white/80 text-center font-bold text-[16px] outline-none resize-none" rows={3} />}
-        </div>
+        <div className={`mt-3 rounded-2xl p-4 min-h-[120px] bg-gradient-to-br ${bg} flex items-center justify-center`}>{preview ? <img src={preview} className="max-h-[160px] rounded-xl object-cover" alt="" /> : <textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="তুমি কী ভাবছো? লিখো... ❤️" className="w-full bg-transparent text-white placeholder-white/80 text-center font-bold text-[16px] outline-none resize-none" rows={3} />}</div>
         {preview && <input value={text} onChange={(e) => setText(e.target.value)} placeholder="ছবির সাথে কিছু লিখো..." className="w-full mt-2 bg-zinc-100 rounded-2xl px-4 py-2.5 text-sm outline-none" />}
-        <label className="block mt-3 bg-zinc-100 rounded-2xl py-3 text-center text-sm font-bold cursor-pointer"><ImageIcon className="inline h-4 w-4 mr-1" /> গ্যালারি থেকে ছবি দাও<input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) { setFile(f); setPreview(URL.createObjectURL(f)); } }} /></label>
+        <label className="block mt-3 bg-zinc-100 rounded-2xl py-3 text-center text-sm font-bold cursor-pointer"><ImageIcon className="inline h-4 w-4 mr-1" /> গ্যালারি থেকে ছবি দাও<input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) setPreview(URL.createObjectURL(f)); }} /></label>
         <button onClick={post} className="w-full mt-3 bg-[#fe2c55] text-white rounded-full py-3 font-bold">Status দাও → সবাই দেখবে</button>
       </div>
     </div>
   );
 }
-
 function StatusViewer({ statuses, index, onClose, onLike }: any) {
   const [idx, setIdx] = useState(index);
   const s = statuses[idx]; if (!s) return null;
   return (
-    <div className="fixed inset-0 z-[110] bg-black text-white flex flex-col">
+    <div className="fixed inset-0 z-[130] bg-black text-white flex flex-col">
       <div className="flex gap-1 p-3">{statuses.map((_: any, i: number) => (<div key={i} className={`flex-1 h-1 rounded-full ${i === idx ? "bg-white" : i < idx ? "bg-white/70" : "bg-white/30"}`} />))}</div>
       <div className="flex items-center gap-2 px-4"><div className="h-9 w-9 rounded-full bg-gradient-to-br from-orange-500 to-pink-600 flex items-center justify-center font-bold">{s.username[0].toUpperCase()}</div><div><p className="font-bold text-sm">{s.username}</p><p className="text-[11px] text-white/60">{timeAgo(s.createdAt)} • সবাই দেখতে পাচ্ছে</p></div><button onClick={onClose} className="ml-auto bg-white/20 p-2 rounded-full"><X className="h-4 w-4" /></button></div>
-      <div className="flex-1 flex items-center justify-center p-4" onClick={() => { if (idx < statuses.length - 1) setIdx(idx + 1); else onClose(); }}>
-        {s.image ? <img src={s.image} className="max-h-full max-w-full rounded-2xl object-contain" alt="" /> : <div className="w-full max-w-[320px] aspect-square rounded-3xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center p-6 text-center text-[20px] font-bold leading-snug">{s.text}</div>}
-      </div>
+      <div className="flex-1 flex items-center justify-center p-4" onClick={() => { if (idx < statuses.length - 1) setIdx(idx + 1); else onClose(); }}>{s.image ? <img src={s.image} className="max-h-full max-w-full rounded-2xl object-contain" alt="" /> : <div className="w-full max-w-[320px] aspect-square rounded-3xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center p-6 text-center text-[20px] font-bold leading-snug">{s.text}</div>}</div>
       <div className="p-4 flex gap-2"><button onClick={() => onLike(s.id)} className="flex-1 bg-zinc-900 rounded-full py-3 font-bold text-sm">❤️ লাইক ({s.likes || 0})</button><button onClick={() => { if (idx < statuses.length - 1) setIdx(idx + 1); else onClose(); }} className="flex-1 bg-[#fe2c55] rounded-full py-3 font-bold text-sm">পরের Status →</button></div>
+    </div>
+  );
+}
+
+// ===== ✅ নিচে লাইভের জায়গায় পুরো সিস্টেম - স্ট্যাটাস পেজ =====
+function StatusPage({ statuses, creators, sounds, onClose, onAddStatus, onOpenStatus, onOpenProfile, onOpenSound, onShowAllCreators }: any) {
+  return (
+    <div className="fixed inset-0 z-[110] bg-white text-black overflow-y-auto pb-24">
+      <div className="sticky top-0 bg-white z-10 flex items-center gap-2 px-3 py-3 border-b border-zinc-200">
+        <button onClick={onClose} className="bg-zinc-100 p-2 rounded-full"><X className="h-4 w-4" /></button>
+        <p className="font-bold text-[16px]">🟢 স্ট্যাটাস</p>
+        <button onClick={onAddStatus} className="ml-auto bg-[#fe2c55] text-white text-[12px] font-bold px-3 py-2 rounded-full">+ Status</button>
+      </div>
+      {/* 1. Status দেওয়া + দেখা */}
+      <div className="px-3 pt-3 pb-3">
+        <div className="flex items-center gap-2"><div className="h-10 w-10 shrink-0 rounded-full bg-gradient-to-br from-orange-500 to-pink-600 flex items-center justify-center font-bold text-white">{myName()[0].toUpperCase()}</div><button onClick={onAddStatus} className="flex-1 text-left bg-zinc-100 rounded-full px-4 py-2.5 text-[13px] text-zinc-500">তুমি কী ভাবছো? Status দাও... ✍️</button></div>
+        <div className="flex gap-2 mt-2"><button onClick={onAddStatus} className="flex-1 bg-zinc-100 rounded-full py-2 text-[12px] font-bold flex items-center justify-center gap-1"><Camera className="h-3.5 w-3.5" /> ছবি Status</button><button onClick={onAddStatus} className="flex-1 bg-zinc-100 rounded-full py-2 text-[12px] font-bold">✍️ লেখা Status</button></div>
+        <p className="text-[13px] font-bold mt-3">🟢 Status ({statuses.length} জন দিয়েছে) — সবাই দেখতে পাবে</p>
+        <div className="flex gap-3 overflow-x-auto no-scrollbar mt-2 pb-1">
+          <button onClick={onAddStatus} className="flex flex-col items-center shrink-0 w-[72px]"><div className="relative h-[96px] w-[72px] rounded-xl bg-zinc-100 overflow-hidden flex items-center justify-center"><div className="h-10 w-10 rounded-full bg-gradient-to-br from-orange-500 to-pink-600 flex items-center justify-center font-bold text-white">{myName()[0].toUpperCase()}</div><span className="absolute bottom-1 left-1/2 -translate-x-1/2 bg-[#fe2c55] text-white text-[16px] font-bold h-6 w-6 rounded-full flex items-center justify-center">+</span></div><span className="text-[11px] font-medium mt-1">তোমার Status</span></button>
+          {statuses.map((s: any, i: number) => (<button key={s.id} onClick={() => onOpenStatus(i)} className="flex flex-col items-center shrink-0 w-[72px]"><div className="relative h-[96px] w-[72px] rounded-xl overflow-hidden border-2 border-[#fe2c55]">{s.image ? <img src={s.image} className="h-full w-full object-cover" alt="" /> : <div className="h-full w-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center p-2 text-center text-white text-[11px] font-bold leading-tight">{s.text}</div>}<div className="absolute top-1 left-1 h-7 w-7 rounded-full bg-gradient-to-br from-orange-500 to-pink-600 flex items-center justify-center text-[11px] font-bold text-white border-2 border-white">{s.username[0].toUpperCase()}</div></div><span className="text-[11px] font-medium max-w-[72px] truncate mt-1">{s.username}</span><span className="text-[10px] text-zinc-500">{timeAgo(s.createdAt)}</span></button>))}
+          {statuses.length === 0 && <p className="text-[12px] text-zinc-500 self-center">এখনো কেউ Status দেয়নি — তুমিই প্রথম দাও 👆</p>}
+        </div>
+      </div>
+      {/* 2. কারা ভিডিও ছেড়েছে */}
+      <div className="px-3 py-2 border-t border-zinc-200 flex items-center justify-between"><p className="text-[13px] font-bold">👥 ভিডিও ছেড়েছে ({creators.length} জন) — {creators.reduce((s: number, c: any) => s + c.count, 0)} টা ভিডিও</p><button onClick={onShowAllCreators} className="text-[12px] text-[#fe2c55] font-bold">সবাইকে দেখো →</button></div>
+      <div className="px-3 pb-3 flex gap-3 overflow-x-auto no-scrollbar">{creators.map((c: any) => (<button key={c.sotId || c.username} onClick={() => onOpenProfile(c.sotId || c.username.replace("@", ""))} className="flex flex-col items-center shrink-0 w-[64px]"><div className="relative"><div className="h-14 w-14 rounded-full p-[2px] bg-gradient-to-br from-orange-500 to-pink-600"><div className="h-full w-full rounded-full bg-zinc-200 flex items-center justify-center font-bold text-lg">{c.username.replace("@", "")[0].toUpperCase()}</div></div><span className="absolute -bottom-1 -right-1 bg-[#fe2c55] text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">▶ {c.count}</span></div><span className="text-[11px] font-medium max-w-[64px] truncate mt-1">{c.username}</span><span className="text-[10px] text-zinc-500">{c.count} টা ভিডিও</span></button>))}</div>
+      {/* 3. ট্রেন্ডিং গান */}
+      <div className="px-3 py-2 border-t border-zinc-200"><p className="text-[13px] font-bold">🔥 ট্রেন্ডিং গান - এই গান দিয়ে ভিডিও বানাও</p><div className="flex gap-2 overflow-x-auto no-scrollbar mt-2 pb-1">{sounds.map(([s, cnt]: any) => (<button key={s} onClick={() => onOpenSound(s)} className="shrink-0 bg-zinc-100 rounded-full px-3 py-2 text-[12px] font-bold">🎵 {s} • {cnt} টা ভিডিও</button>))}</div></div>
+      {/* 4. সব Status-এর লিস্ট */}
+      <div className="px-3 py-2 border-t border-zinc-200"><p className="text-[13px] font-bold">📋 সবার Status লিস্ট</p>{statuses.map((s: any, i: number) => (<button key={s.id} onClick={() => onOpenStatus(i)} className="w-full flex items-center gap-3 bg-zinc-100 rounded-2xl p-3 mt-2 text-left"><div className="h-11 w-11 shrink-0 rounded-full bg-gradient-to-br from-orange-500 to-pink-600 flex items-center justify-center font-bold text-white">{s.username[0].toUpperCase()}</div><div className="flex-1 min-w-0"><p className="font-bold text-[14px] truncate">{s.username}</p><p className="text-[12px] text-zinc-500 truncate">{s.text} • {timeAgo(s.createdAt)}</p></div><span className="text-[12px] font-bold text-[#fe2c55]">দেখো →</span></button>))}{statuses.length === 0 && <p className="text-[12px] text-zinc-500 mt-2">এখনো কোনো Status নেই</p>}</div>
     </div>
   );
 }
@@ -184,38 +172,20 @@ function StatusViewer({ statuses, index, onClose, onLike }: any) {
 function SoundPage({ sound, allVideos, onClose, onOpenVideo, onUseSound }: any) {
   const list = allVideos.filter((v: any) => v.sound === sound); const first = list[0];
   return (
-    <div className="fixed inset-0 z-[95] bg-black text-white overflow-y-auto">
-      <button onClick={onClose} className="absolute top-4 right-4 z-10 rounded-full bg-white/20 p-2"><X /></button>
-      <div className="pt-10 px-4"><div className="flex items-center gap-3"><div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-[#fe2c55] to-orange-500 flex items-center justify-center text-3xl">🎵</div><div><p className="font-bold text-[16px]">{sound}</p><p className="text-white/60 text-[12px]">Original sound • {first?.username || "@sottok"}</p><p className="text-[12px] text-white/70 mt-0.5">{list.length} জন এই গান দিয়ে ভিডিও বানিয়েছে</p></div></div><button onClick={() => onUseSound(sound)} className="w-full mt-4 bg-[#fe2c55] rounded-full py-3 font-bold text-sm">🎵 এই গান দিয়ে ভিডিও বানাও</button><p className="text-[12px] text-white/50 mt-2 text-center">এই গানটা সবার জন্য খোলা — যে কেউ ব্যবহার করতে পারবে</p></div>
-      <p className="px-4 mt-5 font-bold text-[14px]">🎬 এই গান দিয়ে বানানো ভিডিও ({list.length})</p>
-      <div className="grid grid-cols-3 gap-[2px] mt-2 pb-24">{list.map((v: any) => (<div key={v.id} onClick={() => onOpenVideo(v)} className="relative aspect-[9/16] bg-zinc-900 overflow-hidden cursor-pointer"><video src={v.url} muted playsInline preload="metadata" className="h-full w-full object-cover" /><div className="absolute bottom-1 left-1 text-[11px]">❤️ {v.likes}</div><div className="absolute bottom-1 right-1 bg-black/70 text-[9px] px-1.5 py-0.5 rounded-full">🎵</div><p className="absolute top-1 left-1 text-[10px] bg-black/60 px-1.5 rounded-full max-w-[90%] truncate">{v.username}</p></div>))}</div>
-    </div>
+    <div className="fixed inset-0 z-[95] bg-black text-white overflow-y-auto"><button onClick={onClose} className="absolute top-4 right-4 z-10 rounded-full bg-white/20 p-2"><X /></button><div className="pt-10 px-4"><div className="flex items-center gap-3"><div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-[#fe2c55] to-orange-500 flex items-center justify-center text-3xl">🎵</div><div><p className="font-bold text-[16px]">{sound}</p><p className="text-white/60 text-[12px]">Original sound • {first?.username || "@sottok"}</p><p className="text-[12px] text-white/70 mt-0.5">{list.length} জন এই গান দিয়ে ভিডিও বানিয়েছে</p></div></div><button onClick={() => onUseSound(sound)} className="w-full mt-4 bg-[#fe2c55] rounded-full py-3 font-bold text-sm">🎵 এই গান দিয়ে ভিডিও বানাও</button></div><p className="px-4 mt-5 font-bold text-[14px]">🎬 এই গান দিয়ে বানানো ভিডিও ({list.length})</p><div className="grid grid-cols-3 gap-[2px] mt-2 pb-24">{list.map((v: any) => (<div key={v.id} onClick={() => onOpenVideo(v)} className="relative aspect-[9/16] bg-zinc-900 overflow-hidden cursor-pointer"><video src={v.url} muted playsInline preload="metadata" className="h-full w-full object-cover" /><div className="absolute bottom-1 left-1 text-[11px]">❤️ {v.likes}</div><p className="absolute top-1 left-1 text-[10px] bg-black/60 px-1.5 rounded-full max-w-[90%] truncate">{v.username}</p></div>))}</div></div>
   );
 }
 function CreateWithSoundSheet({ sound, onClose }: any) {
   const [caption, setCaption] = useState(""); const [file, setFile] = useState<any>(null);
-  const doUpload = async () => {
-    if (!file) return toast.error("একটা ভিডিও বেছে নাও"); toast("আপলোড হচ্ছে...");
-    try { const { data: { user } } = await supabase.auth.getUser(); if (!user) return toast.error("আগে লগইন করো"); const path = `${user.id}/${Date.now()}-${file.name}`; const { error } = await supabase.storage.from("videos").upload(path, file); if (error) throw error; await supabase.from("videos").insert({ user_id: user.id, video_url: path, caption: caption || `এই গান দিয়ে বানালাম 🎵`, sound_name: sound, visibility: "public" }); toast.success("হয়ে গেছে ✅ এই গান দিয়ে তোমার ভিডিও চলে গেছে"); onClose(); window.location.reload(); } catch { toast.error("আপলোড হয়নি, আবার চেষ্টা করো"); }
-  };
-  return (
-    <div className="fixed inset-0 z-[106] bg-black/80 flex items-end justify-center" onClick={onClose}>
-      <div className="w-full max-w-[420px] bg-white rounded-t-3xl p-4 text-black" onClick={(e) => e.stopPropagation()}><div className="flex justify-between"><b>🎵 এই গান দিয়ে ভিডিও বানাও</b><button onClick={onClose} className="text-2xl px-2">×</button></div><p className="text-[12px] text-zinc-500 mt-1 bg-zinc-100 rounded-full px-3 py-2">🎵 {sound}</p><label className="block mt-3 bg-zinc-100 rounded-2xl p-6 text-center cursor-pointer"><p className="text-3xl">📹</p><p className="font-bold text-sm mt-1">{file ? file.name : "গ্যালারি থেকে ভিডিও বেছে নাও"}</p><input type="file" accept="video/*" className="hidden" onChange={(e) => setFile(e.target.files?.[0] || null)} /></label><input value={caption} onChange={(e) => setCaption(e.target.value)} placeholder="ক্যাপশন লিখো... ❤️" className="w-full mt-3 bg-zinc-100 rounded-2xl px-4 py-3 text-sm outline-none" /><button onClick={doUpload} className="w-full mt-3 bg-[#fe2c55] text-white rounded-full py-3 font-bold">🎵 এই গান দিয়ে পোস্ট করো →</button></div>
-    </div>
-  );
+  const doUpload = async () => { if (!file) return toast.error("একটা ভিডিও বেছে নাও"); toast("আপলোড হচ্ছে..."); try { const { data: { user } } = await supabase.auth.getUser(); if (!user) return toast.error("আগে লগইন করো"); const path = `${user.id}/${Date.now()}-${file.name}`; const { error } = await supabase.storage.from("videos").upload(path, file); if (error) throw error; await supabase.from("videos").insert({ user_id: user.id, video_url: path, caption: caption || `এই গান দিয়ে বানালাম 🎵`, sound_name: sound, visibility: "public" }); toast.success("হয়ে গেছে ✅"); onClose(); window.location.reload(); } catch { toast.error("আপলোড হয়নি"); } };
+  return (<div className="fixed inset-0 z-[120] bg-black/80 flex items-end justify-center" onClick={onClose}><div className="w-full max-w-[420px] bg-white rounded-t-3xl p-4 text-black" onClick={(e) => e.stopPropagation()}><div className="flex justify-between"><b>🎵 এই গান দিয়ে ভিডিও বানাও</b><button onClick={onClose} className="text-2xl px-2">×</button></div><p className="text-[12px] text-zinc-500 mt-1 bg-zinc-100 rounded-full px-3 py-2">🎵 {sound}</p><label className="block mt-3 bg-zinc-100 rounded-2xl p-6 text-center cursor-pointer"><p className="text-3xl">📹</p><p className="font-bold text-sm mt-1">{file ? file.name : "গ্যালারি থেকে ভিডিও বেছে নাও"}</p><input type="file" accept="video/*" className="hidden" onChange={(e) => setFile(e.target.files?.[0] || null)} /></label><input value={caption} onChange={(e) => setCaption(e.target.value)} placeholder="ক্যাপশন লিখো..." className="w-full mt-3 bg-zinc-100 rounded-2xl px-4 py-3 text-sm outline-none" /><button onClick={doUpload} className="w-full mt-3 bg-[#fe2c55] text-white rounded-full py-3 font-bold">🎵 এই গান দিয়ে পোস্ট করো →</button></div></div>);
 }
 
 // ===== অন্যের প্রোফাইল =====
 function ProfileView({ sotId, onClose, allVideos, onOpenVideo }: any) {
   const [info, setInfo] = useState<any>(null); const [myVideos, setMyVideos] = useState<any[]>([]);
   useEffect(() => { (async () => { try { const { data } = await supabase.from("profiles").select("*").eq("sottok_id", sotId).single(); if (data) setInfo(data); } catch {} const mine = allVideos.filter((v: any) => v.sotId === sotId || v.username.replace("@", "") === sotId); setMyVideos(mine.length ? mine : allVideos.slice(0, 3)); })(); }, [sotId, allVideos]);
-  return (
-    <div className="fixed inset-0 z-[90] bg-black text-white overflow-y-auto">
-      <button onClick={onClose} className="absolute top-4 right-4 z-10 rounded-full bg-white/20 p-2"><X /></button>
-      <div className="flex flex-col items-center pt-10 px-4 text-center">{info?.avatar_url ? <img src={info.avatar_url} className="h-24 w-24 rounded-full object-cover border-2 border-white" alt="" /> : <div className="h-24 w-24 rounded-full bg-gradient-to-br from-orange-500 to-pink-600 flex items-center justify-center text-4xl font-bold">{(info?.username || sotId || "S")[0].toUpperCase()}</div>}<h2 className="mt-2 font-bold text-lg">@{info?.username || sotId}</h2><p className="text-white/60 text-[12px]">SOT TOK ID: {sotId}</p><p className="text-[13px] text-white/70 mt-1">{info?.bio || "SOT TOK Creator"}</p><p className="mt-2 text-sm">{myVideos.length} টা ভিডিও • {myVideos.reduce((s: number, v: any) => s + (v.likes || 0), 0)} লাইক</p></div>
-      <div className="grid grid-cols-3 gap-[2px] mt-5 pb-24">{myVideos.map((v: any) => (<div key={v.id} onClick={() => onOpenVideo(v)} className="relative aspect-[9/16] bg-zinc-900 overflow-hidden cursor-pointer"><video src={v.url} muted playsInline preload="metadata" className="h-full w-full object-cover" /><div className="absolute bottom-1 left-1 text-[11px]">❤️ {v.likes}</div><button onClick={(e) => { e.stopPropagation(); void downloadWithWatermark(v); }} className="absolute bottom-1 right-1 bg-black/70 p-1.5 rounded-full"><Download className="h-3.5 w-3.5" /></button></div>))}</div>
-    </div>
-  );
+  return (<div className="fixed inset-0 z-[90] bg-black text-white overflow-y-auto"><button onClick={onClose} className="absolute top-4 right-4 z-10 rounded-full bg-white/20 p-2"><X /></button><div className="flex flex-col items-center pt-10 px-4 text-center">{info?.avatar_url ? <img src={info.avatar_url} className="h-24 w-24 rounded-full object-cover border-2 border-white" alt="" /> : <div className="h-24 w-24 rounded-full bg-gradient-to-br from-orange-500 to-pink-600 flex items-center justify-center text-4xl font-bold">{(info?.username || sotId || "S")[0].toUpperCase()}</div>}<h2 className="mt-2 font-bold text-lg">@{info?.username || sotId}</h2><p className="text-white/60 text-[12px]">SOT TOK ID: {sotId}</p><p className="text-[13px] text-white/70 mt-1">{info?.bio || "SOT TOK Creator"}</p><p className="mt-2 text-sm">{myVideos.length} টা ভিডিও</p></div><div className="grid grid-cols-3 gap-[2px] mt-5 pb-24">{myVideos.map((v: any) => (<div key={v.id} onClick={() => onOpenVideo(v)} className="relative aspect-[9/16] bg-zinc-900 overflow-hidden cursor-pointer"><video src={v.url} muted playsInline preload="metadata" className="h-full w-full object-cover" /><div className="absolute bottom-1 left-1 text-[11px]">❤️ {v.likes}</div><button onClick={(e) => { e.stopPropagation(); void downloadWithWatermark(v); }} className="absolute bottom-1 right-1 bg-black/70 p-1.5 rounded-full"><Download className="h-3.5 w-3.5" /></button></div>))}</div></div>);
 }
 
 function useFeed() {
@@ -242,21 +212,35 @@ function VideoCard({ item, muted, onToggleMute, active, liked, onToggleLike, onO
   async function share() { const url = `${window.location.origin}/feed`; try { if (navigator.share) await navigator.share({ title: "SOT TOK", text: item.caption, url }); else { await navigator.clipboard.writeText(url); toast.success("লিঙ্ক কপি হয়েছে"); } } catch {} }
   return (
     <section className="snap-item relative h-screen w-full">
-      {/* ✅ প্লে করলে কোনো Watermark নেই */}
-      <video ref={ref} src={active ? item.url : undefined} data-src={item.url} loop muted={muted} playsInline preload="none" onClick={onToggleMute} className="h-full w-full bg-black object-cover" />
+      <video ref={ref} src={active ? item.url : undefined} loop muted={muted} playsInline preload="none" onClick={onToggleMute} className="h-full w-full bg-black object-cover" />
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-black/40" />
       {muted && <span className="absolute right-3 top-14 rounded-full bg-black/50 px-3 py-1 text-[11px] text-white">Tap for sound</span>}
       <div className="absolute bottom-28 right-3 flex flex-col items-center gap-5">
-        <div className="relative mb-1"><button onClick={onOpenProfile} className="block h-12 w-12 rounded-full border-2 border-white bg-gradient-to-br from-orange-500 to-pink-600 flex items-center justify-center font-bold text-white">{item.username.replace("@", "")[0].toUpperCase()}</button><button onClick={onFollow} aria-label={followed ? "আনফলো" : "ফলো"} className={`absolute -bottom-2 left-1/2 flex h-5 w-5 -translate-x-1/2 items-center justify-center rounded-full ${followed ? "bg-white" : "bg-red-600"}`}>{followed ? <Check className="h-3.5 w-3.5 text-red-600" strokeWidth={3} /> : <Plus className="h-3.5 w-3.5 text-white" strokeWidth={3} />}</button></div>
-        <button onClick={onToggleLike} className="flex flex-col items-center gap-1" aria-label="লাইক"><Heart className={`h-8 w-8 ${liked ? "fill-red-500 text-red-500" : "text-white"}`} /><span className="text-[11px] text-white">{formatCompact(item.likes)}</span></button>
-        <button onClick={onOpenComments} className="flex flex-col items-center gap-1" aria-label="কমেন্ট"><MessageCircle className="h-8 w-8 text-white" /><span className="text-[11px] text-white">{formatCompact(item.comments)}</span></button>
-        <button onClick={onOpenGift} className="flex flex-col items-center gap-1" aria-label="গিফট"><GiftIcon className="h-8 w-8 text-yellow-400" /><span className="text-[11px] text-white">গিফট</span></button>
-        <button onClick={share} className="flex flex-col items-center gap-1" aria-label="শেয়ার"><Share2 className="h-8 w-8 text-white" /><span className="text-[11px] text-white">Share</span></button>
-        <button onClick={() => { void downloadWithWatermark(item); }} className="flex flex-col items-center gap-1" aria-label="ডাউনলোড"><Download className="h-8 w-8 text-white" /><span className="text-[11px] text-white">ডাউনলোড</span></button>
-        <button onClick={() => { setSaved(!saved); toast.success(saved ? "সেভ থেকে সরানো হয়েছে" : "সেভ হয়ে গেছে"); }} className="flex flex-col items-center gap-1" aria-label="সেভ"><Bookmark className={`h-8 w-8 ${saved ? "fill-yellow-400 text-yellow-400" : "text-white"}`} /><span className="text-[11px] text-white">Save</span></button>
+        <div className="relative mb-1"><button onClick={onOpenProfile} className="block h-12 w-12 rounded-full border-2 border-white bg-gradient-to-br from-orange-500 to-pink-600 flex items-center justify-center font-bold text-white">{item.username.replace("@", "")[0].toUpperCase()}</button><button onClick={onFollow} className={`absolute -bottom-2 left-1/2 flex h-5 w-5 -translate-x-1/2 items-center justify-center rounded-full ${followed ? "bg-white" : "bg-red-600"}`}>{followed ? <Check className="h-3.5 w-3.5 text-red-600" strokeWidth={3} /> : <Plus className="h-3.5 w-3.5 text-white" strokeWidth={3} />}</button></div>
+        <button onClick={onToggleLike} className="flex flex-col items-center gap-1"><Heart className={`h-8 w-8 ${liked ? "fill-red-500 text-red-500" : "text-white"}`} /><span className="text-[11px] text-white">{formatCompact(item.likes)}</span></button>
+        <button onClick={onOpenComments} className="flex flex-col items-center gap-1"><MessageCircle className="h-8 w-8 text-white" /><span className="text-[11px] text-white">{formatCompact(item.comments)}</span></button>
+        <button onClick={onOpenGift} className="flex flex-col items-center gap-1"><GiftIcon className="h-8 w-8 text-yellow-400" /><span className="text-[11px] text-white">গিফট</span></button>
+        <button onClick={share} className="flex flex-col items-center gap-1"><Share2 className="h-8 w-8 text-white" /><span className="text-[11px] text-white">Share</span></button>
+        <button onClick={() => { void downloadWithWatermark(item); }} className="flex flex-col items-center gap-1"><Download className="h-8 w-8 text-white" /><span className="text-[11px] text-white">ডাউনলোড</span></button>
+        <button onClick={() => { setSaved(!saved); toast.success(saved ? "সেভ থেকে সরানো হয়েছে" : "সেভ হয়ে গেছে"); }} className="flex flex-col items-center gap-1"><Bookmark className={`h-8 w-8 ${saved ? "fill-yellow-400 text-yellow-400" : "text-white"}`} /><span className="text-[11px] text-white">Save</span></button>
       </div>
       <div className="absolute bottom-24 left-4 right-24"><button onClick={onOpenProfile} className="text-[15px] font-semibold text-white">{item.username}</button><p className="text-[12px] text-white/70">{formatCompact(item.views)} views • ID: {item.sotId || item.username}</p><p className="mt-1 text-[13px] text-white">{item.caption}</p><button onClick={onOpenSound} className="mt-1 flex items-center gap-1 text-[12px] text-white/80"><Music2 className="h-3.5 w-3.5" /> 🎵 {item.sound} • এই গান দিয়ে বানাও</button><button onClick={onOpenSound} className="mt-2 inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1.5 text-[12px] text-white backdrop-blur"><Music2 className="h-3.5 w-3.5" /> Use this sound</button></div>
     </section>
+  );
+}
+
+// ===== ✅ BottomNav এই একই ফাইলে - লাইভ মুছে স্ট্যাটাস =====
+function BottomNav({ statusCount, onOpenStatus }: any) {
+  return (
+    <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[420px] z-50 bg-[#111] border-t border-zinc-800 flex justify-around items-center py-2 px-1 text-white">
+      <Link to="/feed" className="flex flex-col items-center gap-0.5 w-[60px]"><Home className="h-6 w-6 text-[#fe2c55]" /><span className="text-[11px] font-bold text-[#fe2c55]">হোম</span><span className="h-1 w-1 rounded-full bg-[#fe2c55]" /></Link>
+      <Link to="/feed" className="flex flex-col items-center gap-0.5 w-[60px]"><Compass className="h-6 w-6 text-white/80" /><span className="text-[11px] text-white/70">এক্সপ্লোরার</span></Link>
+      {/* ❌ লাইভ মুছে দেওয়া — ✅ এখানে স্ট্যাটাস */}
+      <button onClick={onOpenStatus} className="flex flex-col items-center gap-0.5 w-[60px] relative"><span className="relative"><CircleDot className="h-6 w-6 text-green-400" />{statusCount ? <span className="absolute -top-1 -right-2 bg-[#fe2c55] text-[9px] font-bold px-1 rounded-full">{statusCount}</span> : null}</span><span className="text-[11px] font-bold text-green-400">স্ট্যাটাস</span></button>
+      <Link to="/upload" className="flex flex-col items-center w-[60px]"><span className="h-10 w-10 rounded-full bg-[#fe2c55] flex items-center justify-center"><Plus className="h-6 w-6 text-white" /></span></Link>
+      <Link to="/inbox" className="flex flex-col items-center gap-0.5 w-[60px]"><Bell className="h-6 w-6 text-white/80" /><span className="text-[11px] text-white/70">ইনবক্স</span></Link>
+      <Link to="/profile" className="flex flex-col items-center gap-0.5 w-[60px]"><User className="h-6 w-6 text-white/80" /><span className="text-[11px] text-white/70">প্রোফাইল</span></Link>
+    </div>
   );
 }
 
@@ -273,7 +257,7 @@ function FeedPage() {
   const [openSound, setOpenSound] = useState<string | null>(null); const [showCreateWithSound, setShowCreateWithSound] = useState<string | null>(null);
   const [statuses, setStatuses] = useState<any[]>(() => getLocal("sottok_status_list", []));
   const [showAddStatus, setShowAddStatus] = useState(false); const [viewStatusIdx, setViewStatusIdx] = useState<number | null>(null);
-  const [showAllCreators, setShowAllCreators] = useState(false);
+  const [showStatusPage, setShowStatusPage] = useState(false); const [showAllCreators, setShowAllCreators] = useState(false);
   const scrollerRef = useRef<HTMLDivElement>(null);
   const baseItems = useMemo(() => { const rows = (data?.pages ?? []).flat(); return rows.length ? rows : demoVideos; }, [data]);
   const items = useMemo(() => baseItems.map((i) => ({ ...i, likes: Math.max(0, i.likes + (likeDelta[i.id] ?? 0)), comments: Math.max(0, i.comments + (commentDelta[i.id] ?? 0)) })), [baseItems, likeDelta, commentDelta]);
@@ -288,38 +272,21 @@ function FeedPage() {
   const likeStatus = (id: string) => { setStatuses((prev) => { const next = prev.map((s) => s.id === id ? { ...s, likes: (s.likes || 0) + 1 } : s); setLocal("sottok_status_list", next); return next; }); };
   return (
     <div className="mx-auto w-full max-w-[420px] bg-black">
-      <div className="fixed left-1/2 top-0 z-40 flex w-full max-w-[420px] -translate-x-1/2 justify-center gap-6 pt-4 bg-black/80 pb-2">
+      {/* ✅ উপরে এখন পরিষ্কার - নীল দাগের Status/Creator/Trending উপরে আর নেই, সব নিচে স্ট্যাটাসে চলে গেছে */}
+      <div className="fixed left-1/2 top-0 z-40 flex w-full max-w-[420px] -translate-x-1/2 justify-center gap-6 pt-4 pb-2 bg-black">
         <button onClick={() => setTab("following")} className={tab === "following" ? "text-[15px] font-bold text-white" : "text-[15px] text-white/60"}>Following</button>
         <button onClick={() => setTab("foryou")} className={tab === "foryou" ? "text-[15px] font-bold text-white" : "text-[15px] text-white/60"}>For You</button>
       </div>
-      <div className="pt-12">
-        {/* Facebook-এর মতো STATUS - সমস্ত মানুষ দিতে পারবে, সমস্ত মানুষ দেখতে পাবে */}
-        <StatusBar statuses={statuses} onAdd={() => setShowAddStatus(true)} onOpen={(i: number) => setViewStatusIdx(i)} onOpenProfile={(id: string) => setOpenProfileId(id)} />
-        {/* Facebook-এর মতো কারা ভিডিও ছেড়েছে */}
-        <div className="bg-white text-black px-3 py-2 border-b border-zinc-200 flex items-center justify-between">
-          <p className="text-[13px] font-bold">👥 ভিডিও ছেড়েছে ({creators.length} জন) — {creators.reduce((s, c) => s + c.count, 0)} টা ভিডিও</p>
-          <button onClick={() => setShowAllCreators(true)} className="text-[12px] text-[#fe2c55] font-bold">সবাইকে দেখো →</button>
-        </div>
-        <div className="bg-white text-black px-3 pb-3 flex gap-3 overflow-x-auto no-scrollbar">
-          {creators.map((c: any) => (<button key={c.sotId || c.username} onClick={() => setOpenProfileId(c.sotId || c.username.replace("@", ""))} className="flex flex-col items-center shrink-0 w-[64px]"><div className="relative"><div className="h-14 w-14 rounded-full p-[2px] bg-gradient-to-br from-orange-500 to-pink-600"><div className="h-full w-full rounded-full bg-zinc-200 flex items-center justify-center font-bold text-lg">{c.username.replace("@", "")[0].toUpperCase()}</div></div><span className="absolute -bottom-1 -right-1 bg-[#fe2c55] text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">▶ {c.count}</span></div><span className="text-[11px] font-medium max-w-[64px] truncate mt-1">{c.username}</span><span className="text-[10px] text-zinc-500">{c.count} টা ভিডিও</span></button>))}
-        </div>
-        {sounds.length > 0 && (<div className="bg-white text-black px-3 py-2 border-b border-zinc-200"><p className="text-[13px] font-bold">🔥 ট্রেন্ডিং গান - এই গান দিয়ে ভিডিও বানাও</p><div className="flex gap-2 overflow-x-auto no-scrollbar mt-2 pb-1">{sounds.map(([s, cnt]: any) => (<button key={s} onClick={() => setOpenSound(s)} className="shrink-0 bg-zinc-100 rounded-full px-3 py-2 text-[12px] font-bold">🎵 {s} • {cnt} টা ভিডিও</button>))}</div></div>)}
-      </div>
-      <div ref={scrollerRef} onScroll={onScroll} className="snap-feed no-scrollbar h-screen overflow-y-scroll">
+      <div ref={scrollerRef} onScroll={onScroll} className="snap-feed no-scrollbar h-screen overflow-y-scroll pt-12">
         {isLoading ? <div className="flex h-screen items-center justify-center text-white/50">লোড হচ্ছে…</div>
         : visibleItems.length === 0 ? <div className="flex h-screen items-center justify-center text-white/60 text-center px-6">এখনো কাউকে ফলো করোনি<br />For You থেকে + চেপে ফলো করো</div>
         : visibleItems.map((item, i) => (<VideoCard key={item.id} item={item} active={i === activeIndex} muted={muted} onToggleMute={() => setMuted((m) => !m)} liked={likedIds.has(item.id)} onToggleLike={() => void toggleLike(item.id)} onOpenComments={() => setOpenComments(item)} followed={!!item.userId && followSet.has(item.userId)} onFollow={() => void toggleFollow(item.userId)} onOpenProfile={() => setOpenProfileId(item.sotId || item.username.replace("@", ""))} onOpenSound={() => setOpenSound(item.sound)} onOpenGift={() => { if (!user) return void toast.error("গিফট পাঠাতে লগইন করুন"); if (item.id.startsWith("demo-")) return void toast.error("ডেমো ভিডিওতে গিফট পাঠানো যাবে না"); if (item.userId === user.id) return void toast.error("নিজের ভিডিওতে গিফট পাঠানো যাবে না"); setOpenGift(item.id); }} />))}
       </div>
+      {/* ✅ নিচে লাইভের জায়গায় স্ট্যাটাস চাপ দিলে পুরো সিস্টেম */}
+      {showStatusPage && <StatusPage statuses={statuses} creators={creators} sounds={sounds} onClose={() => setShowStatusPage(false)} onAddStatus={() => setShowAddStatus(true)} onOpenStatus={(i: number) => setViewStatusIdx(i)} onOpenProfile={(id: string) => { setShowStatusPage(false); setOpenProfileId(id); }} onOpenSound={(s: string) => { setShowStatusPage(false); setOpenSound(s); }} onShowAllCreators={() => setShowAllCreators(true)} />}
       {showAddStatus && <AddStatusSheet onClose={() => setShowAddStatus(false)} onAdded={(s: any) => setStatuses((p) => [s, ...p])} />}
       {viewStatusIdx !== null && statuses[viewStatusIdx] && <StatusViewer statuses={statuses} index={viewStatusIdx} onClose={() => setViewStatusIdx(null)} onLike={likeStatus} />}
-      {showAllCreators && (
-        <div className="fixed inset-0 z-[105] bg-black/80 flex items-end justify-center" onClick={() => setShowAllCreators(false)}>
-          <div className="w-full max-w-[420px] bg-white rounded-t-3xl p-4 max-h-[75vh] overflow-y-auto text-black" onClick={(e) => e.stopPropagation()}>
-            <div className="flex justify-between"><b>👥 যারা যারা ভিডিও ছেড়েছে ({creators.length} জন)</b><button onClick={() => setShowAllCreators(false)} className="text-2xl px-2">×</button></div>
-            <div className="mt-3 space-y-2">{creators.map((c: any, idx: number) => (<button key={c.sotId || c.username} onClick={() => { setShowAllCreators(false); setOpenProfileId(c.sotId || c.username.replace("@", "")); }} className="w-full flex items-center gap-3 bg-zinc-100 rounded-2xl p-3 text-left"><span className="text-zinc-400 font-bold text-sm w-5">{idx + 1}</span><div className="h-12 w-12 shrink-0 rounded-full bg-gradient-to-br from-orange-500 to-pink-600 flex items-center justify-center font-bold text-lg text-white">{c.username.replace("@", "")[0].toUpperCase()}</div><div className="flex-1 min-w-0"><p className="font-bold text-[14px] truncate">{c.username}</p><p className="text-[12px] text-zinc-500">ID: {c.sotId || c.username} • {c.totalLikes} লাইক</p></div><div className="text-right shrink-0"><p className="font-bold text-[14px] text-[#fe2c55]">{c.count} টা</p><p className="text-[11px] text-zinc-500">ভিডিও</p></div></button>))}</div>
-          </div>
-        </div>
-      )}
+      {showAllCreators && (<div className="fixed inset-0 z-[115] bg-black/80 flex items-end justify-center" onClick={() => setShowAllCreators(false)}><div className="w-full max-w-[420px] bg-white rounded-t-3xl p-4 max-h-[75vh] overflow-y-auto text-black" onClick={(e) => e.stopPropagation()}><div className="flex justify-between"><b>👥 যারা যারা ভিডিও ছেড়েছে ({creators.length} জন)</b><button onClick={() => setShowAllCreators(false)} className="text-2xl px-2">×</button></div><div className="mt-3 space-y-2">{creators.map((c: any, idx: number) => (<button key={c.sotId || c.username} onClick={() => { setShowAllCreators(false); setShowStatusPage(false); setOpenProfileId(c.sotId || c.username.replace("@", "")); }} className="w-full flex items-center gap-3 bg-zinc-100 rounded-2xl p-3 text-left"><span className="text-zinc-400 font-bold text-sm w-5">{idx + 1}</span><div className="h-12 w-12 shrink-0 rounded-full bg-gradient-to-br from-orange-500 to-pink-600 flex items-center justify-center font-bold text-lg text-white">{c.username.replace("@", "")[0].toUpperCase()}</div><div className="flex-1 min-w-0"><p className="font-bold text-[14px] truncate">{c.username}</p><p className="text-[12px] text-zinc-500">ID: {c.sotId || c.username} • {c.totalLikes} লাইক</p></div><div className="text-right shrink-0"><p className="font-bold text-[14px] text-[#fe2c55]">{c.count} টা</p><p className="text-[11px] text-zinc-500">ভিডিও</p></div></button>))}</div></div></div>)}
       {openComments && <UniversalComments video={openComments} open onClose={() => setOpenComments(null)} onCountChange={(d: number) => setCommentDelta((x) => ({ ...x, [openComments.id]: (x[openComments.id] ?? 0) + d }))} />}
       {openProfileId && <ProfileView sotId={openProfileId} onClose={() => setOpenProfileId(null)} allVideos={items} onOpenVideo={(v: any) => { setOpenProfileId(null); setFullVideo(v); }} />}
       {fullVideo && (<div className="fixed inset-0 z-[95] bg-black flex flex-col"><button onClick={() => setFullVideo(null)} className="absolute top-4 right-4 z-10 bg-black/60 p-2 rounded-full text-white"><X /></button><video src={fullVideo.url} controls autoPlay loop className="flex-1 w-full object-contain" /><div className="p-4 text-white"><p className="font-bold">{fullVideo.username} • ID: {fullVideo.sotId || fullVideo.username}</p><p className="text-[13px] mt-1">{fullVideo.caption}</p><div className="flex gap-5 mt-3"><button onClick={() => toggleLike(fullVideo.id)} className="flex items-center gap-1"><Heart className={`h-6 w-6 ${likedIds.has(fullVideo.id) ? "fill-red-500 text-red-500" : "text-white"}`} />{fullVideo.likes}</button><button onClick={() => setOpenComments(fullVideo)} className="flex items-center gap-1"><MessageCircle className="h-6 w-6" /> কমেন্ট</button><button onClick={() => downloadWithWatermark(fullVideo)} className="flex items-center gap-1"><Download className="h-6 w-6" /> ডাউনলোড</button></div></div></div>)}
@@ -327,7 +294,8 @@ function FeedPage() {
       {showCreateWithSound && <CreateWithSoundSheet sound={showCreateWithSound} onClose={() => setShowCreateWithSound(null)} />}
       {openGift && <GiftSheet videoId={openGift} open onClose={() => setOpenGift(null)} onSent={setGiftAnim} />}
       <GiftAnimation gift={giftAnim} onDone={() => setGiftAnim(null)} />
-      <BottomNav />
+      {/* ✅ একই ফাইলে BottomNav - লাইভ নেই, স্ট্যাটাস আছে */}
+      <BottomNav statusCount={statuses.length} onOpenStatus={() => setShowStatusPage(true)} />
     </div>
   );
 }
