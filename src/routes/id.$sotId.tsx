@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useState, useRef } from 'react'
 
-export const Route = createFileRoute('/live/$roomId')({
+export const Route = createFileRoute('/id/$sotId')({
   component: SOTTOKLiveRoom,
 })
 

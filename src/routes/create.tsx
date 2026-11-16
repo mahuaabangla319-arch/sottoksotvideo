@@ -1,5 +1,13 @@
- import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState, useRef, useEffect } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { supabase } from '@/integrations/supabase/client'
+import { useAuth } from '@/lib/auth'
+
+const pickMime = (): string => {
+  if (typeof MediaRecorder === 'undefined') return ''
+  return ['video/webm;codecs=vp8,opus', 'video/webm', 'video/mp4'].find((m) => MediaRecorder.isTypeSupported(m)) ?? ''
+}
 
 export const Route = createFileRoute('/create')({
   component: CameraAllWorking,
@@ -7,6 +15,17 @@ export const Route = createFileRoute('/create')({
 
 function CameraAllWorking() {
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const queryClient = useQueryClient()
+  const recCtxRef = useRef<AudioContext | null>(null)
+  const recAudioRef = useRef<HTMLAudioElement | null>(null)
+  const [galleryUrl, setGalleryUrl] = useState('')
+  const [galleryDuration, setGalleryDuration] = useState(0)
+  const [trimStart, setTrimStart] = useState(0)
+  const [trimEnd, setTrimEnd] = useState(0)
+  const [musicFileUrl, setMusicFileUrl] = useState('')
+  const [musicFileName, setMusicFileName] = useState('')
+  const [processing, setProcessing] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
@@ -22,7 +41,7 @@ function CameraAllWorking() {
   const [filter, setFilter] = useState('Normal')
   const [timer, setTimer] = useState('Off')
   const [countdown, setCountdown] = useState(0)
-  const [panel, setPanel] = useState<'none' | 'speed' | 'beauty' | 'filters' | 'timer' | 'more' | 'effects' | 'post' | 'music' | 'text'>('none')
+  const [panel, setPanel] = useState<'none' | 'speed' | 'beauty' | 'filters' | 'timer' | 'more' | 'effects' | 'post' | 'music' | 'text' | 'gallery'>('none')
   const [selectedEffect, setSelectedEffect] = useState('')
   const [caption, setCaption] = useState('')
   const [uploadProgress, setUploadProgress] = useState(0)
@@ -105,11 +124,31 @@ function CameraAllWorking() {
     if (!stream) { alert('আগে ক্যামেরা চালু হতে দাও'); return }
     try {
       chunksRef.current = []
-      const rec = new MediaRecorder(stream, { mimeType: 'video/webm' })
+      let recStream: MediaStream = stream
+      if (musicFileUrl) {
+        const ac = new AudioContext()
+        const dest = ac.createMediaStreamDestination()
+        if (stream.getAudioTracks().length) ac.createMediaStreamSource(stream).connect(dest)
+        const audioEl = new Audio(musicFileUrl)
+        const ms = ac.createMediaElementSource(audioEl)
+        ms.connect(dest)
+        ms.connect(ac.destination)
+        void ac.resume()
+        void audioEl.play().catch(() => {})
+        recCtxRef.current = ac
+        recAudioRef.current = audioEl
+        recStream = new MediaStream([...stream.getVideoTracks(), ...dest.stream.getAudioTracks()])
+      }
+      const mime = pickMime()
+      const rec = mime ? new MediaRecorder(recStream, { mimeType: mime }) : new MediaRecorder(recStream)
       mediaRecorderRef.current = rec
       rec.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data) }
       rec.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: 'video/webm' })
+        const blob = new Blob(chunksRef.current, { type: rec.mimeType || 'video/webm' })
+        recAudioRef.current?.pause()
+        void recCtxRef.current?.close().catch(() => {})
+        recAudioRef.current = null
+        recCtxRef.current = null
         setRecordedBlob(blob)
         setPanel('post')
       }
@@ -159,42 +198,114 @@ function CameraAllWorking() {
     return 1
   }
 
+  const onPickGalleryVideo = (file: File | undefined) => {
+    if (!file) return
+    if (galleryUrl) URL.revokeObjectURL(galleryUrl)
+    setGalleryUrl(URL.createObjectURL(file))
+    setTrimStart(0)
+    setTrimEnd(0)
+    setGalleryDuration(0)
+  }
+
+  const onPickMusicFile = (file: File | undefined) => {
+    if (!file) return
+    if (musicFileUrl) URL.revokeObjectURL(musicFileUrl)
+    setMusicFileUrl(URL.createObjectURL(file))
+    setMusicFileName(file.name)
+    setMusic('🎵 ' + file.name)
+    setPanel('none')
+  }
+
+  // গ্যালারির ভিডিও কেটে (trim) গান সহ নতুন ভিডিও বানায়
+  const processGallery = async () => {
+    if (!galleryUrl || processing) return
+    setProcessing(true)
+    try {
+      const v = document.createElement('video')
+      v.src = galleryUrl
+      v.playsInline = true
+      await new Promise<void>((res, rej) => { v.onloadedmetadata = () => res(); v.onerror = () => rej(new Error('video')) })
+      const end = trimEnd > trimStart ? trimEnd : v.duration
+      v.currentTime = trimStart
+      await new Promise<void>((res) => { v.onseeked = () => res() })
+      const canvas = document.createElement('canvas')
+      canvas.width = v.videoWidth || 720
+      canvas.height = v.videoHeight || 1280
+      const c2 = canvas.getContext('2d')
+      if (!c2) throw new Error('canvas')
+      const ac = new AudioContext()
+      const dest = ac.createMediaStreamDestination()
+      let audioEl: HTMLAudioElement | null = null
+      if (musicFileUrl) {
+        v.muted = true
+        audioEl = new Audio(musicFileUrl)
+        ac.createMediaElementSource(audioEl).connect(dest)
+      } else {
+        ac.createMediaElementSource(v).connect(dest)
+      }
+      const out = new MediaStream([...canvas.captureStream(30).getVideoTracks(), ...dest.stream.getAudioTracks()])
+      const mime = pickMime()
+      const rec = mime ? new MediaRecorder(out, { mimeType: mime }) : new MediaRecorder(out)
+      const parts: Blob[] = []
+      rec.ondataavailable = (e) => { if (e.data.size > 0) parts.push(e.data) }
+      const finished = new Promise<Blob>((res) => { rec.onstop = () => res(new Blob(parts, { type: rec.mimeType || 'video/webm' })) })
+      await ac.resume()
+      rec.start()
+      await v.play()
+      if (audioEl) void audioEl.play().catch(() => {})
+      const draw = () => {
+        if (v.currentTime >= end || v.ended || rec.state !== 'recording') {
+          v.pause()
+          audioEl?.pause()
+          if (rec.state === 'recording') rec.stop()
+          return
+        }
+        c2.filter = getFilterStyle()
+        c2.drawImage(v, 0, 0, canvas.width, canvas.height)
+        requestAnimationFrame(draw)
+      }
+      draw()
+      const blob = await finished
+      void ac.close().catch(() => {})
+      setRecordedBlob(blob)
+      setRecordTime(Math.round(end - trimStart))
+      setPanel('post')
+    } catch {
+      alert('এই ভিডিও কাটা যায়নি, অন্য ভিডিও চেষ্টা করুন')
+    } finally {
+      setProcessing(false)
+    }
+  }
+
   const fastUpload = async () => {
-    if (!recordedBlob && !photoUrl) { alert('আগে ভিডিও / ছবি তোলো ভাই'); return }
+    if (!recordedBlob) { alert('আগে ভিডিও রেকর্ড করুন বা গ্যালারি থেকে নিন'); return }
+    if (!user) { navigate({ to: '/login' }); return }
     setIsUploading(true)
-    setUploadProgress(0)
-    for (let i = 0; i <= 100; i += 20) {
-      await new Promise(r => setTimeout(r, 80))
-      setUploadProgress(i)
+    setUploadProgress(30)
+    try {
+      const ext = recordedBlob.type.includes('mp4') ? 'mp4' : 'webm'
+      const path = `${user.id}/${Date.now()}.${ext}`
+      const { error: upErr } = await supabase.storage.from('videos').upload(path, recordedBlob, { contentType: recordedBlob.type || 'video/webm' })
+      if (upErr) throw upErr
+      setUploadProgress(80)
+      const { error: insErr } = await supabase.from('videos').insert({
+        user_id: user.id,
+        video_url: path,
+        caption: caption || `SOT TOK Video ${selectedEffect} ${sticker}`.trim(),
+        sound_name: musicFileName || (music.includes('কোনো গান নেই') ? 'Original sound' : music),
+        visibility: 'public',
+      })
+      if (insErr) throw insErr
+      setUploadProgress(100)
+      await queryClient.invalidateQueries({ queryKey: ['feed'] })
+      await queryClient.invalidateQueries({ queryKey: ['my-videos'] })
+      alert('✅ ভিডিও পোস্ট হয়ে গেছে! সবাই এখন দেখতে পারবে।')
+      navigate({ to: '/feed' })
+    } catch {
+      alert('আপলোড হয়নি, আবার চেষ্টা করুন')
+    } finally {
+      setIsUploading(false)
     }
-    let videoUrl = ''
-    if (recordedBlob) videoUrl = URL.createObjectURL(recordedBlob)
-    const newPost = {
-      id: Date.now().toString(),
-      user: getUserName(),
-      email: localStorage.getItem('vigo_user_email') || '',
-      videoUrl: videoUrl || photoUrl,
-      photoUrl: photoUrl,
-      caption: caption || `SOT TOK Video 🔥 ${selectedEffect} ${sticker}`,
-      likes: 0,
-      comments: [],
-      time: 'এখনই',
-      filter: filter,
-      speed: speed,
-      beauty: beauty,
-      effect: selectedEffect,
-      music: music,
-      textOverlay: textOverlay,
-      sticker: sticker,
-    }
-    const oldFeed = JSON.parse(localStorage.getItem('sot_tok_feed') || '[]')
-    const newFeed = [newPost, ...oldFeed]
-    localStorage.setItem('sot_tok_feed', JSON.stringify(newFeed))
-    localStorage.setItem('vigo_feed', JSON.stringify(newFeed))
-    setIsUploading(false)
-    setUploadProgress(100)
-    alert(`✅ পোস্ট হয়ে গেছে!\nফিল্টার: ${filter} • Speed: ${speed} • Beauty: ${beauty}% • Effect: ${selectedEffect} • গান: ${music}`)
-    navigate({ to: '/' })
   }
 
   return (
@@ -252,6 +363,7 @@ function CameraAllWorking() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <button onClick={() => setPanel('effects')} style={{ background: 'transparent', border: 'none', color: '#fff', textAlign: 'center' }}><div style={{ fontSize: 28 }}>😊</div><span style={{ fontSize: 12 }}>Effects</span></button>
           <button onClick={handleRecord} style={{ width: 72, height: 72, borderRadius: '50%', background: isRecording ? '#fff' : '#ff0000', border: '4px solid #fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 'bold', color: isRecording ? '#ff0000' : '#fff' }}>{isRecording ? 'STOP' : mode === 'Photo' ? '📸' : mode === 'Live' ? 'LIVE' : '●'}</button>
+          <button onClick={() => setPanel('gallery')} style={{ background: 'transparent', border: 'none', color: '#fff', textAlign: 'center' }}><div style={{ fontSize: 28 }}>🖼️</div><span style={{ fontSize: 12 }}>Gallery</span></button>
           <button onClick={() => setPanel('music')} style={{ background: 'transparent', border: 'none', color: '#fff', textAlign: 'center' }}><div style={{ fontSize: 28 }}>🎵</div><span style={{ fontSize: 12 }}>Music</span></button>
         </div>
         <div style={{ display: 'flex', justifyContent: 'center', gap: 24 }}>
@@ -264,7 +376,7 @@ function CameraAllWorking() {
 
       {panel !== 'none' && (
         <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: '#111b21', borderRadius: '20px 20px 0 0', padding: 16, zIndex: 50, maxHeight: '70vh', overflowY: 'auto' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}><b>{panel === 'speed' ? '⏱️ Speed - সত্যি কাজ করবে' : panel === 'beauty' ? '🪄 Beauty - মুখে লাগবে' : panel === 'filters' ? '✨ Filters - ভিডিওতে লাগবে' : panel === 'timer' ? '⏰ Timer - কাউন্টডাউন হবে' : panel === 'more' ? '••• More - সব চালু' : panel === 'post' ? '📝 পোস্ট করো' : panel === 'music' ? '🎵 Music' : panel === 'text' ? '✍️ Text' : '😊 Effects - ভিডিওতে দেখাবে'}</b><button onClick={() => setPanel('none')} style={{ background: '#202c33', color: '#fff', border: 'none', borderRadius: '50%', width: 28, height: 28 }}>✕</button></div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}><b>{panel === 'speed' ? '⏱️ Speed - সত্যি কাজ করবে' : panel === 'beauty' ? '🪄 Beauty - মুখে লাগবে' : panel === 'filters' ? '✨ Filters - ভিডিওতে লাগবে' : panel === 'timer' ? '⏰ Timer - কাউন্টডাউন হবে' : panel === 'more' ? '••• More - সব চালু' : panel === 'post' ? '📝 পোস্ট করো' : panel === 'music' ? '🎵 Music' : panel === 'text' ? '✍️ Text' : panel === 'gallery' ? '🖼️ Gallery' : '😊 Effects - ভিডিওতে দেখাবে'}</b><button onClick={() => setPanel('none')} style={{ background: '#202c33', color: '#fff', border: 'none', borderRadius: '50%', width: 28, height: 28 }}>✕</button></div>
 
           {panel === 'speed' && <div><div style={{ display: 'flex', gap: 8, marginTop: 12 }}>{speeds.map(s => <button key={s} onClick={() => { setSpeed(s); alert(`Speed ${s} লাগানো হয়েছে! ভিডিও এখন ${s} এ হবে।`) }} style={{ padding: '10px 18px', borderRadius: 20, background: speed === s ? '#ff3b5c' : '#202c33', color: '#fff', border: 'none', fontWeight: 'bold' }}>{s}</button>)}</div><p style={{ fontSize: 12, color: '#aaa', marginTop: 8 }}>0.5x = স্লো মোশন, 2x = ফাস্ট মোশন</p></div>}
 
@@ -283,7 +395,38 @@ function CameraAllWorking() {
             <div onClick={() => { setNight(!night); alert(night ? 'Night বন্ধ' : 'Night চালু - আলো বাড়বে') }} style={{ background: night ? '#ff3b5c' : '#202c33', padding: 12, borderRadius: 12 }}><b>🌙 Night</b><div style={{ fontSize: 11, color: '#aaa' }}>{night ? 'চালু' : 'বন্ধ'}</div></div>
           </div>}
 
-          {panel === 'music' && <div style={{ marginTop: 12 }}>{musics.map(m => <button key={m} onClick={() => { setMusic(m); setPanel('none'); alert(`গান লাগানো হয়েছে: ${m}`) }} style={{ width: '100%', padding: 12, borderRadius: 10, background: music === m ? '#ff3b5c' : '#202c33', color: '#fff', border: 'none', marginTop: 6, textAlign: 'left' }}>{m}</button>)}</div>}
+          {panel === 'gallery' && (
+            <div style={{ marginTop: 12 }}>
+              <label style={{ display: 'block', width: '100%', padding: 12, borderRadius: 10, background: '#ff3b5c', color: '#fff', textAlign: 'center', fontWeight: 'bold', boxSizing: 'border-box' }}>
+                📁 গ্যালারি থেকে ভিডিও বাছুন
+                <input type="file" accept="video/*" style={{ display: 'none' }} onChange={e => onPickGalleryVideo(e.target.files?.[0])} />
+              </label>
+              {galleryUrl && (
+                <div style={{ marginTop: 12 }}>
+                  <video src={galleryUrl} controls playsInline style={{ width: '100%', maxHeight: 220, borderRadius: 10, background: '#000' }} onLoadedMetadata={e => { const d = e.currentTarget.duration; setGalleryDuration(d); setTrimStart(0); setTrimEnd(Math.min(d, 60)) }} />
+                  {galleryDuration > 0 && (
+                    <div style={{ marginTop: 8, fontSize: 13 }}>
+                      <div>শুরু: {trimStart.toFixed(1)}s</div>
+                      <input type="range" min={0} max={galleryDuration} step={0.1} value={trimStart} onChange={e => { const s = Number(e.target.value); setTrimStart(Math.min(s, Math.max(0, trimEnd - 0.5))) }} style={{ width: '100%' }} />
+                      <div>শেষ: {trimEnd.toFixed(1)}s</div>
+                      <input type="range" min={0} max={galleryDuration} step={0.1} value={trimEnd} onChange={e => { const t = Number(e.target.value); setTrimEnd(Math.max(t, trimStart + 0.5)) }} style={{ width: '100%' }} />
+                      <p style={{ fontSize: 12, color: '#aaa' }}>কাটা অংশ: {Math.max(0, trimEnd - trimStart).toFixed(1)} সেকেন্ড{musicFileName ? ` • গান: ${musicFileName}` : ''}</p>
+                      <button onClick={() => setPanel('music')} style={{ width: '100%', padding: 10, borderRadius: 10, background: '#202c33', color: '#fff', border: 'none', marginBottom: 8 }}>🎵 গ্যালারি থেকে গান যোগ করুন</button>
+                      <button onClick={processGallery} disabled={processing} style={{ width: '100%', padding: 12, borderRadius: 10, background: '#ff3b5c', color: '#fff', border: 'none', fontWeight: 'bold' }}>{processing ? 'তৈরি হচ্ছে... অপেক্ষা করুন' : '✂️ কেটে ভিডিও তৈরি করুন'}</button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {panel === 'music' && <div style={{ marginTop: 12 }}>
+            <label style={{ display: 'block', width: '100%', padding: 12, borderRadius: 10, background: '#ff3b5c', color: '#fff', textAlign: 'center', fontWeight: 'bold', boxSizing: 'border-box' }}>
+              📁 গ্যালারি থেকে গান বাছুন
+              <input type="file" accept="audio/*" style={{ display: 'none' }} onChange={e => onPickMusicFile(e.target.files?.[0])} />
+            </label>
+            {musicFileName && <p style={{ fontSize: 12, color: '#aaa' }}>বাছা গান: {musicFileName}</p>}
+            {musics.map(m => <button key={m} onClick={() => { setMusic(m); setPanel('none'); alert(`গান লাগানো হয়েছে: ${m}`) }} style={{ width: '100%', padding: 12, borderRadius: 10, background: music === m ? '#ff3b5c' : '#202c33', color: '#fff', border: 'none', marginTop: 6, textAlign: 'left' }}>{m}</button>)}</div>}
 
           {panel === 'text' && <div style={{ marginTop: 12 }}><input value={textOverlay} onChange={e => setTextOverlay(e.target.value)} placeholder="ভিডিওতে কি লেখা দেখাবে? যেমন শুভ অষ্টমী 🙏" style={{ width: '100%', padding: 12, borderRadius: 10, background: '#202c33', color: '#fff', border: 'none', boxSizing: 'border-box' }} /><button onClick={() => setPanel('none')} style={{ width: '100%', marginTop: 10, padding: 12, borderRadius: 10, background: '#ff3b5c', color: '#fff', border: 'none', fontWeight: 'bold' }}>✅ লেখা লাগাও</button></div>}
 
@@ -293,7 +436,7 @@ function CameraAllWorking() {
             <div style={{ marginTop: 12 }}>
               <p style={{ fontSize: 13 }}>✅ ভিডিও রেডি! {recordTime} সেকেন্ড • ফিল্টার: {filter} • Speed: {speed} • Beauty: {beauty}% • Effect: {selectedEffect} • গান: {music}</p>
               {photoUrl && <img src={photoUrl} style={{ width: '100%', borderRadius: 10, marginBottom: 8 }} />}
-              <input value={caption} onChange={e => setCaption(e.target.value)} placeholder="Caption লেখো... শুভ অষ্টমী 🙏" style={{ width: '100%', padding: 12, borderRadius: 10, background: '#202c33', color: '#fff', border: 'none', boxSizing: 'border-box' }} />
+              <input value={caption} onChange={e => setCaption(e.target.value)} placeholder="Caption লেখো... শুভ অষ্টমী 🙏" style={{ fontSize: 16, width: '100%', padding: 12, borderRadius: 10, background: '#202c33', color: '#fff', border: 'none', boxSizing: 'border-box' }} />
               {isUploading && <div style={{ marginTop: 12 }}><div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}><span>আপলোড হচ্ছে...</span><span>{uploadProgress}%</span></div><div style={{ background: '#202c33', height: 8, borderRadius: 10, marginTop: 6, overflow: 'hidden' }}><div style={{ width: `${uploadProgress}%`, background: '#ff3b5c', height: '100%' }} /></div></div>}
               <button onClick={fastUpload} disabled={isUploading} style={{ width: '100%', marginTop: 12, background: '#ff3b5c', color: '#fff', border: 'none', padding: 13, borderRadius: 20, fontWeight: 'bold' }}>{isUploading ? `আপলোড হচ্ছে... ${uploadProgress}%` : '🚀 ফাস্ট পোস্ট করো'}</button>
               <button onClick={() => setPanel('none')} style={{ width: '100%', marginTop: 8, background: '#202c33', color: '#fff', border: 'none', padding: 12, borderRadius: 20 }}>আবার রেকর্ড করো</button>

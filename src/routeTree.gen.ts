@@ -25,6 +25,7 @@ import { Route as LiveIndexRouteImport } from './routes/live.index'
 import { Route as LiveRoomIdRouteImport } from './routes/live.$roomId'
 import { Route as LiveCreateRouteImport } from './routes/live.create'
 import { Route as RoomsIndexRouteImport } from './routes/rooms.index'
+import { Route as RoomsRoomIdRouteImport } from './routes/rooms.$roomId'
 import { Route as RoomsCreateRouteImport } from './routes/rooms.create'
 
 const IndexRoute = IndexRouteImport.update({
@@ -107,6 +108,11 @@ const RoomsIndexRoute = RoomsIndexRouteImport.update({
   path: '/rooms/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RoomsRoomIdRoute = RoomsRoomIdRouteImport.update({
+  id: '/rooms/$roomId',
+  path: '/rooms/$roomId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RoomsCreateRoute = RoomsCreateRouteImport.update({
   id: '/rooms/create',
   path: '/rooms/create',
@@ -127,6 +133,7 @@ export interface FileRoutesByFullPath {
   '/id/$sotId': typeof IdSotIdRoute
   '/live/$roomId': typeof LiveRoomIdRoute
   '/live/create': typeof LiveCreateRoute
+  '/rooms/$roomId': typeof RoomsRoomIdRoute
   '/rooms/create': typeof RoomsCreateRoute
   '/chat/': typeof ChatIndexRoute
   '/live/': typeof LiveIndexRoute
@@ -146,6 +153,7 @@ export interface FileRoutesByTo {
   '/id/$sotId': typeof IdSotIdRoute
   '/live/$roomId': typeof LiveRoomIdRoute
   '/live/create': typeof LiveCreateRoute
+  '/rooms/$roomId': typeof RoomsRoomIdRoute
   '/rooms/create': typeof RoomsCreateRoute
   '/chat': typeof ChatIndexRoute
   '/live': typeof LiveIndexRoute
@@ -166,6 +174,7 @@ export interface FileRoutesById {
   '/id/$sotId': typeof IdSotIdRoute
   '/live/$roomId': typeof LiveRoomIdRoute
   '/live/create': typeof LiveCreateRoute
+  '/rooms/$roomId': typeof RoomsRoomIdRoute
   '/rooms/create': typeof RoomsCreateRoute
   '/chat/': typeof ChatIndexRoute
   '/live/': typeof LiveIndexRoute
@@ -187,6 +196,7 @@ export interface FileRouteTypes {
     | '/id/$sotId'
     | '/live/$roomId'
     | '/live/create'
+    | '/rooms/$roomId'
     | '/rooms/create'
     | '/chat/'
     | '/live/'
@@ -206,6 +216,7 @@ export interface FileRouteTypes {
     | '/id/$sotId'
     | '/live/$roomId'
     | '/live/create'
+    | '/rooms/$roomId'
     | '/rooms/create'
     | '/chat'
     | '/live'
@@ -225,6 +236,7 @@ export interface FileRouteTypes {
     | '/id/$sotId'
     | '/live/$roomId'
     | '/live/create'
+    | '/rooms/$roomId'
     | '/rooms/create'
     | '/chat/'
     | '/live/'
@@ -245,6 +257,7 @@ export interface RootRouteChildren {
   IdSotIdRoute: typeof IdSotIdRoute
   LiveRoomIdRoute: typeof LiveRoomIdRoute
   LiveCreateRoute: typeof LiveCreateRoute
+  RoomsRoomIdRoute: typeof RoomsRoomIdRoute
   RoomsCreateRoute: typeof RoomsCreateRoute
   ChatIndexRoute: typeof ChatIndexRoute
   LiveIndexRoute: typeof LiveIndexRoute
@@ -365,6 +378,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RoomsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/rooms/$roomId': {
+      id: '/rooms/$roomId'
+      path: '/rooms/$roomId'
+      fullPath: '/rooms/$roomId'
+      preLoaderRoute: typeof RoomsRoomIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/rooms/create': {
       id: '/rooms/create'
       path: '/rooms/create'
@@ -389,6 +409,7 @@ const rootRouteChildren: RootRouteChildren = {
   IdSotIdRoute: IdSotIdRoute,
   LiveRoomIdRoute: LiveRoomIdRoute,
   LiveCreateRoute: LiveCreateRoute,
+  RoomsRoomIdRoute: RoomsRoomIdRoute,
   RoomsCreateRoute: RoomsCreateRoute,
   ChatIndexRoute: ChatIndexRoute,
   LiveIndexRoute: LiveIndexRoute,
