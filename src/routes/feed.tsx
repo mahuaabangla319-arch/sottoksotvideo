@@ -6,7 +6,6 @@ import { Heart, MessageCircle, Share2, Bookmark, Plus, Music2, Check, Download, 
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { BottomNav } from "@/components/BottomNav";
-import { CommentsSheet } from "@/components/CommentsSheet";
 import { GiftSheet } from "@/components/GiftSheet";
 import { GiftAnimation } from "@/components/GiftAnimation";
 import { useAuth } from "@/lib/auth";
@@ -138,7 +137,7 @@ async function downloadWithWatermark(item: FeedItem) {
       const w = ctx.measureText(text).width + 90;
       ctx.fillStyle = 'rgba(0,0,0,0.6)';
       ctx.beginPath();
-      // @ts-ignore - roundRect সব ব্রাউজারে আছে
+      // @ts-ignore
       if (ctx.roundRect) ctx.roundRect(canvas.width - w - 20, y, w, 52, 26); else ctx.rect(canvas.width - w - 20, y, w, 52);
       ctx.fill();
       if (logo.complete && logo.naturalWidth) ctx.drawImage(logo, canvas.width - w - 10, y + 4, 44, 44);
@@ -150,6 +149,81 @@ async function downloadWithWatermark(item: FeedItem) {
   } catch {
     void downloadVideo(item.url, `sottok-${item.id.slice(0, 8)}`);
   }
+}
+
+// ===== SOT TOK - সবার ভিডিওতে সবাই কমেন্ট করতে পারবে =====
+function UniversalComments({ videoId, open, onClose, onCountChange }: any) {
+  const { user } = useAuth();
+  const [text, setText] = useState("");
+  const [list, setList] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!open) return;
+    (async () => {
+      let all: any[] = [];
+      try {
+        const { data } = await supabase.from("comments")
+          .select("*, profiles(username)").eq("video_id", videoId)
+          .order("created_at", { ascending: false });
+        if (data) all = [...data];
+      } catch {}
+      const local = JSON.parse(localStorage.getItem(`sottok_comments_${videoId}`) || "[]");
+      // লোকালটা আগে দেখাও, তারপর সার্ভারেরটা
+      setList([...local, ...all]);
+    })();
+  }, [videoId, open]);
+
+  const send = async () => {
+    if (!text.trim()) return;
+    const myName = user?.email?.split("@")[0] || localStorage.getItem("vigo_user_name") || localStorage.getItem("vigo_user_email")?.split("@")[0] || "Guest";
+    const newC = { id: Date.now(), content: text, created_at: new Date().toISOString(), profiles: { username: myName } };
+    setList((p) => [newC, ...p]);
+    const old = JSON.parse(localStorage.getItem(`sottok_comments_${videoId}`) || "[]");
+    localStorage.setItem(`sottok_comments_${videoId}`, JSON.stringify([newC, ...old]));
+    if (user) {
+      try { await supabase.from("comments").insert({ video_id: videoId, user_id: user.id, content: text }); } catch {}
+    }
+    onCountChange?.(1);
+    setText("");
+    toast.success("কমেন্ট হয়ে গেছে ❤️");
+  };
+
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/70" onClick={onClose}>
+      <div className="w-full max-w-[420px] max-h-[70vh] bg-[#111] rounded-t-3xl p-4 flex flex-col text-white" onClick={(e) => e.stopPropagation()}>
+        <div className="flex justify-between items-center">
+          <b>💬 কমেন্ট ({list.length}) - সবাই কমেন্ট করতে পারবে</b>
+          <button onClick={onClose} className="text-2xl leading-none">×</button>
+        </div>
+        <div className="flex-1 overflow-y-auto mt-3 space-y-3 min-h-[150px]">
+          {list.length === 0 && <p className="text-white/50 text-center text-sm mt-6">এখনো কোনো কমেন্ট নেই<br/>তুমিই প্রথম কমেন্ট করো 👇</p>}
+          {list.map((c: any) => (
+            <div key={c.id} className="flex gap-2">
+              <div className="h-8 w-8 shrink-0 rounded-full bg-gradient-to-br from-orange-500 to-pink-600 flex items-center justify-center font-bold text-sm">
+                {(c.profiles?.username || "S")[0].toUpperCase()}
+              </div>
+              <div className="bg-zinc-900 rounded-2xl px-3 py-2 flex-1">
+                <p className="text-[12px] font-bold">@{c.profiles?.username || "sottok"}</p>
+                <p className="text-[13px]">{c.content}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="flex gap-2 mt-3">
+          <input
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && send()}
+            placeholder="সবাইকে কিছু বলো... ❤️"
+            className="flex-1 rounded-full bg-zinc-900 px-4 py-2.5 text-sm outline-none text-white"
+          />
+          <button onClick={send} className="rounded-full bg-[#fe2c55] px-5 font-bold text-sm text-white">পাঠাও</button>
+        </div>
+        <p className="text-center text-[11px] text-white/40 mt-2">লগইন না করলেও Guest হিসেবে কমেন্ট করা যাবে</p>
+      </div>
+    </div>
+  );
 }
 
 function useFeed() {
@@ -261,10 +335,9 @@ function VideoCard({
         onClick={onToggleMute}
         className="h-full w-full bg-black object-cover"
       />
-
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-black/40" />
 
-      {/* ===== VIGO STYLE - উপর নিচ ঘোরা WATERMARK (দেখার সময়) ===== */}
+      {/* ===== VIGO STYLE - উপর নিচ ঘোরা WATERMARK ===== */}
       <div className="pointer-events-none absolute right-3 flex items-center gap-1.5 rounded-full bg-black/60 px-2.5 py-1.5 animate-[sotWatermarkMove_6s_ease-in-out_infinite_alternate]">
         <img src="/sottok-logo.png" className="h-5 w-5 rounded-md" alt="SOT TOK" />
         <span className="text-[11px] font-bold text-white">SOT TOK • {item.username} • ID: {item.sotId || item.username}</span>
@@ -297,64 +370,4 @@ function VideoCard({
         <button onClick={onToggleLike} className="flex flex-col items-center gap-1" aria-label="লাইক">
           <Heart className={`h-8 w-8 ${liked ? "fill-red-500 text-red-500" : "text-white"}`} />
           <span className="text-[11px] text-white">{formatCompact(item.likes)}</span>
-        </button>
-        <button onClick={onOpenComments} className="flex flex-col items-center gap-1" aria-label="কমেন্ট">
-          <MessageCircle className="h-8 w-8 text-white" />
-          <span className="text-[11px] text-white">{formatCompact(commentCount)}</span>
-        </button>
-        <button onClick={onOpenGift} className="flex flex-col items-center gap-1" aria-label="গিফট">
-          <GiftIcon className="h-8 w-8 text-yellow-400" />
-          <span className="text-[11px] text-white">গিফট</span>
-        </button>
-        <button onClick={share} className="flex flex-col items-center gap-1" aria-label="শেয়ার">
-          <Share2 className="h-8 w-8 text-white" />
-          <span className="text-[11px] text-white">Share</span>
-        </button>
-        <button
-          onClick={() => { void downloadWithWatermark(item); }}
-          className="flex flex-col items-center gap-1"
-          aria-label="ডাউনলোড"
-        >
-          <Download className="h-8 w-8 text-white" />
-          <span className="text-[11px] text-white">ডাউনলোড</span>
-        </button>
-        <button className="flex flex-col items-center gap-1" aria-label="সেভ">
-          <Bookmark className="h-8 w-8 text-white" />
-          <span className="text-[11px] text-white">Save</span>
-        </button>
-      </div>
-
-      <div className="absolute bottom-24 left-4 right-24">
-        {item.sotId ? (
-          <Link to="/id/$sotId" params={{ sotId: item.sotId }} className="text-[15px] font-semibold text-white">{item.username}</Link>
-        ) : (
-          <p className="text-[15px] font-semibold text-white">{item.username}</p>
-        )}
-        <p className="text-[12px] text-white/70">{formatCompact(item.views)} views</p>
-        <p className="mt-1 text-[13px] text-white">{item.caption}</p>
-        <p className="mt-1 text-[12px] text-white/80">{item.sound}</p>
-        <button className="mt-2 inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1.5 text-[12px] text-white backdrop-blur">
-          <Music2 className="h-3.5 w-3.5" /> Use this sound
-        </button>
-      </div>
-    </section>
-  );
-}
-
-function FeedPage() {
-  const { user } = useAuth();
-  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useFeed();
-  const [muted, setMuted] = useState(true);
-  const [tab, setTab] = useState<"following" | "foryou">("foryou");
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
-  const [likeDelta, setLikeDelta] = useState<Record<string, number>>({});
-  const [openGift, setOpenGift] = useState<string | null>(null);
-  const [giftAnim, setGiftAnim] = useState<{ emoji: string; name: string } | null>(null);
-  const [commentDelta, setCommentDelta] = useState<Record<string, number>>({});
-  const [openComments, setOpenComments] = useState<string | null>(null);
-  const [followSet, setFollowSet] = useState<Set<string>>(new Set());
-  const scrollerRef = useRef<HTMLDivElement>(null);
-
-  const baseItems = useMemo(() => {
-    const rows = (data?.pages ?? []).flat();
+        </
