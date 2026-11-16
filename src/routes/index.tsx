@@ -91,4 +91,72 @@ function LoginAgerMoto() {
       <button onClick={() => openProfile('guest@sottok.com', 'Guest User')} style={{ width: '100%', background: 'transparent', color: '#aaa', border: '1px solid #333', padding: 12, borderRadius: 12, marginTop: 12 }}>👀 গেস্ট হিসেবে দেখে নাও</button>
     </div>
   )
+}// ===== SOT TOK - STEP 1 : গ্যালারি + মিউজিক কেটে ভিডিও বানানো =====
+// পুরোনো কোড মুছবে না, শুধু এইটা নিচে বসাও
+
+import { useState } from "react";
+
+export function SOTUpload() {
+  const [video, setVideo] = useState("");
+  const [music, setMusic] = useState("");
+  const [start, setStart] = useState(0);
+  const [end, setEnd] = useState(15);
+
+  const postVideo = () => {
+    if (!video) return alert("আগে গ্যালারি থেকে ভিডিও নাও");
+    const old = JSON.parse(localStorage.getItem("sottok_videos") || "[]");
+    old.unshift({ id: Date.now(), user: "Tumi", video, music, start, end, cap: "#SOTTOK", likes: 0, comments: [] });
+    localStorage.setItem("sottok_videos", JSON.stringify(old));
+    alert("পাবলিক হয়ে গেছে! এখন হোম + প্রোফাইলে দেখা যাবে");
+  };
+
+  return (
+    <div style={{ background: "#111", padding: 14, borderRadius: 14 }}>
+      <h3>🎬 ভিডিও বানাও</h3>
+      <p>1. গ্যালারি থেকে ভিডিও</p>
+      <input type="file" accept="video/*" onChange={(e) => setVideo(URL.createObjectURL(e.target.files[0]))} />
+      <p style={{ marginTop: 10 }}>2. গ্যালারি থেকে মিউজিক</p>
+      <input type="file" accept="audio/*" onChange={(e) => setMusic(URL.createObjectURL(e.target.files[0]))} />
+      <p style={{ marginTop: 10 }}>3. মিউজিক কেটে নাও</p>
+      <p>শুরু: {start}s <input type="range" min="0" max="60" value={start} onChange={(e) => setStart(e.target.value)} /></p>
+      <p>শেষ: {end}s <input type="range" min="5" max="60" value={end} onChange={(e) => setEnd(e.target.value)} /></p>
+      {video && <video src={video} controls style={{ width: "100%", marginTop: 10 }} />}
+      {music && <audio src={music} controls style={{ width: "100%" }} />}
+      <button onClick={postVideo} style={{ background: "#fe2c55", color: "#fff", border: 0, padding: 12, borderRadius: 10, width: "100%", marginTop: 10 }}>🚀 পাবলিক পোস্ট করো</button>
+    </div>
+  );
+}// ===== SOT TOK - STEP 1 : গ্যালারি + মিউজিক কেটে ভিডিও বানানো =====
+// পুরোনো কোড মুছবে না, শুধু এইটা নিচে বসাও
+
+import { useState } from "react";
+
+export function SOTUpload() {
+  const [video, setVideo] = useState("");
+  const [music, setMusic] = useState("");
+  const [start, setStart] = useState(0);
+  const [end, setEnd] = useState(15);
+
+  const postVideo = () => {
+    if (!video) return alert("আগে গ্যালারি থেকে ভিডিও নাও");
+    const old = JSON.parse(localStorage.getItem("sottok_videos") || "[]");
+    old.unshift({ id: Date.now(), user: "Tumi", video, music, start, end, cap: "#SOTTOK", likes: 0, comments: [] });
+    localStorage.setItem("sottok_videos", JSON.stringify(old));
+    alert("পাবলিক হয়ে গেছে! এখন হোম + প্রোফাইলে দেখা যাবে");
+  };
+
+  return (
+    <div style={{ background: "#111", padding: 14, borderRadius: 14 }}>
+      <h3>🎬 ভিডিও বানাও</h3>
+      <p>1. গ্যালারি থেকে ভিডিও</p>
+      <input type="file" accept="video/*" onChange={(e) => setVideo(URL.createObjectURL(e.target.files[0]))} />
+      <p style={{ marginTop: 10 }}>2. গ্যালারি থেকে মিউজিক</p>
+      <input type="file" accept="audio/*" onChange={(e) => setMusic(URL.createObjectURL(e.target.files[0]))} />
+      <p style={{ marginTop: 10 }}>3. মিউজিক কেটে নাও</p>
+      <p>শুরু: {start}s <input type="range" min="0" max="60" value={start} onChange={(e) => setStart(e.target.value)} /></p>
+      <p>শেষ: {end}s <input type="range" min="5" max="60" value={end} onChange={(e) => setEnd(e.target.value)} /></p>
+      {video && <video src={video} controls style={{ width: "100%", marginTop: 10 }} />}
+      {music && <audio src={music} controls style={{ width: "100%" }} />}
+      <button onClick={postVideo} style={{ background: "#fe2c55", color: "#fff", border: 0, padding: 12, borderRadius: 10, width: "100%", marginTop: 10 }}>🚀 পাবলিক পোস্ট করো</button>
+    </div>
+  );
 }
