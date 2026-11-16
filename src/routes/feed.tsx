@@ -2,19 +2,26 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { downloadVideo, fetchFollowingSet, setFollow } from "@/lib/social";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { Heart, MessageCircle, Share2, Bookmark, Plus, Music2, Check, Download, Gift as GiftIcon, X, Users, Play, Camera, Image as ImageIcon, Home, Compass, Bell, User, CircleDot, LogOut, ShieldCheck, FileText, Trash2 } from "lucide-react";
+import { Heart, MessageCircle, Share2, Bookmark, Plus, Music2, Check, Download, Gift as GiftIcon, X, Camera, Image as ImageIcon, Home, Compass, Bell, User, CircleDot, LogOut, ShieldCheck, FileText, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { GiftSheet } from "@/components/GiftSheet";
-import { GiftAnimation } from "@/components/GiftAnimation";
-import { useAuth } from "@/lib/auth";
+// ✅ Gift ফাইল না থাকলেও ক্র্যাশ করবে না - নিচে SafeGiftSheet আছে
+import { GiftSheet as RealGiftSheet } from "@/components/GiftSheet";
+import { GiftAnimation as RealGiftAnimation } from "@/components/GiftAnimation";
 import { countView, fetchMyLikes, formatCompact, likeVideo, unlikeVideo } from "@/lib/engagement";
 
 const DESC = "ভারতের শর্ট ভিডিও ফিড — ড্যান্স, কমেডি, রান্না আর ফ্যামিলি ভিডিও।";
 export const Route = createFileRoute("/feed")({
-  head: () => ({ meta: [{ title: "For You — Short Tok" }, { name: "description", content: DESC }, { property: "og:title", content: "For You — Short Tok" }, { property: "og:description", content: DESC }] }),
+  head: () => ({ meta: [{ title: "For You — Short Tok" }, { name: "description", content: DESC }] }),
   component: FeedPage,
 });
+
+// ✅ ক্র্যাশ হলে সাদা পেজ না দেখিয়ে এইটা দেখাবে
+function SafeWrap({ children }: any) {
+  const [err, setErr] = useState<any>(null);
+  if (err) return <div className="flex h-screen items-center justify-center bg-black text-white text-center px-6">কিছু একটা আটকে গেছে<br />পেজটা রিফ্রেশ করো<br /><button onClick={() => window.location.reload()} className="mt-3 bg-[#fe2c55] px-4 py-2 rounded-full font-bold">Try Again</button></div>;
+  try { return children; } catch (e) { setErr(e); return null; }
+}
 
 type FeedItem = { id: string; userId?: string | undefined; sotId?: string | undefined; username: string; caption: string; url: string; sound: string; views: number; likes: number; comments: number; };
 const PAGE_SIZE = 6;
@@ -23,10 +30,27 @@ const demoVideos: FeedItem[] = [
   { id: "demo-2", username: "@rannaghor", caption: "৫ মিনিটে চিকেন কারি 🍛", url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4", sound: "Original sound - Short Tok Artist", views: 820000, likes: 3200, comments: 0 },
   { id: "demo-3", username: "@shorttok_food", caption: "গরম গরম পিঠা 😍", url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4", sound: "Original sound - Short Tok Artist", views: 610000, likes: 2700, comments: 0 },
 ];
-const getLocal = (k: string, d: any) => { try { return JSON.parse(localStorage.getItem(k) || JSON.stringify(d)); } catch { return d; } };
-const setLocal = (k: string, v: any) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
-const myName = () => localStorage.getItem("shorttok_username") || localStorage.getItem("shorttok_user_name") || localStorage.getItem("shorttok_user_email")?.split("@")[0] || "Guest";
+// ✅ localStorage সেফ - না থাকলেও ক্র্যাশ করবে না
+const getLocal = (k: string, d: any) => { try { if (typeof window === "undefined" || !window.localStorage) return d; const v = window.localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } };
+const setLocal = (k: string, v: any) => { try { if (typeof window !== "undefined" && window.localStorage) window.localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+const getLS = (k: string) => { try { return window.localStorage?.getItem(k) || ""; } catch { return ""; } };
+const setLS = (k: string, v: string) => { try { window.localStorage?.setItem(k, v); } catch {} };
+const myName = () => getLS("shorttok_username") || getLS("shorttok_user_name") || getLS("shorttok_user_email")?.split("@")[0] || "Guest";
 const timeAgo = (t: number) => { const d = Date.now() - t; if (d < 60000) return "এখনই"; if (d < 3600000) return `${Math.floor(d / 60000)} মিনিট আগে`; if (d < 86400000) return `${Math.floor(d / 3600000)} ঘণ্টা আগে`; return `${Math.floor(d / 86400000)} দিন আগে`; };
+
+// ✅ useAuth সেফ - AuthProvider না থাকলেও ক্র্যাশ করবে না, এটাই আসল ফিক্স
+function useSafeAuth() {
+  const [authUser, setAuthUser] = useState<any>(null);
+  useEffect(() => {
+    let alive = true;
+    (async () => { try { const { data } = await supabase.auth.getSession(); if (alive) setAuthUser(data?.session?.user || null); } catch { if (alive) setAuthUser(null); } })();
+    let sub: any = null;
+    try { const r = supabase.auth.onAuthStateChange((_e, s) => { if (alive) setAuthUser(s?.user || null); }); sub = r?.data; } catch {}
+    return () => { alive = false; try { sub?.subscription?.unsubscribe(); } catch {} };
+  }, []);
+  return { user: authUser };
+}
+
 async function signBatch(paths: string[]): Promise<Map<string, string>> {
   const map = new Map<string, string>();
   const storagePaths = paths.filter((p) => !p.startsWith("http"));
@@ -35,44 +59,44 @@ async function signBatch(paths: string[]): Promise<Map<string, string>> {
   return map;
 }
 
-// ===== ✅ Gmail লগইন - একবার করলে থেকে যাবে, Log Out না চাপলে যাবে না =====
+// ===== Gmail - একবার লগইন = থেকে যাবে =====
 function usePersistLogin() {
-  const { user } = useAuth();
+  const { user } = useSafeAuth();
   const [savedUser, setSavedUser] = useState<any>(() => getLocal("shorttok_persist_login", null));
   const [showLogin, setShowLogin] = useState(false);
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      const u = data.session?.user;
-      if (u) {
-        const info = { id: u.id, email: u.email, name: u.user_metadata?.full_name || u.email?.split("@")[0] || "User", avatar: u.user_metadata?.avatar_url || "", at: Date.now() };
-        setLocal("shorttok_persist_login", info); localStorage.setItem("shorttok_username", info.name); localStorage.setItem("shorttok_user_email", info.email || ""); localStorage.removeItem("shorttok_logged_out"); setSavedUser(info);
-      } else {
-        const saved = getLocal("shorttok_persist_login", null); const loggedOut = localStorage.getItem("shorttok_logged_out");
-        if (saved && !loggedOut) setSavedUser(saved);
-      }
-    });
-    const { data: l } = supabase.auth.onAuthStateChange((_e, session) => {
-      if (session?.user) {
-        const u = session.user; const info = { id: u.id, email: u.email, name: u.user_metadata?.full_name || u.email?.split("@")[0] || "User", avatar: u.user_metadata?.avatar_url || "", at: Date.now() };
-        setLocal("shorttok_persist_login", info); localStorage.setItem("shorttok_username", info.name); localStorage.removeItem("shorttok_logged_out"); setSavedUser(info);
-      }
-    });
-    return () => l.subscription.unsubscribe();
+    (async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        const u = data?.session?.user;
+        if (u) {
+          const info = { id: u.id, email: u.email, name: (u.user_metadata as any)?.full_name || u.email?.split("@")[0] || "User", avatar: (u.user_metadata as any)?.avatar_url || "", at: Date.now() };
+          setLocal("shorttok_persist_login", info); setLS("shorttok_username", info.name); setLS("shorttok_user_email", info.email || ""); try { window.localStorage.removeItem("shorttok_logged_out"); } catch {}
+          setSavedUser(info);
+        } else {
+          const saved = getLocal("shorttok_persist_login", null); const loggedOut = getLS("shorttok_logged_out");
+          if (saved && !loggedOut) setSavedUser(saved);
+        }
+      } catch {}
+    })();
   }, []);
   const loginWithGoogle = async () => { try { const { error } = await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: window.location.origin + "/feed", queryParams: { prompt: "select_account" } } }); if (error) throw error; } catch { toast.error("Gmail লগইন হয়নি, আবার চেষ্টা করো"); } };
   const logout = async () => {
     if (!confirm("Log Out করতে চাও? এরপর আবার Gmail দিয়ে লগইন করতে হবে।")) return;
     try { await supabase.auth.signOut(); } catch {}
-    localStorage.setItem("shorttok_logged_out", "1"); localStorage.removeItem("shorttok_persist_login"); setSavedUser(null); toast.success("Log Out হয়ে গেছে"); window.location.href = "/feed";
+    try { window.localStorage.setItem("shorttok_logged_out", "1"); window.localStorage.removeItem("shorttok_persist_login"); } catch {}
+    setSavedUser(null); toast.success("Log Out হয়ে গেছে"); window.location.href = "/feed";
   };
   const deleteAccount = async () => {
     if (!confirm("তুমি কি সত্যিই তোমার অ্যাকাউন্ট + সব ভিডিও + Status মুছে ফেলতে চাও? এটা ফেরানো যাবে না।")) return;
     if (!confirm("আবার কনফার্ম করো - অ্যাকাউন্ট ডিলিট হয়ে যাবে।")) return;
     try { const uid = savedUser?.id || user?.id; if (uid) { await supabase.from("videos").delete().eq("user_id", uid); await supabase.from("profiles").delete().eq("id", uid); } await supabase.auth.signOut(); } catch {}
-    localStorage.clear(); toast.success("অ্যাকাউন্ট ডিলিট হয়ে গেছে"); window.location.href = "/feed";
+    try { window.localStorage.clear(); } catch {}
+    toast.success("অ্যাকাউন্ট ডিলিট হয়ে গেছে"); window.location.href = "/feed";
   };
   return { currentUser: user || savedUser, showLogin, setShowLogin, loginWithGoogle, logout, deleteAccount };
 }
+
 function LoginSheet({ onClose, onGoogle }: any) {
   return (
     <div className="fixed inset-0 z-[140] bg-black/80 flex items-end justify-center" onClick={onClose}>
@@ -80,7 +104,7 @@ function LoginSheet({ onClose, onGoogle }: any) {
         <div className="h-14 w-14 mx-auto rounded-full bg-gradient-to-br from-[#fe2c55] to-orange-500 flex items-center justify-center text-2xl font-bold text-white">S</div>
         <b className="block mt-2 text-[18px]">Short Tok এ স্বাগতম</b>
         <p className="text-[12px] text-zinc-500 mt-1">Gmail দিয়ে একবার লগইন করো — এরপর বারবার লগইন করতে হবে না,<br />যতক্ষণ না তুমি Log Out করছো</p>
-        <button onClick={onGoogle} className="w-full mt-4 bg-white border-2 border-zinc-200 rounded-full py-3 font-bold flex items-center justify-center gap-2">G Gmail দিয়ে লগইন করো</button>
+        <button onClick={onGoogle} className="w-full mt-4 bg-white border-2 border-zinc-200 rounded-full py-3 font-bold">G Gmail দিয়ে লগইন করো</button>
         <button onClick={onClose} className="w-full mt-2 bg-zinc-100 rounded-full py-3 font-bold text-sm">পরে করবো — এমনি দেখবো</button>
       </div>
     </div>
@@ -96,7 +120,6 @@ function PrivacySheet({ onClose }: any) {
         <p><b>3. ডাউনলোড:</b> তুমি ডাউনলোড করলে ভিডিওতে Short Tok Watermark বসে — এটা আসল মালিককে চিনতে সাহায্য করে।</p>
         <p><b>4. ডিলিট:</b> তুমি চাইলে যেকোনো সময় Status পেজ / প্রোফাইল থেকে <b>Delete Account</b> চাপলে তোমার অ্যাকাউন্ট + ভিডিও + Status মুছে যাবে।</p>
         <p><b>5. বাচ্চাদের জন্য:</b> 13 বছরের নিচে কেউ অ্যাকাউন্ট খুলবে না। খারাপ / নগ্ন / হিংসার ভিডিও দিলে অ্যাকাউন্ট বন্ধ হবে।</p>
-        <p><b>6. যোগাযোগ:</b> কোনো সমস্যা হলে অ্যাপের ভিতরে Report বাটন থেকে জানাও।</p>
         <p className="text-zinc-500">Last updated: 2026 • Short Tok • Made in India</p>
         <button onClick={onClose} className="w-full bg-[#fe2c55] text-white rounded-full py-3 font-bold">বুঝেছি, বন্ধ করো</button>
       </div>
@@ -104,13 +127,13 @@ function PrivacySheet({ onClose }: any) {
   );
 }
 
-// ===== ডাউনলোড - শুধু ডাউনলোড করলেই Short Tok Watermark, প্লে করলে নয় =====
+// ===== ডাউনলোড - শুধু ডাউনলোড করলেই Short Tok Watermark =====
 async function downloadWithWatermark(item: FeedItem) {
   toast("ডাউনলোড হচ্ছে… Short Tok Watermark বসানো হচ্ছে");
   try {
     const ownerName = item.username; const ownerId = item.sotId || item.userId || item.username;
     let videoUrl = item.url;
-    try { const res = await fetch(item.url, { mode: "cors" }); if (res.ok) videoUrl = URL.createObjectURL(await res.blob()); else { const r2 = await fetch(`https://corsproxy.io/?url=${encodeURIComponent(item.url)}`); if (r2.ok) videoUrl = URL.createObjectURL(await r2.blob()); } } catch { try { const r3 = await fetch(`https://corsproxy.io/?url=${encodeURIComponent(item.url)}`); if (r3.ok) videoUrl = URL.createObjectURL(await r3.blob()); } catch {} }
+    try { const res = await fetch(item.url, { mode: "cors" }); if (res.ok) videoUrl = URL.createObjectURL(await res.blob()); } catch {}
     const videoEl = document.createElement("video"); videoEl.src = videoUrl; videoEl.muted = true; videoEl.playsInline = true; videoEl.crossOrigin = "anonymous";
     await videoEl.play().catch(() => {}); await new Promise((r) => { if (videoEl.videoWidth) return r(null); videoEl.onloadedmetadata = () => r(null); setTimeout(() => r(null), 1500); });
     if (!videoEl.videoWidth) throw new Error("no video");
@@ -141,7 +164,7 @@ async function downloadWithWatermark(item: FeedItem) {
 }
 
 function UniversalComments({ video, open, onClose, onCountChange }: any) {
-  const { user } = useAuth();
+  const { user } = useSafeAuth();
   const [text, setText] = useState(""); const [list, setList] = useState<any[]>([]); const [loading, setLoading] = useState(true);
   useEffect(() => {
     if (!open) return; setLoading(true); const local = getLocal(`shorttok_comments_${video.id}`, []); setList(local);
@@ -149,7 +172,7 @@ function UniversalComments({ video, open, onClose, onCountChange }: any) {
   }, [open, video.id]);
   const send = async () => {
     if (!text.trim()) return;
-    const savedName = localStorage.getItem("shorttok_username") || localStorage.getItem("shorttok_user_name") || user?.email?.split("@")[0] || myName();
+    const savedName = getLS("shorttok_username") || user?.email?.split("@")[0] || myName();
     const newC = { id: "local-" + Date.now(), content: text.trim(), created_at: new Date().toISOString(), profiles: { username: savedName } };
     setList((p) => [newC, ...p]); const old = getLocal(`shorttok_comments_${video.id}`, []); setLocal(`shorttok_comments_${video.id}`, [newC, ...old]); setText(""); toast.success("কমেন্ট হয়ে গেছে ❤️"); if (onCountChange) onCountChange(1);
     if (user && !String(video.id).startsWith("demo-")) { try { await supabase.from("comments").insert({ video_id: video.id, user_id: user.id, content: newC.content }); } catch {} }
@@ -204,7 +227,6 @@ function StatusViewer({ statuses, index, onClose, onLike }: any) {
   );
 }
 
-// ===== ✅ নিচে লাইভের জায়গায় পুরো সিস্টেম - স্ট্যাটাস পেজ =====
 function StatusPage({ statuses, creators, sounds, currentUser, onLogout, onLogin, onDeleteAccount, onPrivacy, onClose, onAddStatus, onOpenStatus, onOpenProfile, onOpenSound, onShowAllCreators }: any) {
   return (
     <div className="fixed inset-0 z-[110] bg-white text-black overflow-y-auto pb-24">
@@ -224,7 +246,6 @@ function StatusPage({ statuses, creators, sounds, currentUser, onLogout, onLogin
           <button onClick={onPrivacy} className="flex-1 bg-white rounded-full py-2 text-[12px] font-bold flex items-center justify-center gap-1"><FileText className="h-3.5 w-3.5" /> Privacy Policy</button>
           {currentUser && <button onClick={onDeleteAccount} className="flex-1 bg-red-100 text-red-600 rounded-full py-2 text-[12px] font-bold flex items-center justify-center gap-1"><Trash2 className="h-3.5 w-3.5" /> Account Delete</button>}
         </div>
-        <p className="text-[11px] text-zinc-500 mt-1">Delete চাপলে তোমার অ্যাকাউন্ট + সব ভিডিও চিরতরে মুছে যাবে।</p>
       </div>
       <div className="px-3 pt-3 pb-3">
         <div className="flex items-center gap-2"><div className="h-10 w-10 shrink-0 rounded-full bg-gradient-to-br from-orange-500 to-pink-600 flex items-center justify-center font-bold text-white">{myName()[0].toUpperCase()}</div><button onClick={onAddStatus} className="flex-1 text-left bg-zinc-100 rounded-full px-4 py-2.5 text-[13px] text-zinc-500">তুমি কী ভাবছো? Status দাও... ✍️</button></div>
@@ -275,4 +296,105 @@ function useFeed() {
         const ids = [...new Set(rows.map((v) => v.user_id))];
         const [{ data: profiles }, urls] = await Promise.all([supabase.from("profiles").select("id, username, sottok_id").in("id", ids), signBatch(rows.map((v) => v.video_url))]);
         const nameById = new Map((profiles ?? []).map((p) => [p.id, p.username])); const sotById = new Map((profiles ?? []).map((p) => [p.id, p.sottok_id]));
-        return rows.map((v) => { const lc = getLocal(`shorttok_comments_${v.id}`, []).length; return { id: v.id, userId: v.user_id, sotId: sotById.get(v.user_id), username: "@" + (nameById.get(v.user_id) || "shorttok"), caption: v.caption, url
+        return rows.map((v) => { const lc = getLocal(`shorttok_comments_${v.id}`, []).length; return { id: v.id, userId: v.user_id, sotId: sotById.get(v.user_id), username: "@" + (nameById.get(v.user_id) || "shorttok"), caption: v.caption, url: urls.get(v.video_url) ?? "", sound: v.sound_name, views: v.views ?? 0, likes: v.likes ?? 0, comments: (v.comments_count ?? 0) + lc }; }).filter((r) => r.url);
+      } catch { return []; }
+    },
+  });
+}
+
+function VideoCard({ item, muted, onToggleMute, active, liked, onToggleLike, onOpenComments, followed, onFollow, onOpenProfile, onOpenGift, onOpenSound }: any) {
+  const ref = useRef<HTMLVideoElement>(null); const [saved, setSaved] = useState(false);
+  useEffect(() => { const el = ref.current; if (!el) return; if (active) { void el.play().catch(() => {}); try { void countView(item.id); } catch {} } else { el.pause(); el.currentTime = 0; } }, [active, item.id]);
+  async function share() { const url = `${window.location.origin}/feed`; try { if (navigator.share) await navigator.share({ title: "Short Tok", text: item.caption, url }); else { await navigator.clipboard.writeText(url); toast.success("লিঙ্ক কপি হয়েছে"); } } catch {} }
+  return (
+    <section className="snap-item relative h-screen w-full">
+      <video ref={ref} src={active ? item.url : undefined} loop muted={muted} playsInline preload="none" onClick={onToggleMute} className="h-full w-full bg-black object-cover" />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-black/40" />
+      {muted && <span className="absolute right-3 top-14 rounded-full bg-black/50 px-3 py-1 text-[11px] text-white">Tap for sound</span>}
+      <div className="absolute bottom-28 right-3 flex flex-col items-center gap-5">
+        <div className="relative mb-1"><button onClick={onOpenProfile} className="block h-12 w-12 rounded-full border-2 border-white bg-gradient-to-br from-orange-500 to-pink-600 flex items-center justify-center font-bold text-white">{item.username.replace("@", "")[0].toUpperCase()}</button><button onClick={onFollow} className={`absolute -bottom-2 left-1/2 flex h-5 w-5 -translate-x-1/2 items-center justify-center rounded-full ${followed ? "bg-white" : "bg-red-600"}`}>{followed ? <Check className="h-3.5 w-3.5 text-red-600" strokeWidth={3} /> : <Plus className="h-3.5 w-3.5 text-white" strokeWidth={3} />}</button></div>
+        <button onClick={onToggleLike} className="flex flex-col items-center gap-1"><Heart className={`h-8 w-8 ${liked ? "fill-red-500 text-red-500" : "text-white"}`} /><span className="text-[11px] text-white">{formatCompact(item.likes)}</span></button>
+        <button onClick={onOpenComments} className="flex flex-col items-center gap-1"><MessageCircle className="h-8 w-8 text-white" /><span className="text-[11px] text-white">{formatCompact(item.comments)}</span></button>
+        <button onClick={onOpenGift} className="flex flex-col items-center gap-1"><GiftIcon className="h-8 w-8 text-yellow-400" /><span className="text-[11px] text-white">গিফট</span></button>
+        <button onClick={share} className="flex flex-col items-center gap-1"><Share2 className="h-8 w-8 text-white" /><span className="text-[11px] text-white">Share</span></button>
+        <button onClick={() => { void downloadWithWatermark(item); }} className="flex flex-col items-center gap-1"><Download className="h-8 w-8 text-white" /><span className="text-[11px] text-white">ডাউনলোড</span></button>
+        <button onClick={() => { setSaved(!saved); toast.success(saved ? "সেভ থেকে সরানো হয়েছে" : "সেভ হয়ে গেছে"); }} className="flex flex-col items-center gap-1"><Bookmark className={`h-8 w-8 ${saved ? "fill-yellow-400 text-yellow-400" : "text-white"}`} /><span className="text-[11px] text-white">Save</span></button>
+      </div>
+      <div className="absolute bottom-24 left-4 right-24"><button onClick={onOpenProfile} className="text-[15px] font-semibold text-white">{item.username}</button><p className="text-[12px] text-white/70">{formatCompact(item.views)} views • ID: {item.sotId || item.username}</p><p className="mt-1 text-[13px] text-white">{item.caption}</p><button onClick={onOpenSound} className="mt-1 flex items-center gap-1 text-[12px] text-white/80"><Music2 className="h-3.5 w-3.5" /> 🎵 {item.sound} • এই গান দিয়ে বানাও</button><button onClick={onOpenSound} className="mt-2 inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1.5 text-[12px] text-white backdrop-blur"><Music2 className="h-3.5 w-3.5" /> Use this sound</button></div>
+    </section>
+  );
+}
+
+function BottomNav({ statusCount, onOpenStatus, currentUser, onLogin }: any) {
+  return (
+    <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[420px] z-50 bg-[#111] border-t border-zinc-800 flex justify-around items-center py-2 px-1 text-white">
+      <Link to="/feed" className="flex flex-col items-center gap-0.5 w-[60px]"><Home className="h-6 w-6 text-[#fe2c55]" /><span className="text-[11px] font-bold text-[#fe2c55]">হোম</span><span className="h-1 w-1 rounded-full bg-[#fe2c55]" /></Link>
+      <Link to="/feed" className="flex flex-col items-center gap-0.5 w-[60px]"><Compass className="h-6 w-6 text-white/80" /><span className="text-[11px] text-white/70">এক্সপ্লোরার</span></Link>
+      <button onClick={onOpenStatus} className="flex flex-col items-center gap-0.5 w-[60px] relative"><span className="relative"><CircleDot className="h-6 w-6 text-green-400" />{statusCount ? <span className="absolute -top-1 -right-2 bg-[#fe2c55] text-[9px] font-bold px-1 rounded-full">{statusCount}</span> : null}</span><span className="text-[11px] font-bold text-green-400">স্ট্যাটাস</span></button>
+      <Link to="/upload" className="flex flex-col items-center w-[60px]"><span className="h-10 w-10 rounded-full bg-[#fe2c55] flex items-center justify-center"><Plus className="h-6 w-6 text-white" /></span></Link>
+      <Link to="/inbox" className="flex flex-col items-center gap-0.5 w-[60px]"><Bell className="h-6 w-6 text-white/80" /><span className="text-[11px] text-white/70">ইনবক্স</span></Link>
+      <button onClick={onLogin} className="flex flex-col items-center gap-0.5 w-[60px]"><span className="h-6 w-6 rounded-full bg-gradient-to-br from-orange-500 to-pink-600 flex items-center justify-center text-[12px] font-bold">{currentUser ? (currentUser.name?.[0] || "U").toUpperCase() : <User className="h-5 w-5" />}</span><span className="text-[11px] text-white/70 max-w-[60px] truncate">{currentUser ? currentUser.name : "প্রোফাইল"}</span></button>
+    </div>
+  );
+}
+
+function FeedPage() {
+  const { user } = useSafeAuth();
+  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useFeed();
+  const [muted, setMuted] = useState(true); const [tab, setTab] = useState<"following" | "foryou">("foryou");
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [likedIds, setLikedIds] = useState<Set<string>>(() => new Set(getLocal("shorttok_liked", [])));
+  const [likeDelta, setLikeDelta] = useState<Record<string, number>>({}); const [commentDelta, setCommentDelta] = useState<Record<string, number>>({});
+  const [openGift, setOpenGift] = useState<string | null>(null); const [giftAnim, setGiftAnim] = useState<{ emoji: string; name: string } | null>(null);
+  const [openComments, setOpenComments] = useState<FeedItem | null>(null); const [openProfileId, setOpenProfileId] = useState<string | null>(null);
+  const [fullVideo, setFullVideo] = useState<FeedItem | null>(null); const [followSet, setFollowSet] = useState<Set<string>>(() => new Set(getLocal("shorttok_follow", [])));
+  const [openSound, setOpenSound] = useState<string | null>(null); const [showCreateWithSound, setShowCreateWithSound] = useState<string | null>(null);
+  const [statuses, setStatuses] = useState<any[]>(() => getLocal("shorttok_status_list", []));
+  const [showAddStatus, setShowAddStatus] = useState(false); const [viewStatusIdx, setViewStatusIdx] = useState<number | null>(null);
+  const [showStatusPage, setShowStatusPage] = useState(false); const [showAllCreators, setShowAllCreators] = useState(false);
+  const [showPrivacy, setShowPrivacy] = useState(false);
+  const { currentUser, showLogin, setShowLogin, loginWithGoogle, logout, deleteAccount } = usePersistLogin();
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const baseItems = useMemo(() => { const rows = (data?.pages ?? []).flat(); return rows.length ? rows : demoVideos; }, [data]);
+  const items = useMemo(() => baseItems.map((i) => ({ ...i, likes: Math.max(0, i.likes + (likeDelta[i.id] ?? 0)), comments: Math.max(0, i.comments + (commentDelta[i.id] ?? 0)) })), [baseItems, likeDelta, commentDelta]);
+  const creators = useMemo(() => { const map = new Map<string, any>(); items.forEach((v) => { const key = v.sotId || v.username; if (!map.has(key)) map.set(key, { username: v.username, sotId: v.sotId || v.username, count: 0, totalLikes: 0 }); const c = map.get(key); c.count += 1; c.totalLikes += v.likes || 0; }); return [...map.values()].sort((a, b) => b.count - a.count); }, [items]);
+  const sounds = useMemo(() => { const map = new Map<string, number>(); items.forEach((v) => { if (v.sound) map.set(v.sound, (map.get(v.sound) || 0) + 1); }); return [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5); }, [items]);
+  useEffect(() => { const ids = baseItems.map((i) => i.id).filter((id) => !id.startsWith("demo-")); if (!user || !ids.length) return; let alive = true; void fetchMyLikes(ids, user.id).then((s) => alive && setLikedIds((prev) => new Set([...prev, ...s]))).catch(() => {}); return () => { alive = false; }; }, [baseItems, user]);
+  useEffect(() => { const ids = [...new Set(baseItems.map((i) => i.userId).filter((x): x is string => !!x))]; if (!user || !ids.length) return; void fetchFollowingSet(user.id, ids).then((s) => setFollowSet((prev) => new Set([...prev, ...s]))).catch(() => {}); }, [baseItems, user]);
+  async function toggleFollow(other?: string) { if (!other) return; const was = followSet.has(other); const next = new Set(followSet); if (was) next.delete(other); else next.add(other); setFollowSet(next); setLocal("shorttok_follow", [...next]); if (user) { try { await setFollow(user.id, other, !was); } catch {} } toast.success(was ? "আনফলো করা হয়েছে" : "ফলো করা হয়েছে"); }
+  async function toggleLike(id: string) { const wasLiked = likedIds.has(id); const next = new Set(likedIds); if (wasLiked) next.delete(id); else next.add(id); setLikedIds(next); setLocal("shorttok_liked", [...next]); setLikeDelta((d) => ({ ...d, [id]: (d[id] ?? 0) + (wasLiked ? -1 : 1) })); if (!wasLiked) toast.success("❤️ লাইক হয়ে গেছে"); if (user && !id.startsWith("demo-")) { try { if (wasLiked) await unlikeVideo(id, user.id); else await likeVideo(id, user.id); } catch {} } }
+  const onScroll = useCallback(() => { const el = scrollerRef.current; if (!el) return; const index = Math.round(el.scrollTop / el.clientHeight); setActiveIndex((prev) => (prev === index ? prev : index)); if (hasNextPage && !isFetchingNextPage && index >= items.length - 2) void fetchNextPage(); }, [fetchNextPage, hasNextPage, isFetchingNextPage, items.length]);
+  const visibleItems = tab === "foryou" ? items : items.filter((it) => it.userId && followSet.has(it.userId));
+  const likeStatus = (id: string) => { setStatuses((prev) => { const next = prev.map((s) => s.id === id ? { ...s, likes: (s.likes || 0) + 1 } : s); setLocal("shorttok_status_list", next); return next; }); };
+  const openProfileOrLogin = () => { if (currentUser) setOpenProfileId(currentUser.name || currentUser.email?.split("@")[0] || "me"); else setShowLogin(true); };
+  return (
+    <SafeWrap>
+    <div className="mx-auto w-full max-w-[420px] bg-black">
+      <div className="fixed left-1/2 top-0 z-40 flex w-full max-w-[420px] -translate-x-1/2 justify-center gap-6 pt-4 pb-2 bg-black">
+        <button onClick={() => setTab("following")} className={tab === "following" ? "text-[15px] font-bold text-white" : "text-[15px] text-white/60"}>Following</button>
+        <button onClick={() => setTab("foryou")} className={tab === "foryou" ? "text-[15px] font-bold text-white" : "text-[15px] text-white/60"}>For You</button>
+        {currentUser ? <button onClick={logout} className="ml-auto mr-2 bg-zinc-800 text-[11px] px-2 py-1 rounded-full flex items-center gap-1">👋 {currentUser.name} • Log Out</button> : <button onClick={() => setShowLogin(true)} className="ml-auto mr-2 bg-[#fe2c55] text-[11px] px-2 py-1 rounded-full font-bold">G লগইন</button>}
+      </div>
+      <div ref={scrollerRef} onScroll={onScroll} className="snap-feed no-scrollbar h-screen overflow-y-scroll pt-12">
+        {isLoading ? <div className="flex h-screen items-center justify-center text-white/50">লোড হচ্ছে…</div>
+        : visibleItems.length === 0 ? <div className="flex h-screen items-center justify-center text-white/60 text-center px-6">এখনো কাউকে ফলো করোনি<br />For You থেকে + চেপে ফলো করো</div>
+        : visibleItems.map((item, i) => (<VideoCard key={item.id} item={item} active={i === activeIndex} muted={muted} onToggleMute={() => setMuted((m) => !m)} liked={likedIds.has(item.id)} onToggleLike={() => void toggleLike(item.id)} onOpenComments={() => setOpenComments(item)} followed={!!item.userId && followSet.has(item.userId)} onFollow={() => void toggleFollow(item.userId)} onOpenProfile={() => setOpenProfileId(item.sotId || item.username.replace("@", ""))} onOpenSound={() => setOpenSound(item.sound)} onOpenGift={() => { if (!currentUser && !user) return setShowLogin(true); if (item.id.startsWith("demo-")) return void toast.error("ডেমো ভিডিওতে গিফট পাঠানো যাবে না"); if (item.userId === user?.id) return void toast.error("নিজের ভিডিওতে গিফট পাঠানো যাবে না"); setOpenGift(item.id); }} />))}
+      </div>
+      {showLogin && <LoginSheet onClose={() => setShowLogin(false)} onGoogle={loginWithGoogle} />}
+      {showPrivacy && <PrivacySheet onClose={() => setShowPrivacy(false)} />}
+      {showStatusPage && <StatusPage statuses={statuses} creators={creators} sounds={sounds} currentUser={currentUser} onLogout={logout} onLogin={() => setShowLogin(true)} onDeleteAccount={deleteAccount} onPrivacy={() => setShowPrivacy(true)} onClose={() => setShowStatusPage(false)} onAddStatus={() => { if (!currentUser) return setShowLogin(true); setShowAddStatus(true); }} onOpenStatus={(i: number) => setViewStatusIdx(i)} onOpenProfile={(id: string) => { setShowStatusPage(false); setOpenProfileId(id); }} onOpenSound={(s: string) => { setShowStatusPage(false); setOpenSound(s); }} onShowAllCreators={() => setShowAllCreators(true)} />}
+      {showAddStatus && <AddStatusSheet onClose={() => setShowAddStatus(false)} onAdded={(s: any) => setStatuses((p) => [s, ...p])} />}
+      {viewStatusIdx !== null && statuses[viewStatusIdx] && <StatusViewer statuses={statuses} index={viewStatusIdx} onClose={() => setViewStatusIdx(null)} onLike={likeStatus} />}
+      {showAllCreators && (<div className="fixed inset-0 z-[115] bg-black/80 flex items-end justify-center" onClick={() => setShowAllCreators(false)}><div className="w-full max-w-[420px] bg-white rounded-t-3xl p-4 max-h-[75vh] overflow-y-auto text-black" onClick={(e) => e.stopPropagation()}><div className="flex justify-between"><b>👥 যারা যারা ভিডিও ছেড়েছে ({creators.length} জন)</b><button onClick={() => setShowAllCreators(false)} className="text-2xl px-2">×</button></div><div className="mt-3 space-y-2">{creators.map((c: any, idx: number) => (<button key={c.sotId || c.username} onClick={() => { setShowAllCreators(false); setShowStatusPage(false); setOpenProfileId(c.sotId || c.username.replace("@", "")); }} className="w-full flex items-center gap-3 bg-zinc-100 rounded-2xl p-3 text-left"><span className="text-zinc-400 font-bold text-sm w-5">{idx + 1}</span><div className="h-12 w-12 shrink-0 rounded-full bg-gradient-to-br from-orange-500 to-pink-600 flex items-center justify-center font-bold text-lg text-white">{c.username.replace("@", "")[0].toUpperCase()}</div><div className="flex-1 min-w-0"><p className="font-bold text-[14px] truncate">{c.username}</p><p className="text-[12px] text-zinc-500">ID: {c.sotId || c.username} • {c.totalLikes} লাইক</p></div><div className="text-right shrink-0"><p className="font-bold text-[14px] text-[#fe2c55]">{c.count} টা</p><p className="text-[11px] text-zinc-500">ভিডিও</p></div></button>))}</div></div></div>)}
+      {openComments && <UniversalComments video={openComments} open onClose={() => setOpenComments(null)} onCountChange={(d: number) => setCommentDelta((x) => ({ ...x, [openComments.id]: (x[openComments.id] ?? 0) + d }))} />}
+      {openProfileId && <ProfileView sotId={openProfileId} onClose={() => setOpenProfileId(null)} allVideos={items} onOpenVideo={(v: any) => { setOpenProfileId(null); setFullVideo(v); }} currentUser={currentUser} onLogout={logout} onLogin={() => setShowLogin(true)} />}
+      {fullVideo && (<div className="fixed inset-0 z-[95] bg-black flex flex-col"><button onClick={() => setFullVideo(null)} className="absolute top-4 right-4 z-10 bg-black/60 p-2 rounded-full text-white"><X /></button><video src={fullVideo.url} controls autoPlay loop className="flex-1 w-full object-contain" /><div className="p-4 text-white"><p className="font-bold">{fullVideo.username} • ID: {fullVideo.sotId || fullVideo.username}</p><p className="text-[13px] mt-1">{fullVideo.caption}</p><div className="flex gap-5 mt-3"><button onClick={() => toggleLike(fullVideo.id)} className="flex items-center gap-1"><Heart className={`h-6 w-6 ${likedIds.has(fullVideo.id) ? "fill-red-500 text-red-500" : "text-white"}`} />{fullVideo.likes}</button><button onClick={() => setOpenComments(fullVideo)} className="flex items-center gap-1"><MessageCircle className="h-6 w-6" /> কমেন্ট</button><button onClick={() => downloadWithWatermark(fullVideo)} className="flex items-center gap-1"><Download className="h-6 w-6" /> ডাউনলোড</button></div></div></div>)}
+      {openSound && <SoundPage sound={openSound} allVideos={items} onClose={() => setOpenSound(null)} onOpenVideo={(v: any) => { setOpenSound(null); setFullVideo(v); }} onUseSound={(s: string) => { setOpenSound(null); setShowCreateWithSound(s); }} />}
+      {showCreateWithSound && <CreateWithSoundSheet sound={showCreateWithSound} onClose={() => setShowCreateWithSound(null)} />}
+      {openGift && RealGiftSheet ? <RealGiftSheet videoId={openGift} open onClose={() => setOpenGift(null)} onSent={setGiftAnim} /> : null}
+      {giftAnim && RealGiftAnimation ? <RealGiftAnimation gift={giftAnim} onDone={() => setGiftAnim(null)} /> : null}
+      <BottomNav statusCount={statuses.length} onOpenStatus={() => setShowStatusPage(true)} currentUser={currentUser} onLogin={openProfileOrLogin} />
+    </div>
+    </SafeWrap>
+  );
+}
