@@ -5,7 +5,6 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { Heart, MessageCircle, Share2, Bookmark, Plus, Music2, Check, Download, Gift as GiftIcon, X, Camera, Image as ImageIcon, Home, Compass, Bell, User, CircleDot, LogOut, ShieldCheck, FileText, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-// ✅ Gift ফাইল না থাকলেও ক্র্যাশ করবে না - নিচে SafeGiftSheet আছে
 import { GiftSheet as RealGiftSheet } from "@/components/GiftSheet";
 import { GiftAnimation as RealGiftAnimation } from "@/components/GiftAnimation";
 import { countView, fetchMyLikes, formatCompact, likeVideo, unlikeVideo } from "@/lib/engagement";
@@ -15,30 +14,24 @@ export const Route = createFileRoute("/feed")({
   head: () => ({ meta: [{ title: "For You — Short Tok" }, { name: "description", content: DESC }] }),
   component: FeedPage,
 });
-
-// ✅ ক্র্যাশ হলে সাদা পেজ না দেখিয়ে এইটা দেখাবে
 function SafeWrap({ children }: any) {
   const [err, setErr] = useState<any>(null);
   if (err) return <div className="flex h-screen items-center justify-center bg-black text-white text-center px-6">কিছু একটা আটকে গেছে<br />পেজটা রিফ্রেশ করো<br /><button onClick={() => window.location.reload()} className="mt-3 bg-[#fe2c55] px-4 py-2 rounded-full font-bold">Try Again</button></div>;
   try { return children; } catch (e) { setErr(e); return null; }
 }
-
-type FeedItem = { id: string; userId?: string | undefined; sotId?: string | undefined; username: string; caption: string; url: string; sound: string; views: number; likes: number; comments: number; };
+type FeedItem = { id: string; userId?: string | undefined; sotId?: string | undefined; username: string; caption: string; url: string; sound: string; views: number; likes: number; comments: number; avatar?: string };
 const PAGE_SIZE = 6;
 const demoVideos: FeedItem[] = [
   { id: "demo-1", username: "@india_kitchen", caption: "আজকের রেসিপি: ঘরোয়া পনির বাটার মশলা 🔥", url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4", sound: "Original sound - Short Tok Artist", views: 1000000, likes: 4000, comments: 0 },
   { id: "demo-2", username: "@rannaghor", caption: "৫ মিনিটে চিকেন কারি 🍛", url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4", sound: "Original sound - Short Tok Artist", views: 820000, likes: 3200, comments: 0 },
   { id: "demo-3", username: "@shorttok_food", caption: "গরম গরম পিঠা 😍", url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4", sound: "Original sound - Short Tok Artist", views: 610000, likes: 2700, comments: 0 },
 ];
-// ✅ localStorage সেফ - না থাকলেও ক্র্যাশ করবে না
 const getLocal = (k: string, d: any) => { try { if (typeof window === "undefined" || !window.localStorage) return d; const v = window.localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } };
 const setLocal = (k: string, v: any) => { try { if (typeof window !== "undefined" && window.localStorage) window.localStorage.setItem(k, JSON.stringify(v)); } catch {} };
 const getLS = (k: string) => { try { return window.localStorage?.getItem(k) || ""; } catch { return ""; } };
 const setLS = (k: string, v: string) => { try { window.localStorage?.setItem(k, v); } catch {} };
 const myName = () => getLS("shorttok_username") || getLS("shorttok_user_name") || getLS("shorttok_user_email")?.split("@")[0] || "Guest";
 const timeAgo = (t: number) => { const d = Date.now() - t; if (d < 60000) return "এখনই"; if (d < 3600000) return `${Math.floor(d / 60000)} মিনিট আগে`; if (d < 86400000) return `${Math.floor(d / 3600000)} ঘণ্টা আগে`; return `${Math.floor(d / 86400000)} দিন আগে`; };
-
-// ✅ useAuth সেফ - AuthProvider না থাকলেও ক্র্যাশ করবে না, এটাই আসল ফিক্স
 function useSafeAuth() {
   const [authUser, setAuthUser] = useState<any>(null);
   useEffect(() => {
@@ -50,7 +43,6 @@ function useSafeAuth() {
   }, []);
   return { user: authUser };
 }
-
 async function signBatch(paths: string[]): Promise<Map<string, string>> {
   const map = new Map<string, string>();
   const storagePaths = paths.filter((p) => !p.startsWith("http"));
@@ -58,8 +50,6 @@ async function signBatch(paths: string[]): Promise<Map<string, string>> {
   if (storagePaths.length) { try { const { data } = await supabase.storage.from("videos").createSignedUrls(storagePaths, 60 * 60 * 8); (data ?? []).forEach((d) => { if (d.path && d.signedUrl) map.set(d.path, d.signedUrl); }); } catch {} }
   return map;
 }
-
-// ===== Gmail - একবার লগইন = থেকে যাবে =====
 function usePersistLogin() {
   const { user } = useSafeAuth();
   const [savedUser, setSavedUser] = useState<any>(() => getLocal("shorttok_persist_login", null));
@@ -96,7 +86,6 @@ function usePersistLogin() {
   };
   return { currentUser: user || savedUser, showLogin, setShowLogin, loginWithGoogle, logout, deleteAccount };
 }
-
 function LoginSheet({ onClose, onGoogle }: any) {
   return (
     <div className="fixed inset-0 z-[140] bg-black/80 flex items-end justify-center" onClick={onClose}>
@@ -126,49 +115,63 @@ function PrivacySheet({ onClose }: any) {
     </div>
   );
 }
-
-// ===== ডাউনলোড - শুধু ডাউনলোড করলেই Short Tok Watermark =====
+// ===== ডাউনলোড - ফুল ভিডিও + চারদিকে লাফানো Short Tok Watermark =====
 async function downloadWithWatermark(item: FeedItem) {
-  toast("ডাউনলোড হচ্ছে… Short Tok Watermark বসানো হচ্ছে");
+  toast("ডাউনলোড হচ্ছে… ফুল ভিডিও + Short Tok Watermark বসানো হচ্ছে, একটু দাঁড়াও");
   try {
     const ownerName = item.username; const ownerId = item.sotId || item.userId || item.username;
-    let videoUrl = item.url;
-    try { const res = await fetch(item.url, { mode: "cors" }); if (res.ok) videoUrl = URL.createObjectURL(await res.blob()); } catch {}
-    const videoEl = document.createElement("video"); videoEl.src = videoUrl; videoEl.muted = true; videoEl.playsInline = true; videoEl.crossOrigin = "anonymous";
-    await videoEl.play().catch(() => {}); await new Promise((r) => { if (videoEl.videoWidth) return r(null); videoEl.onloadedmetadata = () => r(null); setTimeout(() => r(null), 1500); });
+    let videoBlob: Blob | null = null;
+    try { const res = await fetch(item.url, { mode: "cors" }); if (res.ok) videoBlob = await res.blob(); } catch {}
+    if (!videoBlob) { try { const r2 = await fetch(`https://corsproxy.io/?url=${encodeURIComponent(item.url)}`); if (r2.ok) videoBlob = await r2.blob(); } catch {} }
+    if (!videoBlob) throw new Error("no blob");
+    const videoUrl = URL.createObjectURL(videoBlob);
+    const videoEl = document.createElement("video"); videoEl.src = videoUrl; videoEl.muted = true; videoEl.playsInline = true; videoEl.crossOrigin = "anonymous"; videoEl.preload = "auto";
+    await new Promise<void>((resolve) => { videoEl.onloadedmetadata = () => resolve(); videoEl.onerror = () => resolve(); setTimeout(() => resolve(), 3000); });
     if (!videoEl.videoWidth) throw new Error("no video");
+    const totalSec = videoEl.duration && isFinite(videoEl.duration) ? videoEl.duration : 0;
     const canvas = document.createElement("canvas"); canvas.width = videoEl.videoWidth || 720; canvas.height = videoEl.videoHeight || 1280;
     const ctx = canvas.getContext("2d")!; const stream = (canvas as any).captureStream(30);
-    const rec = new MediaRecorder(stream, { mimeType: "video/webm" });
+    const mime = MediaRecorder.isTypeSupported("video/webm;codecs=vp9") ? "video/webm;codecs=vp9" : "video/webm";
+    const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 5_000_000 });
     const chunks: any[] = []; rec.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
-    rec.onstop = () => { const b = new Blob(chunks, { type: "video/webm" }); const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = `ShortTok-${ownerName.replace("@", "")}-${ownerId}.webm`; document.body.appendChild(a); a.click(); a.remove(); toast.success("ডাউনলোড হয়ে গেছে - Short Tok Watermark সহ"); };
-    rec.start(200);
+    const stoppedPromise = new Promise<void>((resolve) => { rec.onstop = () => resolve(); });
     const logo = new Image(); logo.src = "/shorttok-logo.png";
     await new Promise((r) => { logo.onload = r; logo.onerror = r; setTimeout(r, 500); });
-    const startTime = Date.now(); let stopped = false;
+    let wx = 20, wy = 60; let vx = 3.2, vy = 2.6; let stopped = false;
     const stopRec = () => { if (!stopped) { stopped = true; try { rec.stop(); } catch {} } };
     const draw = () => {
-      if (videoEl.ended) { stopRec(); return; }
+      if (stopped) return;
       try { ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height); } catch { stopRec(); return; }
-      const t = (Date.now() - startTime) / 6000; const progress = Math.abs((t % 2) - 1); const y = 40 + progress * (canvas.height - 140);
       const text = `Short Tok  •  ${ownerName}  •  ID: ${ownerId}`;
-      ctx.font = "bold 26px Arial"; const w = ctx.measureText(text).width + 90;
-      ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(canvas.width - w - 20, y, w, 52);
-      if (logo.complete && logo.naturalWidth) ctx.drawImage(logo, canvas.width - w - 10, y + 4, 44, 44);
-      ctx.fillStyle = "#fff"; ctx.fillText(text, canvas.width - w + 42, y + 34);
+      ctx.font = "bold 26px Arial"; const w = ctx.measureText(text).width + 92; const h = 54;
+      wx += vx; wy += vy;
+      if (wx <= 10) { wx = 10; vx = Math.abs(vx); }
+      if (wx + w >= canvas.width - 10) { wx = canvas.width - w - 10; vx = -Math.abs(vx); }
+      if (wy <= 10) { wy = 10; vy = Math.abs(vy); }
+      if (wy + h >= canvas.height - 50) { wy = canvas.height - h - 50; vy = -Math.abs(vy); }
+      ctx.fillStyle = "rgba(0,0,0,0.65)"; ctx.fillRect(wx, wy, w, h);
+      if (logo.complete && logo.naturalWidth) ctx.drawImage(logo, wx + 6, wy + 5, 44, 44);
+      ctx.fillStyle = "#fff"; ctx.fillText(text, wx + 54, wy + 35);
       ctx.fillStyle = "rgba(0,0,0,0.5)"; ctx.fillRect(0, canvas.height - 36, canvas.width, 36);
-      ctx.fillStyle = "rgba(255,255,255,0.85)"; ctx.font = "18px Arial"; ctx.fillText(`Made on Short Tok  •  ${ownerName}  •  ID: ${ownerId}`, 14, canvas.height - 12);
+      ctx.fillStyle = "rgba(255,255,255,0.9)"; ctx.font = "18px Arial"; ctx.fillText(`Made on Short Tok  •  ${ownerName}  •  ID: ${ownerId}`, 14, canvas.height - 12);
       if (!stopped) requestAnimationFrame(draw);
-    }; draw(); videoEl.onended = () => stopRec(); setTimeout(() => stopRec(), 30000);
+    };
+    videoEl.currentTime = 0; rec.start(200); draw(); await videoEl.play().catch(() => {});
+    videoEl.onended = () => { setTimeout(() => stopRec(), 300); };
+    const maxTime = Math.min(Math.max((totalSec + 2) * 1000, 10000), 180000);
+    setTimeout(() => stopRec(), maxTime);
+    await stoppedPromise;
+    const b = new Blob(chunks, { type: "video/webm" });
+    const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = `ShortTok-${ownerName.replace("@", "")}-${ownerId}.webm`; document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(videoUrl); toast.success("ফুল ভিডিও ডাউনলোড হয়ে গেছে ✅ Short Tok Watermark সহ");
   } catch { try { await downloadVideo(item.url, `shorttok-${item.id.slice(0, 8)}`); } catch { window.open(item.url, "_blank"); } }
 }
-
 function UniversalComments({ video, open, onClose, onCountChange }: any) {
   const { user } = useSafeAuth();
   const [text, setText] = useState(""); const [list, setList] = useState<any[]>([]); const [loading, setLoading] = useState(true);
   useEffect(() => {
     if (!open) return; setLoading(true); const local = getLocal(`shorttok_comments_${video.id}`, []); setList(local);
-    (async () => { try { const { data } = await supabase.from("comments").select("*, profiles(username)").eq("video_id", video.id).order("created_at", { ascending: false }); if (data && data.length) setList((prev) => { const ids = new Set(prev.map((x: any) => String(x.id))); const fresh = data.filter((x: any) => !ids.has(String(x.id))); return [...prev, ...fresh]; }); } catch {} setLoading(false); })();
+    (async () => { try { const { data } = await supabase.from("comments").select("*, profiles(username, avatar_url)").eq("video_id", video.id).order("created_at", { ascending: false }); if (data && data.length) setList((prev) => { const ids = new Set(prev.map((x: any) => String(x.id))); const fresh = data.filter((x: any) => !ids.has(String(x.id))); return [...prev, ...fresh]; }); } catch {} setLoading(false); })();
   }, [open, video.id]);
   const send = async () => {
     if (!text.trim()) return;
@@ -186,14 +189,13 @@ function UniversalComments({ video, open, onClose, onCountChange }: any) {
         <div className="flex-1 overflow-y-auto mt-3 space-y-3 min-h-[150px]">
           {loading && list.length === 0 && <p className="text-white/50 text-center text-sm mt-6">লোড হচ্ছে…</p>}
           {!loading && list.length === 0 && <p className="text-white/50 text-center text-sm mt-6">এখনো কোনো কমেন্ট নেই<br />তুমিই প্রথম কমেন্ট করো 👇</p>}
-          {list.map((c: any) => (<div key={c.id} className="flex gap-2"><div className="h-8 w-8 shrink-0 rounded-full bg-gradient-to-br from-orange-500 to-pink-600 flex items-center justify-center font-bold text-sm">{(c.profiles?.username || "S")[0].toUpperCase()}</div><div className="bg-zinc-900 rounded-2xl px-3 py-2 flex-1"><p className="text-[12px] font-bold">@{c.profiles?.username || "shorttok"}</p><p className="text-[13px]">{c.content}</p></div></div>))}
+          {list.map((c: any) => (<div key={c.id} className="flex gap-2">{c.profiles?.avatar_url ? <img src={c.profiles.avatar_url} className="h-8 w-8 shrink-0 rounded-full object-cover" alt="" /> : <div className="h-8 w-8 shrink-0 rounded-full bg-gradient-to-br from-orange-500 to-pink-600 flex items-center justify-center font-bold text-sm">{(c.profiles?.username || "S")[0].toUpperCase()}</div>}<div className="bg-zinc-900 rounded-2xl px-3 py-2 flex-1"><p className="text-[12px] font-bold">@{c.profiles?.username || "shorttok"}</p><p className="text-[13px]">{c.content}</p></div></div>))}
         </div>
         <div className="flex gap-2 mt-3"><input value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send()} placeholder="কমেন্ট লিখো... ❤️" className="flex-1 rounded-full bg-zinc-900 px-4 py-2.5 text-sm outline-none text-white" /><button onClick={send} className="rounded-full bg-[#fe2c55] px-5 font-bold text-sm text-white">পাঠাও</button></div>
       </div>
     </div>
   );
 }
-
 function AddStatusSheet({ onClose, onAdded }: any) {
   const [text, setText] = useState(""); const [preview, setPreview] = useState("");
   const bg = ["from-purple-500 to-pink-500", "from-blue-500 to-teal-500", "from-orange-500 to-red-500", "from-green-500 to-teal-600"][text.length % 4];
@@ -226,7 +228,6 @@ function StatusViewer({ statuses, index, onClose, onLike }: any) {
     </div>
   );
 }
-
 function StatusPage({ statuses, creators, sounds, currentUser, onLogout, onLogin, onDeleteAccount, onPrivacy, onClose, onAddStatus, onOpenStatus, onOpenProfile, onOpenSound, onShowAllCreators }: any) {
   return (
     <div className="fixed inset-0 z-[110] bg-white text-black overflow-y-auto pb-24">
@@ -236,7 +237,7 @@ function StatusPage({ statuses, creators, sounds, currentUser, onLogout, onLogin
         <button onClick={onAddStatus} className="ml-auto bg-[#fe2c55] text-white text-[12px] font-bold px-3 py-2 rounded-full">+ Status</button>
       </div>
       <div className="mx-3 mt-3 bg-zinc-100 rounded-2xl p-3 flex items-center gap-3">
-        <div className="h-11 w-11 shrink-0 rounded-full bg-gradient-to-br from-orange-500 to-pink-600 flex items-center justify-center font-bold text-white">{currentUser ? (currentUser.name?.[0] || "S").toUpperCase() : "?"}</div>
+        {currentUser?.avatar ? <img src={currentUser.avatar} className="h-11 w-11 shrink-0 rounded-full object-cover" alt="" /> : <div className="h-11 w-11 shrink-0 rounded-full bg-gradient-to-br from-orange-500 to-pink-600 flex items-center justify-center font-bold text-white">{currentUser ? (currentUser.name?.[0] || "S").toUpperCase() : "?"}</div>}
         <div className="flex-1 min-w-0"><p className="font-bold text-[14px] truncate">{currentUser ? `👋 ${currentUser.name || currentUser.email}` : "লগইন করোনি"}</p><p className="text-[12px] text-zinc-500">{currentUser ? "লগইন থেকে যাবে • Log Out না চাপলে যাবে না" : "Gmail দিয়ে একবার লগইন করো — এরপর চাইবে না"}</p></div>
         {currentUser ? <button onClick={onLogout} className="bg-red-600 text-white text-[12px] font-bold px-3 py-2 rounded-full flex items-center gap-1 shrink-0"><LogOut className="h-3.5 w-3.5" /> Log Out</button> : <button onClick={onLogin} className="bg-white border-2 border-zinc-200 text-[12px] font-bold px-3 py-2 rounded-full shrink-0">G Gmail লগইন</button>}
       </div>
@@ -258,13 +259,12 @@ function StatusPage({ statuses, creators, sounds, currentUser, onLogout, onLogin
         </div>
       </div>
       <div className="px-3 py-2 border-t border-zinc-200 flex items-center justify-between"><p className="text-[13px] font-bold">👥 ভিডিও ছেড়েছে ({creators.length} জন) — {creators.reduce((s: number, c: any) => s + c.count, 0)} টা ভিডিও</p><button onClick={onShowAllCreators} className="text-[12px] text-[#fe2c55] font-bold">সবাইকে দেখো →</button></div>
-      <div className="px-3 pb-3 flex gap-3 overflow-x-auto no-scrollbar">{creators.map((c: any) => (<button key={c.sotId || c.username} onClick={() => onOpenProfile(c.sotId || c.username.replace("@", ""))} className="flex flex-col items-center shrink-0 w-[64px]"><div className="relative"><div className="h-14 w-14 rounded-full p-[2px] bg-gradient-to-br from-orange-500 to-pink-600"><div className="h-full w-full rounded-full bg-zinc-200 flex items-center justify-center font-bold text-lg">{c.username.replace("@", "")[0].toUpperCase()}</div></div><span className="absolute -bottom-1 -right-1 bg-[#fe2c55] text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">▶ {c.count}</span></div><span className="text-[11px] font-medium max-w-[64px] truncate mt-1">{c.username}</span><span className="text-[10px] text-zinc-500">{c.count} টা ভিডিও</span></button>))}</div>
+      <div className="px-3 pb-3 flex gap-3 overflow-x-auto no-scrollbar">{creators.map((c: any) => (<button key={c.sotId || c.username} onClick={() => onOpenProfile(c.sotId || c.username.replace("@", ""))} className="flex flex-col items-center shrink-0 w-[64px]"><div className="relative">{c.avatar ? <img src={c.avatar} className="h-14 w-14 rounded-full object-cover border-2 border-[#fe2c55]" alt="" /> : <div className="h-14 w-14 rounded-full p-[2px] bg-gradient-to-br from-orange-500 to-pink-600"><div className="h-full w-full rounded-full bg-zinc-200 flex items-center justify-center font-bold text-lg">{c.username.replace("@", "")[0].toUpperCase()}</div></div>}<span className="absolute -bottom-1 -right-1 bg-[#fe2c55] text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">▶ {c.count}</span></div><span className="text-[11px] font-medium max-w-[64px] truncate mt-1">{c.username}</span><span className="text-[10px] text-zinc-500">{c.count} টা ভিডিও</span></button>))}</div>
       <div className="px-3 py-2 border-t border-zinc-200"><p className="text-[13px] font-bold">🔥 ট্রেন্ডিং গান - এই গান দিয়ে ভিডিও বানাও</p><div className="flex gap-2 overflow-x-auto no-scrollbar mt-2 pb-1">{sounds.map(([s, cnt]: any) => (<button key={s} onClick={() => onOpenSound(s)} className="shrink-0 bg-zinc-100 rounded-full px-3 py-2 text-[12px] font-bold">🎵 {s} • {cnt} টা ভিডিও</button>))}</div></div>
       <div className="px-3 py-2 border-t border-zinc-200"><p className="text-[13px] font-bold">📋 সবার Status লিস্ট</p>{statuses.map((s: any, i: number) => (<button key={s.id} onClick={() => onOpenStatus(i)} className="w-full flex items-center gap-3 bg-zinc-100 rounded-2xl p-3 mt-2 text-left"><div className="h-11 w-11 shrink-0 rounded-full bg-gradient-to-br from-orange-500 to-pink-600 flex items-center justify-center font-bold text-white">{s.username[0].toUpperCase()}</div><div className="flex-1 min-w-0"><p className="font-bold text-[14px] truncate">{s.username}</p><p className="text-[12px] text-zinc-500 truncate">{s.text} • {timeAgo(s.createdAt)}</p></div><span className="text-[12px] font-bold text-[#fe2c55]">দেখো →</span></button>))}{statuses.length === 0 && <p className="text-[12px] text-zinc-500 mt-2">এখনো কোনো Status নেই</p>}</div>
     </div>
   );
 }
-
 function SoundPage({ sound, allVideos, onClose, onOpenVideo, onUseSound }: any) {
   const list = allVideos.filter((v: any) => v.sound === sound); const first = list[0];
   return (
@@ -276,14 +276,31 @@ function CreateWithSoundSheet({ sound, onClose }: any) {
   const doUpload = async () => { if (!file) return toast.error("একটা ভিডিও বেছে নাও"); toast("আপলোড হচ্ছে..."); try { const { data: { user } } = await supabase.auth.getUser(); if (!user) return toast.error("আগে লগইন করো"); const path = `${user.id}/${Date.now()}-${file.name}`; const { error } = await supabase.storage.from("videos").upload(path, file); if (error) throw error; await supabase.from("videos").insert({ user_id: user.id, video_url: path, caption: caption || `এই গান দিয়ে বানালাম 🎵`, sound_name: sound, visibility: "public" }); toast.success("হয়ে গেছে ✅"); onClose(); window.location.reload(); } catch { toast.error("আপলোড হয়নি"); } };
   return (<div className="fixed inset-0 z-[120] bg-black/80 flex items-end justify-center" onClick={onClose}><div className="w-full max-w-[420px] bg-white rounded-t-3xl p-4 text-black" onClick={(e) => e.stopPropagation()}><div className="flex justify-between"><b>🎵 এই গান দিয়ে ভিডিও বানাও</b><button onClick={onClose} className="text-2xl px-2">×</button></div><p className="text-[12px] text-zinc-500 mt-1 bg-zinc-100 rounded-full px-3 py-2">🎵 {sound}</p><label className="block mt-3 bg-zinc-100 rounded-2xl p-6 text-center cursor-pointer"><p className="text-3xl">📹</p><p className="font-bold text-sm mt-1">{file ? file.name : "গ্যালারি থেকে ভিডিও বেছে নাও"}</p><input type="file" accept="video/*" className="hidden" onChange={(e) => setFile(e.target.files?.[0] || null)} /></label><input value={caption} onChange={(e) => setCaption(e.target.value)} placeholder="ক্যাপশন লিখো..." className="w-full mt-3 bg-zinc-100 rounded-2xl px-4 py-3 text-sm outline-none" /><button onClick={doUpload} className="w-full mt-3 bg-[#fe2c55] text-white rounded-full py-3 font-bold">🎵 এই গান দিয়ে পোস্ট করো →</button></div></div>);
 }
-
-function ProfileView({ sotId, onClose, allVideos, onOpenVideo, currentUser, onLogout, onLogin }: any) {
-  const [info, setInfo] = useState<any>(null); const [myVideos, setMyVideos] = useState<any[]>([]);
-  useEffect(() => { (async () => { try { const { data } = await supabase.from("profiles").select("*").eq("sottok_id", sotId).single(); if (data) setInfo(data); } catch {} const mine = allVideos.filter((v: any) => v.sotId === sotId || v.username.replace("@", "") === sotId); setMyVideos(mine.length ? mine : allVideos.slice(0, 3)); })(); }, [sotId, allVideos]);
-  const isMe = currentUser && (currentUser.name === (info?.username || sotId) || currentUser.email?.split("@")[0] === sotId);
-  return (<div className="fixed inset-0 z-[90] bg-black text-white overflow-y-auto"><button onClick={onClose} className="absolute top-4 right-4 z-10 rounded-full bg-white/20 p-2"><X /></button><div className="flex flex-col items-center pt-10 px-4 text-center">{info?.avatar_url ? <img src={info.avatar_url} className="h-24 w-24 rounded-full object-cover border-2 border-white" alt="" /> : <div className="h-24 w-24 rounded-full bg-gradient-to-br from-orange-500 to-pink-600 flex items-center justify-center text-4xl font-bold">{(info?.username || sotId || "S")[0].toUpperCase()}</div>}<h2 className="mt-2 font-bold text-lg">@{info?.username || sotId}</h2><p className="text-white/60 text-[12px]">Short Tok ID: {sotId}</p><p className="text-[13px] text-white/70 mt-1">{info?.bio || "Short Tok Creator"}</p><p className="mt-2 text-sm">{myVideos.length} টা ভিডিও</p>{currentUser ? <button onClick={onLogout} className="mt-3 bg-red-600 px-4 py-2 rounded-full text-sm font-bold flex items-center gap-1"><LogOut className="h-4 w-4" /> Log Out</button> : <button onClick={onLogin} className="mt-3 bg-white text-black px-4 py-2 rounded-full text-sm font-bold">G Gmail লগইন</button>}{isMe && <p className="text-[11px] text-green-400 mt-1">✅ তুমি লগইন আছো — Log Out না চাপলে লগইন থাকবে</p>}</div><div className="grid grid-cols-3 gap-[2px] mt-5 pb-24">{myVideos.map((v: any) => (<div key={v.id} onClick={() => onOpenVideo(v)} className="relative aspect-[9/16] bg-zinc-900 overflow-hidden cursor-pointer"><video src={v.url} muted playsInline preload="metadata" className="h-full w-full object-cover" /><div className="absolute bottom-1 left-1 text-[11px]">❤️ {v.likes}</div><button onClick={(e) => { e.stopPropagation(); void downloadWithWatermark(v); }} className="absolute bottom-1 right-1 bg-black/70 p-1.5 rounded-full"><Download className="h-3.5 w-3.5" /></button></div>))}</div></div>);
+function ProfileView({ sotId, onClose, allVideos, onOpenVideo, currentUser, onLogout, onLogin, followed, onFollow, myUserId }: any) {
+  const [info, setInfo] = useState<any>(null); const [myVideos, setMyVideos] = useState<any[]>([]); const [followerCount, setFollowerCount] = useState(0);
+  useEffect(() => {
+    (async () => {
+      try { const { data } = await supabase.from("profiles").select("*").eq("sottok_id", sotId).single(); if (data) { setInfo(data); setFollowerCount((data as any).followers_count || 0); } } catch {}
+      const mine = allVideos.filter((v: any) => v.sotId === sotId || v.username.replace("@", "") === sotId); setMyVideos(mine.length ? mine : allVideos.slice(0, 3));
+    })();
+  }, [sotId, allVideos]);
+  const isMe = currentUser && (currentUser.name === (info?.username || sotId) || currentUser.email?.split("@")[0] === sotId || myUserId === info?.id);
+  const avatar = info?.avatar_url || "";
+  const displayName = info?.username || sotId;
+  return (
+    <div className="fixed inset-0 z-[90] bg-black text-white overflow-y-auto"><button onClick={onClose} className="absolute top-4 right-4 z-10 rounded-full bg-white/20 p-2"><X /></button>
+      <div className="flex flex-col items-center pt-10 px-4 text-center">
+        {avatar ? <img src={avatar} className="h-24 w-24 rounded-full object-cover border-2 border-white" alt="" /> : <div className="h-24 w-24 rounded-full bg-gradient-to-br from-orange-500 to-pink-600 flex items-center justify-center text-4xl font-bold">{(displayName || "S")[0].toUpperCase()}</div>}
+        <h2 className="mt-2 font-bold text-lg">@{displayName}</h2><p className="text-white/60 text-[12px]">Short Tok ID: {sotId}</p><p className="text-[13px] text-white/70 mt-1">{info?.bio || "Short Tok Creator"}</p>
+        <div className="flex gap-5 mt-3 text-center"><div><p className="font-bold">{followerCount + (followed ? 1 : 0)}</p><p className="text-[11px] text-white/60">Followers</p></div><div><p className="font-bold">{myVideos.length}</p><p className="text-[11px] text-white/60">ভিডিও</p></div><div><p className="font-bold">{myVideos.reduce((s: number, v: any) => s + (v.likes || 0), 0)}</p><p className="text-[11px] text-white/60">লাইক</p></div></div>
+        {!isMe ? <button onClick={onFollow} className={`mt-3 px-8 py-2.5 rounded-full text-sm font-bold ${followed ? "bg-white text-black" : "bg-[#fe2c55] text-white"}`}>{followed ? "✓ Following — Unfollow করতে চাপো" : "+ Follow করো"}</button> : <p className="mt-3 text-[12px] text-green-400 font-bold">✅ এটা তোমার প্রোফাইল</p>}
+        {currentUser ? <button onClick={onLogout} className="mt-2 bg-zinc-800 px-4 py-2 rounded-full text-sm font-bold flex items-center gap-1"><LogOut className="h-4 w-4" /> Log Out</button> : <button onClick={onLogin} className="mt-3 bg-white text-black px-4 py-2 rounded-full text-sm font-bold">G Gmail লগইন</button>}
+        {isMe && <p className="text-[11px] text-green-400 mt-1">✅ তুমি লগইন আছো — Log Out না চাপলে লগইন থাকবে</p>}
+      </div>
+      <div className="grid grid-cols-3 gap-[2px] mt-5 pb-24">{myVideos.map((v: any) => (<div key={v.id} onClick={() => onOpenVideo(v)} className="relative aspect-[9/16] bg-zinc-900 overflow-hidden cursor-pointer"><video src={v.url} muted playsInline preload="metadata" className="h-full w-full object-cover" /><div className="absolute bottom-1 left-1 text-[11px]">❤️ {v.likes}</div><button onClick={(e) => { e.stopPropagation(); void downloadWithWatermark(v); }} className="absolute bottom-1 right-1 bg-black/70 p-1.5 rounded-full"><Download className="h-3.5 w-3.5" /></button></div>))}</div>
+    </div>
+  );
 }
-
 function useFeed() {
   return useInfiniteQuery({
     queryKey: ["feed"], initialPageParam: 0, staleTime: 60_000, gcTime: 5 * 60_000, refetchOnWindowFocus: false,
@@ -294,14 +311,13 @@ function useFeed() {
         const { data } = await supabase.from("videos").select("id, caption, video_url, sound_name, views, likes, comments_count, user_id").eq("visibility", "public").eq("is_deleted", false).order("created_at", { ascending: false }).range(from, from + PAGE_SIZE - 1);
         const rows = data ?? []; if (!rows.length) return [];
         const ids = [...new Set(rows.map((v) => v.user_id))];
-        const [{ data: profiles }, urls] = await Promise.all([supabase.from("profiles").select("id, username, sottok_id").in("id", ids), signBatch(rows.map((v) => v.video_url))]);
-        const nameById = new Map((profiles ?? []).map((p) => [p.id, p.username])); const sotById = new Map((profiles ?? []).map((p) => [p.id, p.sottok_id]));
-        return rows.map((v) => { const lc = getLocal(`shorttok_comments_${v.id}`, []).length; return { id: v.id, userId: v.user_id, sotId: sotById.get(v.user_id), username: "@" + (nameById.get(v.user_id) || "shorttok"), caption: v.caption, url: urls.get(v.video_url) ?? "", sound: v.sound_name, views: v.views ?? 0, likes: v.likes ?? 0, comments: (v.comments_count ?? 0) + lc }; }).filter((r) => r.url);
+        const [{ data: profiles }, urls] = await Promise.all([supabase.from("profiles").select("id, username, sottok_id, avatar_url").in("id", ids), signBatch(rows.map((v) => v.video_url))]);
+        const nameById = new Map((profiles ?? []).map((p) => [p.id, p.username])); const sotById = new Map((profiles ?? []).map((p) => [p.id, p.sottok_id])); const avById = new Map((profiles ?? []).map((p) => [p.id, (p as any).avatar_url]));
+        return rows.map((v) => { const lc = getLocal(`shorttok_comments_${v.id}`, []).length; return { id: v.id, userId: v.user_id, sotId: sotById.get(v.user_id), avatar: avById.get(v.user_id), username: "@" + (nameById.get(v.user_id) || "shorttok"), caption: v.caption, url: urls.get(v.video_url) ?? "", sound: v.sound_name, views: v.views ?? 0, likes: v.likes ?? 0, comments: (v.comments_count ?? 0) + lc }; }).filter((r) => r.url);
       } catch { return []; }
     },
   });
 }
-
 function VideoCard({ item, muted, onToggleMute, active, liked, onToggleLike, onOpenComments, followed, onFollow, onOpenProfile, onOpenGift, onOpenSound }: any) {
   const ref = useRef<HTMLVideoElement>(null); const [saved, setSaved] = useState(false);
   useEffect(() => { const el = ref.current; if (!el) return; if (active) { void el.play().catch(() => {}); try { void countView(item.id); } catch {} } else { el.pause(); el.currentTime = 0; } }, [active, item.id]);
@@ -312,7 +328,7 @@ function VideoCard({ item, muted, onToggleMute, active, liked, onToggleLike, onO
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-black/40" />
       {muted && <span className="absolute right-3 top-14 rounded-full bg-black/50 px-3 py-1 text-[11px] text-white">Tap for sound</span>}
       <div className="absolute bottom-28 right-3 flex flex-col items-center gap-5">
-        <div className="relative mb-1"><button onClick={onOpenProfile} className="block h-12 w-12 rounded-full border-2 border-white bg-gradient-to-br from-orange-500 to-pink-600 flex items-center justify-center font-bold text-white">{item.username.replace("@", "")[0].toUpperCase()}</button><button onClick={onFollow} className={`absolute -bottom-2 left-1/2 flex h-5 w-5 -translate-x-1/2 items-center justify-center rounded-full ${followed ? "bg-white" : "bg-red-600"}`}>{followed ? <Check className="h-3.5 w-3.5 text-red-600" strokeWidth={3} /> : <Plus className="h-3.5 w-3.5 text-white" strokeWidth={3} />}</button></div>
+        <div className="relative mb-1">{item.avatar ? <button onClick={onOpenProfile}><img src={item.avatar} className="block h-12 w-12 rounded-full border-2 border-white object-cover" alt="" /></button> : <button onClick={onOpenProfile} className="block h-12 w-12 rounded-full border-2 border-white bg-gradient-to-br from-orange-500 to-pink-600 flex items-center justify-center font-bold text-white">{item.username.replace("@", "")[0].toUpperCase()}</button>}<button onClick={onFollow} className={`absolute -bottom-2 left-1/2 flex h-5 w-5 -translate-x-1/2 items-center justify-center rounded-full ${followed ? "bg-white" : "bg-red-600"}`}>{followed ? <Check className="h-3.5 w-3.5 text-red-600" strokeWidth={3} /> : <Plus className="h-3.5 w-3.5 text-white" strokeWidth={3} />}</button></div>
         <button onClick={onToggleLike} className="flex flex-col items-center gap-1"><Heart className={`h-8 w-8 ${liked ? "fill-red-500 text-red-500" : "text-white"}`} /><span className="text-[11px] text-white">{formatCompact(item.likes)}</span></button>
         <button onClick={onOpenComments} className="flex flex-col items-center gap-1"><MessageCircle className="h-8 w-8 text-white" /><span className="text-[11px] text-white">{formatCompact(item.comments)}</span></button>
         <button onClick={onOpenGift} className="flex flex-col items-center gap-1"><GiftIcon className="h-8 w-8 text-yellow-400" /><span className="text-[11px] text-white">গিফট</span></button>
@@ -324,7 +340,6 @@ function VideoCard({ item, muted, onToggleMute, active, liked, onToggleLike, onO
     </section>
   );
 }
-
 function BottomNav({ statusCount, onOpenStatus, currentUser, onLogin }: any) {
   return (
     <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[420px] z-50 bg-[#111] border-t border-zinc-800 flex justify-around items-center py-2 px-1 text-white">
@@ -333,11 +348,10 @@ function BottomNav({ statusCount, onOpenStatus, currentUser, onLogin }: any) {
       <button onClick={onOpenStatus} className="flex flex-col items-center gap-0.5 w-[60px] relative"><span className="relative"><CircleDot className="h-6 w-6 text-green-400" />{statusCount ? <span className="absolute -top-1 -right-2 bg-[#fe2c55] text-[9px] font-bold px-1 rounded-full">{statusCount}</span> : null}</span><span className="text-[11px] font-bold text-green-400">স্ট্যাটাস</span></button>
       <Link to="/upload" className="flex flex-col items-center w-[60px]"><span className="h-10 w-10 rounded-full bg-[#fe2c55] flex items-center justify-center"><Plus className="h-6 w-6 text-white" /></span></Link>
       <Link to="/inbox" className="flex flex-col items-center gap-0.5 w-[60px]"><Bell className="h-6 w-6 text-white/80" /><span className="text-[11px] text-white/70">ইনবক্স</span></Link>
-      <button onClick={onLogin} className="flex flex-col items-center gap-0.5 w-[60px]"><span className="h-6 w-6 rounded-full bg-gradient-to-br from-orange-500 to-pink-600 flex items-center justify-center text-[12px] font-bold">{currentUser ? (currentUser.name?.[0] || "U").toUpperCase() : <User className="h-5 w-5" />}</span><span className="text-[11px] text-white/70 max-w-[60px] truncate">{currentUser ? currentUser.name : "প্রোফাইল"}</span></button>
+      <button onClick={onLogin} className="flex flex-col items-center gap-0.5 w-[60px]">{currentUser?.avatar ? <img src={currentUser.avatar} className="h-6 w-6 rounded-full object-cover" alt="" /> : <span className="h-6 w-6 rounded-full bg-gradient-to-br from-orange-500 to-pink-600 flex items-center justify-center text-[12px] font-bold">{currentUser ? (currentUser.name?.[0] || "U").toUpperCase() : <User className="h-5 w-5" />}</span>}<span className="text-[11px] text-white/70 max-w-[60px] truncate">{currentUser ? currentUser.name : "প্রোফাইল"}</span></button>
     </div>
   );
 }
-
 function FeedPage() {
   const { user } = useSafeAuth();
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useFeed();
@@ -357,16 +371,18 @@ function FeedPage() {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const baseItems = useMemo(() => { const rows = (data?.pages ?? []).flat(); return rows.length ? rows : demoVideos; }, [data]);
   const items = useMemo(() => baseItems.map((i) => ({ ...i, likes: Math.max(0, i.likes + (likeDelta[i.id] ?? 0)), comments: Math.max(0, i.comments + (commentDelta[i.id] ?? 0)) })), [baseItems, likeDelta, commentDelta]);
-  const creators = useMemo(() => { const map = new Map<string, any>(); items.forEach((v) => { const key = v.sotId || v.username; if (!map.has(key)) map.set(key, { username: v.username, sotId: v.sotId || v.username, count: 0, totalLikes: 0 }); const c = map.get(key); c.count += 1; c.totalLikes += v.likes || 0; }); return [...map.values()].sort((a, b) => b.count - a.count); }, [items]);
+  const creators = useMemo(() => { const map = new Map<string, any>(); items.forEach((v) => { const key = v.sotId || v.username; if (!map.has(key)) map.set(key, { username: v.username, sotId: v.sotId || v.username, avatar: (v as any).avatar, count: 0, totalLikes: 0 }); const c = map.get(key); c.count += 1; c.totalLikes += v.likes || 0; }); return [...map.values()].sort((a, b) => b.count - a.count); }, [items]);
   const sounds = useMemo(() => { const map = new Map<string, number>(); items.forEach((v) => { if (v.sound) map.set(v.sound, (map.get(v.sound) || 0) + 1); }); return [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5); }, [items]);
   useEffect(() => { const ids = baseItems.map((i) => i.id).filter((id) => !id.startsWith("demo-")); if (!user || !ids.length) return; let alive = true; void fetchMyLikes(ids, user.id).then((s) => alive && setLikedIds((prev) => new Set([...prev, ...s]))).catch(() => {}); return () => { alive = false; }; }, [baseItems, user]);
   useEffect(() => { const ids = [...new Set(baseItems.map((i) => i.userId).filter((x): x is string => !!x))]; if (!user || !ids.length) return; void fetchFollowingSet(user.id, ids).then((s) => setFollowSet((prev) => new Set([...prev, ...s]))).catch(() => {}); }, [baseItems, user]);
-  async function toggleFollow(other?: string) { if (!other) return; const was = followSet.has(other); const next = new Set(followSet); if (was) next.delete(other); else next.add(other); setFollowSet(next); setLocal("shorttok_follow", [...next]); if (user) { try { await setFollow(user.id, other, !was); } catch {} } toast.success(was ? "আনফলো করা হয়েছে" : "ফলো করা হয়েছে"); }
+  async function toggleFollow(other?: string) { if (!other) return; if (!currentUser && !user) return setShowLogin(true); const was = followSet.has(other); const next = new Set(followSet); if (was) next.delete(other); else next.add(other); setFollowSet(next); setLocal("shorttok_follow", [...next]); if (user) { try { await setFollow(user.id, other, !was); } catch {} } toast.success(was ? "আনফলো করা হয়েছে" : "ফলো করা হয়েছে"); }
   async function toggleLike(id: string) { const wasLiked = likedIds.has(id); const next = new Set(likedIds); if (wasLiked) next.delete(id); else next.add(id); setLikedIds(next); setLocal("shorttok_liked", [...next]); setLikeDelta((d) => ({ ...d, [id]: (d[id] ?? 0) + (wasLiked ? -1 : 1) })); if (!wasLiked) toast.success("❤️ লাইক হয়ে গেছে"); if (user && !id.startsWith("demo-")) { try { if (wasLiked) await unlikeVideo(id, user.id); else await likeVideo(id, user.id); } catch {} } }
   const onScroll = useCallback(() => { const el = scrollerRef.current; if (!el) return; const index = Math.round(el.scrollTop / el.clientHeight); setActiveIndex((prev) => (prev === index ? prev : index)); if (hasNextPage && !isFetchingNextPage && index >= items.length - 2) void fetchNextPage(); }, [fetchNextPage, hasNextPage, isFetchingNextPage, items.length]);
   const visibleItems = tab === "foryou" ? items : items.filter((it) => it.userId && followSet.has(it.userId));
   const likeStatus = (id: string) => { setStatuses((prev) => { const next = prev.map((s) => s.id === id ? { ...s, likes: (s.likes || 0) + 1 } : s); setLocal("shorttok_status_list", next); return next; }); };
   const openProfileOrLogin = () => { if (currentUser) setOpenProfileId(currentUser.name || currentUser.email?.split("@")[0] || "me"); else setShowLogin(true); };
+  const profileTarget = openProfileId ? items.find((x: any) => (x.sotId || x.username.replace("@", "")) === openProfileId) : null;
+  const profileFollowed = !!(profileTarget?.userId && followSet.has(profileTarget.userId));
   return (
     <SafeWrap>
     <div className="mx-auto w-full max-w-[420px] bg-black">
@@ -385,9 +401,9 @@ function FeedPage() {
       {showStatusPage && <StatusPage statuses={statuses} creators={creators} sounds={sounds} currentUser={currentUser} onLogout={logout} onLogin={() => setShowLogin(true)} onDeleteAccount={deleteAccount} onPrivacy={() => setShowPrivacy(true)} onClose={() => setShowStatusPage(false)} onAddStatus={() => { if (!currentUser) return setShowLogin(true); setShowAddStatus(true); }} onOpenStatus={(i: number) => setViewStatusIdx(i)} onOpenProfile={(id: string) => { setShowStatusPage(false); setOpenProfileId(id); }} onOpenSound={(s: string) => { setShowStatusPage(false); setOpenSound(s); }} onShowAllCreators={() => setShowAllCreators(true)} />}
       {showAddStatus && <AddStatusSheet onClose={() => setShowAddStatus(false)} onAdded={(s: any) => setStatuses((p) => [s, ...p])} />}
       {viewStatusIdx !== null && statuses[viewStatusIdx] && <StatusViewer statuses={statuses} index={viewStatusIdx} onClose={() => setViewStatusIdx(null)} onLike={likeStatus} />}
-      {showAllCreators && (<div className="fixed inset-0 z-[115] bg-black/80 flex items-end justify-center" onClick={() => setShowAllCreators(false)}><div className="w-full max-w-[420px] bg-white rounded-t-3xl p-4 max-h-[75vh] overflow-y-auto text-black" onClick={(e) => e.stopPropagation()}><div className="flex justify-between"><b>👥 যারা যারা ভিডিও ছেড়েছে ({creators.length} জন)</b><button onClick={() => setShowAllCreators(false)} className="text-2xl px-2">×</button></div><div className="mt-3 space-y-2">{creators.map((c: any, idx: number) => (<button key={c.sotId || c.username} onClick={() => { setShowAllCreators(false); setShowStatusPage(false); setOpenProfileId(c.sotId || c.username.replace("@", "")); }} className="w-full flex items-center gap-3 bg-zinc-100 rounded-2xl p-3 text-left"><span className="text-zinc-400 font-bold text-sm w-5">{idx + 1}</span><div className="h-12 w-12 shrink-0 rounded-full bg-gradient-to-br from-orange-500 to-pink-600 flex items-center justify-center font-bold text-lg text-white">{c.username.replace("@", "")[0].toUpperCase()}</div><div className="flex-1 min-w-0"><p className="font-bold text-[14px] truncate">{c.username}</p><p className="text-[12px] text-zinc-500">ID: {c.sotId || c.username} • {c.totalLikes} লাইক</p></div><div className="text-right shrink-0"><p className="font-bold text-[14px] text-[#fe2c55]">{c.count} টা</p><p className="text-[11px] text-zinc-500">ভিডিও</p></div></button>))}</div></div></div>)}
+      {showAllCreators && (<div className="fixed inset-0 z-[115] bg-black/80 flex items-end justify-center" onClick={() => setShowAllCreators(false)}><div className="w-full max-w-[420px] bg-white rounded-t-3xl p-4 max-h-[75vh] overflow-y-auto text-black" onClick={(e) => e.stopPropagation()}><div className="flex justify-between"><b>👥 যারা যারা ভিডিও ছেড়েছে ({creators.length} জন)</b><button onClick={() => setShowAllCreators(false)} className="text-2xl px-2">×</button></div><div className="mt-3 space-y-2">{creators.map((c: any, idx: number) => (<button key={c.sotId || c.username} onClick={() => { setShowAllCreators(false); setShowStatusPage(false); setOpenProfileId(c.sotId || c.username.replace("@", "")); }} className="w-full flex items-center gap-3 bg-zinc-100 rounded-2xl p-3 text-left"><span className="text-zinc-400 font-bold text-sm w-5">{idx + 1}</span>{c.avatar ? <img src={c.avatar} className="h-12 w-12 shrink-0 rounded-full object-cover" alt="" /> : <div className="h-12 w-12 shrink-0 rounded-full bg-gradient-to-br from-orange-500 to-pink-600 flex items-center justify-center font-bold text-lg text-white">{c.username.replace("@", "")[0].toUpperCase()}</div>}<div className="flex-1 min-w-0"><p className="font-bold text-[14px] truncate">{c.username}</p><p className="text-[12px] text-zinc-500">ID: {c.sotId || c.username} • {c.totalLikes} লাইক</p></div><div className="text-right shrink-0"><p className="font-bold text-[14px] text-[#fe2c55]">{c.count} টা</p><p className="text-[11px] text-zinc-500">ভিডিও</p></div></button>))}</div></div></div>)}
       {openComments && <UniversalComments video={openComments} open onClose={() => setOpenComments(null)} onCountChange={(d: number) => setCommentDelta((x) => ({ ...x, [openComments.id]: (x[openComments.id] ?? 0) + d }))} />}
-      {openProfileId && <ProfileView sotId={openProfileId} onClose={() => setOpenProfileId(null)} allVideos={items} onOpenVideo={(v: any) => { setOpenProfileId(null); setFullVideo(v); }} currentUser={currentUser} onLogout={logout} onLogin={() => setShowLogin(true)} />}
+      {openProfileId && <ProfileView sotId={openProfileId} onClose={() => setOpenProfileId(null)} allVideos={items} onOpenVideo={(v: any) => { setOpenProfileId(null); setFullVideo(v); }} currentUser={currentUser} onLogout={logout} onLogin={() => setShowLogin(true)} followed={profileFollowed} onFollow={() => void toggleFollow(profileTarget?.userId)} myUserId={user?.id} />}
       {fullVideo && (<div className="fixed inset-0 z-[95] bg-black flex flex-col"><button onClick={() => setFullVideo(null)} className="absolute top-4 right-4 z-10 bg-black/60 p-2 rounded-full text-white"><X /></button><video src={fullVideo.url} controls autoPlay loop className="flex-1 w-full object-contain" /><div className="p-4 text-white"><p className="font-bold">{fullVideo.username} • ID: {fullVideo.sotId || fullVideo.username}</p><p className="text-[13px] mt-1">{fullVideo.caption}</p><div className="flex gap-5 mt-3"><button onClick={() => toggleLike(fullVideo.id)} className="flex items-center gap-1"><Heart className={`h-6 w-6 ${likedIds.has(fullVideo.id) ? "fill-red-500 text-red-500" : "text-white"}`} />{fullVideo.likes}</button><button onClick={() => setOpenComments(fullVideo)} className="flex items-center gap-1"><MessageCircle className="h-6 w-6" /> কমেন্ট</button><button onClick={() => downloadWithWatermark(fullVideo)} className="flex items-center gap-1"><Download className="h-6 w-6" /> ডাউনলোড</button></div></div></div>)}
       {openSound && <SoundPage sound={openSound} allVideos={items} onClose={() => setOpenSound(null)} onOpenVideo={(v: any) => { setOpenSound(null); setFullVideo(v); }} onUseSound={(s: string) => { setOpenSound(null); setShowCreateWithSound(s); }} />}
       {showCreateWithSound && <CreateWithSoundSheet sound={showCreateWithSound} onClose={() => setShowCreateWithSound(null)} />}
