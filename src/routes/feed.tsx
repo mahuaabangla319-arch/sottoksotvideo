@@ -82,7 +82,6 @@ const demoVideos: FeedItem[] = [
   },
 ];
 
-/** One batched signing call for the whole page instead of one request per video. */
 async function signBatch(paths: string[]): Promise<Map<string, string>> {
   const map = new Map<string, string>();
   const storagePaths = paths.filter((p) => !p.startsWith("http"));
@@ -94,6 +93,63 @@ async function signBatch(paths: string[]): Promise<Map<string, string>> {
     });
   }
   return map;
+}
+
+// ===== SOT TOK - VIGO STYLE ঘুরন্ত WATERMARK দিয়ে ডাউনলোড =====
+async function downloadWithWatermark(item: FeedItem) {
+  toast("ডাউনলোড হচ্ছে… Watermark বসানো হচ্ছে");
+  try {
+    const videoEl = document.createElement('video');
+    videoEl.src = item.url;
+    videoEl.muted = true;
+    videoEl.playsInline = true;
+    videoEl.crossOrigin = "anonymous";
+    await videoEl.play().catch(() => {});
+    await new Promise(r => setTimeout(r, 600));
+    const canvas = document.createElement('canvas');
+    canvas.width = videoEl.videoWidth || 720;
+    canvas.height = videoEl.videoHeight || 1280;
+    const ctx = canvas.getContext('2d')!;
+    const stream = (canvas as any).captureStream(30);
+    const rec = new MediaRecorder(stream, { mimeType: 'video/webm' });
+    const chunks: any[] = [];
+    rec.ondataavailable = e => chunks.push(e.data);
+    rec.onstop = () => {
+      const blob = new Blob(chunks, { type: 'video/webm' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `SOTTOK-${item.username.replace('@','')}.webm`;
+      a.click();
+      toast.success("ডাউনলোড হয়ে গেছে - SOT TOK Watermark সহ");
+    };
+    rec.start();
+    const logo = new Image();
+    logo.src = '/sottok-logo.png';
+    await new Promise(r => { logo.onload = r; logo.onerror = r; });
+    const startTime = Date.now();
+    const draw = () => {
+      if (videoEl.ended || videoEl.paused) { try { rec.stop(); } catch {} return; }
+      ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
+      const t = (Date.now() - startTime) / 6000;
+      const progress = Math.abs((t % 2) - 1);
+      const y = 40 + progress * (canvas.height - 140);
+      const text = `SOT TOK  •  ${item.username}  •  ID: ${item.sotId || item.userId || item.username}`;
+      ctx.font = 'bold 26px Arial';
+      const w = ctx.measureText(text).width + 90;
+      ctx.fillStyle = 'rgba(0,0,0,0.6)';
+      ctx.beginPath();
+      // @ts-ignore - roundRect সব ব্রাউজারে আছে
+      if (ctx.roundRect) ctx.roundRect(canvas.width - w - 20, y, w, 52, 26); else ctx.rect(canvas.width - w - 20, y, w, 52);
+      ctx.fill();
+      if (logo.complete && logo.naturalWidth) ctx.drawImage(logo, canvas.width - w - 10, y + 4, 44, 44);
+      ctx.fillStyle = '#fff';
+      ctx.fillText(text, canvas.width - w + 42, y + 34);
+      requestAnimationFrame(draw);
+    };
+    draw();
+  } catch {
+    void downloadVideo(item.url, `sottok-${item.id.slice(0, 8)}`);
+  }
 }
 
 function useFeed() {
@@ -113,11 +169,8 @@ function useFeed() {
         .eq("is_deleted", false)
         .order("created_at", { ascending: false })
         .range(from, from + PAGE_SIZE - 1);
-
-
       const rows = data ?? [];
       if (!rows.length) return [];
-
       const ids = [...new Set(rows.map((v) => v.user_id))];
       const [{ data: profiles }, urls] = await Promise.all([
         supabase.from("profiles").select("id, username, sottok_id").in("id", ids),
@@ -125,7 +178,6 @@ function useFeed() {
       ]);
       const nameById = new Map((profiles ?? []).map((p) => [p.id, p.username]));
       const sotById = new Map((profiles ?? []).map((p) => [p.id, p.sottok_id]));
-
       return rows
         .map((v) => ({
           id: v.id,
@@ -193,9 +245,7 @@ function VideoCard({
         await navigator.clipboard.writeText(url);
         toast.success("লিঙ্ক কপি হয়েছে");
       }
-    } catch {
-      /* user cancelled */
-    }
+    } catch {}
   }
 
   return (
@@ -213,6 +263,13 @@ function VideoCard({
       />
 
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-black/40" />
+
+      {/* ===== VIGO STYLE - উপর নিচ ঘোরা WATERMARK (দেখার সময়) ===== */}
+      <div className="pointer-events-none absolute right-3 flex items-center gap-1.5 rounded-full bg-black/60 px-2.5 py-1.5 animate-[sotWatermarkMove_6s_ease-in-out_infinite_alternate]">
+        <img src="/sottok-logo.png" className="h-5 w-5 rounded-md" alt="SOT TOK" />
+        <span className="text-[11px] font-bold text-white">SOT TOK • {item.username} • ID: {item.sotId || item.username}</span>
+      </div>
+      <style>{`@keyframes sotWatermarkMove { 0% { top: 56px; } 50% { top: 45%; } 100% { top: 78%; } }`}</style>
 
       {muted && (
         <span className="absolute right-3 top-14 rounded-full bg-black/50 px-3 py-1 text-[11px] text-white">
@@ -254,10 +311,7 @@ function VideoCard({
           <span className="text-[11px] text-white">Share</span>
         </button>
         <button
-          onClick={() => {
-            toast("ডাউনলোড শুরু হয়েছে…");
-            void downloadVideo(item.url, `sottok-${item.id.slice(0, 8)}`);
-          }}
+          onClick={() => { void downloadWithWatermark(item); }}
           className="flex flex-col items-center gap-1"
           aria-label="ডাউনলোড"
         >
@@ -304,149 +358,3 @@ function FeedPage() {
 
   const baseItems = useMemo(() => {
     const rows = (data?.pages ?? []).flat();
-    return rows.length ? rows : demoVideos;
-  }, [data]);
-
-  const items = useMemo(
-    () =>
-      baseItems.map((i) => ({
-        ...i,
-        likes: Math.max(0, i.likes + (likeDelta[i.id] ?? 0)),
-      })),
-    [baseItems, likeDelta],
-  );
-
-  useEffect(() => {
-    const ids = baseItems.map((i) => i.id).filter((id) => !id.startsWith("demo-"));
-    if (!user || !ids.length) return;
-    let alive = true;
-    void fetchMyLikes(ids, user.id).then((s) => alive && setLikedIds(s));
-    return () => {
-      alive = false;
-    };
-  }, [baseItems, user]);
-
-  useEffect(() => {
-    const ids = [...new Set(baseItems.map((i) => i.userId).filter((x): x is string => !!x))];
-    if (!user || !ids.length) return;
-    void fetchFollowingSet(user.id, ids).then(setFollowSet);
-  }, [baseItems, user]);
-
-  async function toggleFollow(other?: string) {
-    if (!other) { toast.error("ডেমো ভিডিও"); return; }
-    if (!user) { toast.error("ফলো করতে লগইন করুন"); return; }
-    const was = followSet.has(other);
-    setFollowSet((s) => { const n = new Set(s); if (was) n.delete(other); else n.add(other); return n; });
-    try {
-      await setFollow(user.id, other, !was);
-      toast.success(was ? "আনফলো করা হয়েছে" : "ফলো করা হয়েছে");
-    } catch {
-      setFollowSet((s) => { const n = new Set(s); if (was) n.add(other); else n.delete(other); return n; });
-      toast.error("আবার চেষ্টা করুন");
-    }
-  }
-
-  async function toggleLike(id: string) {
-    if (!user) {
-      toast.error("লাইক করতে লগইন করুন");
-      return;
-    }
-    if (id.startsWith("demo-")) {
-      toast.error("ডেমো ভিডিওতে লাইক করা যাবে না");
-      return;
-    }
-    const wasLiked = likedIds.has(id);
-    setLikedIds((prev) => {
-      const next = new Set(prev);
-      if (wasLiked) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-    setLikeDelta((d) => ({ ...d, [id]: (d[id] ?? 0) + (wasLiked ? -1 : 1) }));
-    try {
-      if (wasLiked) await unlikeVideo(id, user.id);
-      else await likeVideo(id, user.id);
-    } catch {
-      setLikedIds((prev) => {
-        const next = new Set(prev);
-        if (wasLiked) next.add(id);
-        else next.delete(id);
-        return next;
-      });
-      setLikeDelta((d) => ({ ...d, [id]: (d[id] ?? 0) + (wasLiked ? 1 : -1) }));
-      toast.error("আবার চেষ্টা করুন");
-    }
-  }
-
-  const onScroll = useCallback(() => {
-    const el = scrollerRef.current;
-    if (!el) return;
-    const index = Math.round(el.scrollTop / el.clientHeight);
-    setActiveIndex((prev) => (prev === index ? prev : index));
-    if (hasNextPage && !isFetchingNextPage && index >= items.length - 2) void fetchNextPage();
-  }, [fetchNextPage, hasNextPage, isFetchingNextPage, items.length]);
-
-  return (
-    <div className="mx-auto w-full max-w-[420px] bg-black">
-      <div className="fixed left-1/2 top-0 z-40 flex w-full max-w-[420px] -translate-x-1/2 justify-center gap-6 pt-4">
-        <button
-          onClick={() => setTab("following")}
-          className={tab === "following" ? "text-[15px] font-bold text-white" : "text-[15px] text-white/60"}
-        >
-          Following
-        </button>
-        <button
-          onClick={() => setTab("foryou")}
-          className={tab === "foryou" ? "text-[15px] font-bold text-white" : "text-[15px] text-white/60"}
-        >
-          For You
-        </button>
-      </div>
-
-      <div ref={scrollerRef} onScroll={onScroll} className="snap-feed no-scrollbar h-screen overflow-y-scroll">
-        {isLoading ? (
-          <div className="flex h-screen items-center justify-center text-white/50">লোড হচ্ছে…</div>
-        ) : (
-          items.map((item, i) => (
-            <VideoCard
-              key={item.id}
-              item={item}
-              active={i === activeIndex}
-              muted={muted}
-              onToggleMute={() => setMuted((m) => !m)}
-              liked={likedIds.has(item.id)}
-              onToggleLike={() => void toggleLike(item.id)}
-              commentCount={Math.max(0, item.comments + (commentDelta[item.id] ?? 0))}
-              onOpenComments={() => setOpenComments(item.id)}
-              followed={!!item.userId && followSet.has(item.userId)}
-              onFollow={() => void toggleFollow(item.userId)}
-              isMe={!!user && item.userId === user.id}
-              onOpenGift={() => {
-                if (!user) return void toast.error("গিফট পাঠাতে লগইন করুন");
-                if (item.id.startsWith("demo-")) return void toast.error("ডেমো ভিডিওতে গিফট পাঠানো যাবে না");
-                if (item.userId === user.id) return void toast.error("নিজের ভিডিওতে গিফট পাঠানো যাবে না");
-                setOpenGift(item.id);
-              }}
-            />
-          ))
-        )}
-      </div>
-
-      {openComments && (
-        <CommentsSheet
-          videoId={openComments}
-          open
-          onClose={() => setOpenComments(null)}
-          onCountChange={(delta) =>
-            setCommentDelta((d) => ({ ...d, [openComments]: (d[openComments] ?? 0) + delta }))
-          }
-        />
-      )}
-
-      {openGift && <GiftSheet videoId={openGift} open onClose={() => setOpenGift(null)} onSent={setGiftAnim} />}
-      <GiftAnimation gift={giftAnim} onDone={() => setGiftAnim(null)} />
-
-      <BottomNav />
-    </div>
-  );
-}
