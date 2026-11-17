@@ -16,6 +16,9 @@ import { AuthProvider } from "@/lib/auth";
 import { Toaster } from "@/components/ui/sonner";
 import { NotificationListener } from "@/components/NotificationListener";
 
+// --- SOTTOK NEW: Clerk Login - Purono kichu delete kora hoy ni, sudhu jora hoyeche ---
+import { ClerkProvider } from "@clerk/clerk-react";
+import { SottoKHeader } from "../SottoKAuth";
 
 function NotFoundComponent() {
   return (
@@ -135,14 +138,16 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-        <Outlet />
-        <Toaster position="top-center" richColors />
-        <NotificationListener />
-      </AuthProvider>
-    </QueryClientProvider>
+    <ClerkProvider publishableKey={import.meta.env.VITE_CLERK_PUBLISHABLE_KEY}>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <SottoKHeader />
+          {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+          <Outlet />
+          <Toaster position="top-center" richColors />
+          <NotificationListener />
+        </AuthProvider>
+      </QueryClientProvider>
+    </ClerkProvider>
   );
-
 }
