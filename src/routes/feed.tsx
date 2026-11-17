@@ -74,4 +74,60 @@ function CreateVideoSheet({ onClose, onPosted, currentUser, user, sounds }: any)
   {step === 2 && (<div className="p-4 space-y-3"><p className="font-bold">✂️ ২. গান কাটো — কতটুকু নেবে?</p><div className="bg-zinc-100 rounded-2xl p-4"><p className="text-sm font-bold">🎵 {songName}</p><p className="text-[12px] text-zinc-500 mt-1">শুরু: {start} সেকেন্ড থেকে • চলবে: {duration} সেকেন্ড</p><div className="flex gap-2 mt-3">{presets.map((d) => (<button key={d} onClick={() => setDuration(d)} className={`flex-1 py-2 rounded-full font-bold text-sm ${duration === d ? "bg-black text-white" : "bg-white"}`}>{d} sec</button>))}</div><label className="block mt-3 text-[12px] font-bold">শুরু কোথা থেকে? {start}s</label><input type="range" min={0} max={120} value={start} onChange={(e) => setStart(Number(e.target.value))} className="w-full accent-[#fe2c55]" /><label className="block text-[12px] font-bold">কতটুকু? {duration}s</label><input type="range" min={5} max={60} value={duration} onChange={(e) => setDuration(Number(e.target.value))} className="w-full accent-[#fe2c55]" /><button onClick={playTrimmed} className="w-full mt-2 bg-white border rounded-full py-2 font-bold text-sm">▶️ কাটা গানটা শুনে দেখো</button></div><div className="flex gap-2"><button onClick={() => setStep(1)} className="flex-1 bg-zinc-100 rounded-full py-3 font-bold">← পিছে</button><button onClick={() => setStep(3)} className="flex-1 bg-[#fe2c55] text-white rounded-full py-3 font-bold">ভিডিও বানাও → 👄</button></div></div>)}
   {step === 3 && (<div className="p-4 space-y-3"><p className="font-bold">👄 ৩. ভিডিও বানাও</p><p className="text-[12px] bg-zinc-100 rounded-full px-3 py-2">🎵 {songName} • {start}s থেকে {duration}s পর্যন্ত বাজবে</p>{countdown > 0 && <div className="text-center text-6xl font-black text-[#fe2c55]">{countdown}</div>}{isRecording && <p className="text-center text-red-600 font-bold animate-pulse">🔴 রেকর্ড হচ্ছে... {duration} সেকেন্ড • গান বাজছে</p>}{videoPreview ? <video src={videoPreview} controls className="w-full rounded-2xl bg-black aspect-[9/16] object-cover" /> : <div className="w-full aspect-[9/16] bg-zinc-900 rounded-2xl flex items-center justify-center text-white text-center p-4">📹 ক্যামেরা দিয়ে রেকর্ড করো<br />অথবা গ্যালারি থেকে ভিডিও নাও</div>}<div className="flex gap-2"><button onClick={startRecording} className="flex-1 bg-red-600 text-white rounded-full py-3 font-bold">🔴 ক্যামেরা রেকর্ড</button>{isRecording && <button onClick={stopRecording} className="flex-1 bg-black text-white rounded-full py-3 font-bold">⏹️ থামাও</button>}</div><label className="block bg-zinc-100 rounded-2xl py-3 text-center font-bold text-sm cursor-pointer">📁 গ্যালারি থেকে ভিডিও নাও<input type="file" accept="video/*" className="hidden" onChange={async (e) => { const f = e.target.files?.[0]; if (f) { setVideoFile(f); const perm = await fileToPermanentUrl(f); setVideoPreview(perm); } }} /></label><input value={caption} onChange={(e) => setCaption(e.target.value)} placeholder="ক্যাপশন লিখো... 🎬" className="w-full bg-zinc-100 rounded-2xl px-4 py-3 text-sm outline-none" /><button onClick={doUpload} disabled={uploading} className="w-full bg-[#fe2c55] text-white rounded-full py-3 font-bold">{uploading ? "আপলোড হচ্ছে... ⏳" : "🚀 পোস্ট করো → হোমে আর প্রোফাইলে দেখাবে"}</button><button onClick={() => setStep(2)} className="w-full bg-zinc-100 rounded-full py-2 text-sm font-bold">← গান আবার কাটো</button></div>)}
   </div>);
+}// ---------- ADD ONLY: SHORT TOK - Instagram Profile + Real Actions ----------
+
+// 1. পোস্ট করলেই Home + Profile দুই জায়গায়
+export function postVideoToAll(newItem:any, uid:string, userName:string){
+  const get=(k:string)=>JSON.parse(localStorage.getItem(k)||"[]");
+  const put=(k:string,v:any)=>localStorage.setItem(k,JSON.stringify(v));
+  put("shorttok_my_videos",[newItem,...get("shorttok_my_videos")]);
+  put("shorttok_feed_extra",[newItem,...get("shorttok_feed_extra")]);
+  put("sottok_videos",[newItem,...get("sottok_videos")]);
+  // 2. Followers দের Notification
+  put("shorttok_notifications_all",[{id:"nt-"+Date.now(),actor_name:userName,type:"video",video_id:newItem.id,message:`🎬 ${userName} নতুন ভিডিও পোস্ট করেছে`,created_at:Date.now(),is_read:false},...get("shorttok_notifications_all")].slice(0,100));
+}
+
+// 3. Like / Follow / Save - সত্যি সত্যি কাজ করবে
+export function toggleLike(videoId:string){
+  const k="shorttok_likes"; const l=JSON.parse(localStorage.getItem(k)||"[]");
+  const i=l.indexOf(videoId); if(i>=0) l.splice(i,1); else l.push(videoId);
+  localStorage.setItem(k,JSON.stringify(l)); return l.includes(videoId);
+}
+export function toggleFollow(userId:string){
+  const k="shorttok_following"; const f=JSON.parse(localStorage.getItem(k)||"[]");
+  const i=f.indexOf(userId); if(i>=0) f.splice(i,1); else f.push(userId);
+  localStorage.setItem(k,JSON.stringify(f)); return f.includes(userId);
+}
+export function addComment(videoId:string, text:string, name:string){
+  const k="shorttok_comments"; const c=JSON.parse(localStorage.getItem(k)||"{}");
+  if(!c[videoId]) c[videoId]=[]; c[videoId].push({name,text,at:Date.now()});
+  localStorage.setItem(k,JSON.stringify(c)); return c[videoId];
+}
+
+// 4. Profile - Instagram এর মতো, নাম শুধু SHORT TOK
+export function ProfileInstagram({user, myVideos}:any){
+  const videos = myVideos || JSON.parse(localStorage.getItem("shorttok_my_videos")||"[]");
+  const following = JSON.parse(localStorage.getItem("shorttok_following")||"[]");
+  const followers = JSON.parse(localStorage.getItem("shorttok_followers")||"[]");
+  return (
+    <div style={{background:"#fff",padding:12}}>
+      <div style={{display:"flex",alignItems:"center",gap:16}}>
+        <div style={{width:80,height:80,borderRadius:99,background:"#fe2c55",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:32,fontWeight:"900"}}>{(user?.name||"S")[0]}</div>
+        <div style={{display:"flex",gap:18,textAlign:"center"}}>
+          <div><b>{videos.length}</b><div style={{fontSize:12}}>Posts</div></div>
+          <div><b>{followers.length}</b><div style={{fontSize:12}}>Followers</div></div>
+          <div><b>{following.length}</b><div style={{fontSize:12}}>Following</div></div>
+        </div>
+      </div>
+      <b style={{display:"block",marginTop:8}}>{user?.name||"SHORT TOK User"}</b>
+      <p style={{fontSize:13,margin:"2px 0"}}>@{user?.username||"shorttok"} • নিজের পরিচয় নিজে তৈরি করো</p>
+      <p style={{fontSize:12,color:"#666"}}>SHORT TOK • ভিডিও • পরিচয় • নিজের জগৎ</p>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:2,marginTop:10}}>
+        {videos.map((v:any)=>(
+          <video key={v.id} src={v.url} style={{width:"100%",aspectRatio:"9/16",objectFit:"cover",background:"#000"}} />
+        ))}
+      </div>
+      {videos.length===0 && <p style={{textAlign:"center",fontSize:13,color:"#888",padding:20}}>এখনো কোনো ভিডিও নেই<br/>+ দিয়ে প্রথম ভিডিও বানাও 🎬</p>}
+    </div>
+  );
 }
