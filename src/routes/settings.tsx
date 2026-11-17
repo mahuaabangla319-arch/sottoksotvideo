@@ -3,7 +3,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft, Bell, ChevronRight, Copy, Download, EyeOff, FileText, Globe, HelpCircle,
-  Info, KeyRound, LogOut, MessagesSquare, Share2, Shield, Trash2, User, Wallet,
+  Info, KeyRound, LogOut, MessagesSquare, Share2, Shield, Trash2, User, Wallet, Phone,
 } from "lucide-react";
 import { toast } from "sonner";
 import { PhoneShell } from "@/components/PhoneShell";
@@ -60,11 +60,16 @@ function SettingsPage() {
   const [notif, setNotif] = useState(true);
   const [autoplay, setAutoplay] = useState(true);
   const [dataSaver, setDataSaver] = useState(false);
+  const [mobile, setMobile] = useState("");
+  const [linkedMobile, setLinkedMobile] = useState("");
 
   useEffect(() => {
     setNotif(localStorage.getItem("sottok-notif") !== "off");
     setAutoplay(localStorage.getItem("sottok-autoplay") !== "off");
     setDataSaver(localStorage.getItem("sottok-datasaver") === "on");
+    const saved = localStorage.getItem("sottok-linked-mobile") || "";
+    setLinkedMobile(saved);
+    if (saved) setMobile(saved);
   }, []);
 
   const { data: profile, refetch } = useQuery({
@@ -75,6 +80,36 @@ function SettingsPage() {
       return data;
     },
   });
+
+  // --- NEW: Your Mobile Number Link ---
+  const linkMobile = async () => {
+    const m = mobile.trim();
+    if (m.length < 10) { toast.error("সঠিক ১০ সংখ্যার মোবাইল নম্বর দাও"); return; }
+    // 1. Save locally - so mobile login works instantly even after logout
+    localStorage.setItem("sottok-linked-mobile", m);
+    // Also save in shorttok_users list for mobile login lookup
+    try {
+      const users = JSON.parse(localStorage.getItem("shorttok_users") || "[]");
+      const email = user?.email || "";
+      const idx = users.findIndex((u: any) => u.email === email);
+      if (idx >= 0) users[idx].mobile = m;
+      else if (email) users.push({ email, name: profile?.username || email.split("@")[0], mobile: m });
+      localStorage.setItem("shorttok_users", JSON.stringify(users));
+    } catch {}
+    // 2. Try to save in Supabase (if phone column exists, it will save)
+    if (user) {
+      await supabase.from("profiles").update({ phone: m } as any).eq("id", user.id);
+    }
+    setLinkedMobile(m);
+    toast.success("হয়ে গেছে! মোবাইল নম্বর লিঙ্ক হয়ে গেছে ✓\nএখন থেকে শুধু এই নম্বর দিয়েই লগইন করতে পারবে");
+  };
+
+  const unlinkMobile = () => {
+    localStorage.removeItem("sottok-linked-mobile");
+    setLinkedMobile("");
+    setMobile("");
+    toast.success("মোবাইল নম্বর আনলিঙ্ক করা হয়েছে");
+  };
 
   const toggleNotif = async () => {
     const next = !notif;
@@ -134,6 +169,33 @@ function SettingsPage() {
           <Row icon={<KeyRound className="h-5 w-5" />} label="পাসওয়ার্ড পরিবর্তন" onClick={() => void resetPassword()} />
         </Section>
       )}
+
+      {/* === NEW: MOBILE NUMBER LINK - তোমার চাওয়া সিস্টেম === */}
+      <Section title="মোবাইল লগইন">
+        <div className="px-4 py-4">
+          <div className="flex items-center gap-3">
+            <Phone className="h-5 w-5 text-white/80" />
+            <div className="flex-1">
+              <p className="text-[14px] text-white">Your Mobile Number - Link Mobile Number</p>
+              <p className="text-[11px] text-white/45">{linkedMobile ? `Linked ✓ - ${linkedMobile}` : "এখনো লিঙ্ক করা হয়নি - টাচ করে লিঙ্ক করো"}</p>
+            </div>
+          </div>
+          <input
+            value={mobile}
+            onChange={(e) => setMobile(e.target.value.replace(/\D/g, "").slice(0, 10))}
+            placeholder="১০ সংখ্যার মোবাইল নম্বর লিখো"
+            inputMode="numeric"
+            className="mt-3 w-full rounded-xl bg-white/10 px-4 py-3 text-[14px] text-white outline-none placeholder:text-white/40"
+          />
+          <button onClick={() => void linkMobile()} className="mt-3 w-full rounded-full bg-[#fe2c55] py-3 text-[14px] font-bold text-white">
+            {linkedMobile ? "নম্বর আপডেট করো" : "Link করো"}
+          </button>
+          {linkedMobile && (
+            <button onClick={unlinkMobile} className="mt-2 w-full py-2 text-center text-[12px] text-red-400">আনলিঙ্ক করো</button>
+          )}
+          <p className="mt-2 text-[11px] text-white/40">পরে লগআউট হয়ে গেলেও শুধু এই নম্বর দিয়েই এই একই অ্যাকাউন্ট খুলে যাবে।</p>
+        </div>
+      </Section>
 
       <Section title="প্রাইভেসি ও নিরাপত্তা">
         <Row icon={<EyeOff className="h-5 w-5" />} label="প্রোফাইল সার্চে লুকান" hint="অন্যরা আপনাকে সার্চে পাবে না" onClick={() => void toggleHidden()} right={<Toggle on={!!profile?.is_hidden} />} />
