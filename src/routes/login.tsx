@@ -1,21 +1,22 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 export default function Login(){
   const nav=useNavigate();
   const [tab,setTab]=useState("signup");
   const [name,setName]=useState(""); const [mobile,setMobile]=useState("");
-  const [gmail,setGmail]=useState(""); const [pin,setPin]=useState("");
-  const [cpin,setCpin]=useState("");
+  const [gmail,setGmail]=useState(""); const [pin,setPin]=useState(""); const [cpin,setCpin]=useState("");
+  // অটোমেটিক: আগেই লগইন থাকলে সোজা Feed
+  useEffect(()=>{ if(localStorage.getItem("shorttok_current")) nav("/feed"); },[]);
   const get=()=>JSON.parse(localStorage.getItem("shorttok_users")||"[]");
   function signup(){
     if(!name||mobile.length!==10||!gmail.includes("@")||pin.length<4) return alert("সব ঠিক করে দাও");
     if(pin!==cpin) return alert("PIN মিলছে না");
-    let u=get();
-    let old=u.find((x:any)=>x.email===gmail);
+    let u=get(); let old=u.find((x:any)=>x.email===gmail);
     if(old){ old.mobile="+91"+mobile; old.pin=pin; old.name=name; }
     else u.push({email:gmail,name,mobile:"+91"+mobile,pin});
     localStorage.setItem("shorttok_users",JSON.stringify(u));
-    alert("হয়ে গেছে ✅"); setTab("login");
+    localStorage.setItem("shorttok_current",gmail); // অটোমেটিক লগইন
+    alert("হয়ে গেছে ✅ অটোমেটিক লগইন হয়ে গেলো"); nav("/feed");
   }
   function login(){
     let f=get().find((x:any)=>x.mobile==="+91"+mobile && x.pin===pin);
@@ -31,7 +32,7 @@ export default function Login(){
       <input value={gmail} onChange={e=>setGmail(e.target.value)} placeholder="৩. পুরনো Gmail" style={{padding:12,borderRadius:12,border:"1px solid #ddd"}}/>
       <input type="password" value={pin} onChange={e=>setPin(e.target.value.replace(/\D/g,"").slice(0,6))} placeholder="৪. PIN" style={{padding:12,borderRadius:12,border:"1px solid #ddd"}}/>
       <input type="password" value={cpin} onChange={e=>setCpin(e.target.value.replace(/\D/g,"").slice(0,6))} placeholder="৫. Confirm PIN" style={{padding:12,borderRadius:12,border:"1px solid #ddd"}}/>
-      <button onClick={signup} style={{padding:14,borderRadius:99,background:"#fe2c55",color:"#fff",border:"none",fontWeight:"bold"}}>✅ সাইনআপ করো</button>
+      <button onClick={signup} style={{padding:14,borderRadius:99,background:"#fe2c55",color:"#fff",border:"none",fontWeight:"bold"}}>✅ সাইনআপ + অটো লগইন</button>
     </div>}
     {tab==="login" && <div style={{display:"flex",flexDirection:"column",gap:10,marginTop:14}}>
       <input value={mobile} onChange={e=>setMobile(e.target.value.replace(/\D/g,"").slice(0,10))} placeholder="মোবাইল নম্বর" style={{padding:12,borderRadius:12,border:"1px solid #ddd"}}/>
