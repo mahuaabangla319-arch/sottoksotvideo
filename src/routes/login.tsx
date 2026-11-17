@@ -1,186 +1,92 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { ArrowLeft, ShieldCheck, Loader2 } from "lucide-react";
-import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
-import { SotTokLogo } from "@/components/SotTokLogo";
-import { useAuth } from "@/lib/auth";
+// @ts-nocheck
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { useEffect, useState } from 'react'
+import { supabase } from '@/integrations/supabase/client'
 
-export const Route = createFileRoute("/login")({
-  head: () => ({
-    meta: [
-      { title: "সাইন ইন — SOT TOK" },
-      { name: "description", content: "Gmail দিয়ে সাইন ইন করুন অথবা নতুন SOT TOK আইডি তৈরি করুন।" },
-      { property: "og:title", content: "সাইন ইন — SOT TOK" },
-      { property: "og:description", content: "Gmail দিয়ে সাইন ইন করুন অথবা নতুন SOT TOK আইডি তৈরি করুন।" },
-    ],
-  }),
-  component: LoginPage,
-});
+export const Route = createFileRoute('/login')({ component: LoginPage })
 
 function LoginPage() {
-  const navigate = useNavigate();
-  const { user } = useAuth();
-  const [googleLoading, setGoogleLoading] = useState(false);
-  const [creating, setCreating] = useState(false);
-  const [fullName, setFullName] = useState("");
-  const [gmailId, setGmailId] = useState("");
-  const [password, setPassword] = useState("");
+  const navigate = useNavigate()
+  const [checking, setChecking] = useState(true)
+  const [email, setEmail] = useState('')
+  const [pass, setPass] = useState('')
+  const [msg, setMsg] = useState('')
 
+  // ===== অটোমেটিক লগইন — আগে লগইন করা থাকলে নিজে নিজে ঢুকে যাবে =====
   useEffect(() => {
-    if (user) navigate({ to: "/feed" });
-  }, [user, navigate]);
+    ;(async () => {
+      try {
+        const { data } = await supabase.auth.getSession()
+        const saved = localStorage.getItem('shorttok_persist_login')
+        const loggedOut = localStorage.getItem('shorttok_logged_out')
+        if (data?.session?.user || (saved && !loggedOut)) {
+          // অটো লগইন হয়ে গেছে — সোজা ফিডে
+          navigate({ to: '/feed', replace: true })
+          return
+        }
+      } catch {}
+      setChecking(false)
+    })()
+  }, [])
 
-  const signInGoogle = async () => {
-    setGoogleLoading(true);
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
-    });
-    if (result.error) {
-      setGoogleLoading(false);
-      toast.error("সাইন ইন ব্যর্থ হয়েছে। আবার চেষ্টা করুন।");
-      return;
+  const loginGmail = async () => {
+    try {
+      setMsg('Gmail খুলছে... একটু দাঁড়াও')
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: window.location.origin + '/feed', queryParams: { prompt: 'select_account' } },
+      })
+      if (error) throw error
+    } catch {
+      setMsg('Gmail লগইন হয়নি, আবার চেষ্টা করো')
     }
-    if (result.redirected) return;
-    navigate({ to: "/feed" });
-  };
+  }
 
-  const createId = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const id = gmailId.trim().toLowerCase().replace(/[^a-z0-9._-]/g, "");
-    if (!fullName.trim()) {
-      toast.error("পুরো নাম লিখুন।");
-      return;
-    }
-    if (id.length < 3) {
-      toast.error("অন্তত ৩ অক্ষরের আইডি লিখুন।");
-      return;
-    }
-    if (password.length < 6) {
-      toast.error("পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে।");
-      return;
-    }
+  const loginEmail = async () => {
+    if (!email || !pass) { setMsg('Email আর Password ২টোই দাও'); return }
+    try {
+      setMsg('লগইন হচ্ছে...')
+      const { error } = await supabase.auth.signInWithPassword({ email, password: pass })
+      if (error) throw error
+      localStorage.removeItem('shorttok_logged_out')
+      navigate({ to: '/feed', replace: true })
+    } catch { setMsg('Email / Password ভুল, আবার দেখো') }
+  }
 
+  const skipLogin = () => {
+    try { localStorage.setItem('shorttok_skip_login', '1') } catch {}
+    navigate({ to: '/feed' })
+  }
 
-    setCreating(true);
-    const email = `${id}@sottok.com`;
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: window.location.origin,
-        data: { full_name: fullName.trim(), username: id },
-      },
-    });
-    setCreating(false);
-    if (error) {
-      toast.error(
-        error.message.includes("already")
-          ? "এই আইডি আগে থেকেই আছে। অন্য আইডি চেষ্টা করুন।"
-          : error.message,
-      );
-      return;
-    }
-    toast.success(`আইডি তৈরি হয়েছে: ${email}`);
-    navigate({ to: "/feed" });
-  };
+  if (checking) {
+    return (
+      <div style={{ background: '#000', color: '#fff', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', maxWidth: 480, margin: '0 auto' }}>
+        <div style={{ width: 90, height: 90, borderRadius: '50%', background: 'linear-gradient(135deg,#fe2c55,#ff6a00)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 50, fontWeight: '900' }}>S</div>
+        <p style={{ marginTop: 14, fontSize: 13, color: '#aaa' }}>অটো লগইন দেখা হচ্ছে...</p>
+      </div>
+    )
+  }
 
   return (
-    <div className="mx-auto min-h-screen w-full max-w-[420px] bg-black px-6 pb-10 pt-5 text-white">
-      <button
-        onClick={() => navigate({ to: "/" })}
-        aria-label="পিছনে"
-        className="mb-2 flex h-9 w-9 items-center justify-center rounded-full"
-      >
-        <ArrowLeft className="h-6 w-6 text-white" />
-      </button>
+    <div style={{ background: '#fff', color: '#000', minHeight: '100vh', maxWidth: 480, margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px 20px', position: 'relative', overflow: 'hidden' }}>
+      {/* পিছনে হালকা জলছবি — সবসময় থাকবে */}
+      <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', opacity: 0.05, fontSize: 180, fontWeight: '900' }}>S</div>
 
-      <div className="flex flex-col items-center">
-        <SotTokLogo size={92} />
-        <h1 className="mt-4 font-display text-[30px] font-bold text-brand" style={{ letterSpacing: "2px" }}>
-          SOT TOK
-        </h1>
-        <p className="mt-1 text-sm text-gold">নিজের পরিচয় নিজেই তৈরি করো</p>
-      </div>
+      <div style={{ width: 84, height: 84, borderRadius: '50%', background: 'linear-gradient(135deg,#fe2c55,#ff6a00,#7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 42, fontWeight: '900', color: '#fff', position: 'relative', zIndex: 1 }}>S</div>
+      <b style={{ fontSize: 24, marginTop: 12, position: 'relative', zIndex: 1 }}>Short Tok এ স্বাগতম</b>
+      <p style={{ fontSize: 12, color: '#666', textAlign: 'center', position: 'relative', zIndex: 1 }}>Gmail দিয়ে একবার লগইন করো — এরপর বারবার লগইন করতে হবে না<br />অটোমেটিক লগইন হয়ে যাবে</p>
 
-      <p className="mt-6 text-center text-[13px] leading-relaxed text-white/70">
-        Gmail দিয়ে সাইন ইন করুন। নতুন অ্যাকাউন্টে একটি স্থায়ী SOT TOK আইডি তৈরি হবে এবং আপনার নাম
-        সিস্টেমে সুরক্ষিত থাকবে।
-      </p>
+      <button onClick={loginGmail} style={{ width: '100%', marginTop: 22, padding: 13, borderRadius: 999, background: '#fff', border: '2px solid #ddd', fontWeight: 'bold', fontSize: 15, position: 'relative', zIndex: 1 }}>G Gmail দিয়ে লগইন করো</button>
 
-      <div className="mt-4 flex justify-center">
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-green-500/60 px-3 py-1 text-[11px] text-green-400">
-          <ShieldCheck className="h-3.5 w-3.5" /> 100% Safe &amp; Private
-        </span>
-      </div>
+      <p style={{ fontSize: 12, color: '#999', margin: '16px 0 8px', position: 'relative', zIndex: 1 }}>— অথবা Email দিয়ে —</p>
+      <input value={email} onChange={e => setEmail(e.target.value)} placeholder="Email" style={{ width: '100%', padding: 12, borderRadius: 12, border: '1px solid #ddd', marginBottom: 8, boxSizing: 'border-box', position: 'relative', zIndex: 1 }} />
+      <input value={pass} onChange={e => setPass(e.target.value)} type="password" placeholder="Password" style={{ width: '100%', padding: 12, borderRadius: 12, border: '1px solid #ddd', marginBottom: 8, boxSizing: 'border-box', position: 'relative', zIndex: 1 }} />
+      <button onClick={loginEmail} style={{ width: '100%', padding: 13, borderRadius: 999, background: '#fe2c55', color: '#fff', border: 'none', fontWeight: 'bold', position: 'relative', zIndex: 1 }}>লগইন করো →</button>
+      {msg && <p style={{ fontSize: 12, color: '#fe2c55', marginTop: 8 }}>{msg}</p>}
 
-      <button
-        onClick={signInGoogle}
-        disabled={googleLoading}
-        className="mt-6 flex w-full items-center justify-center gap-3 rounded-xl bg-brand py-3.5 text-[15px] font-semibold text-white disabled:opacity-70"
-      >
-        {googleLoading ? (
-          <Loader2 className="h-5 w-5 animate-spin" />
-        ) : (
-          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-sm font-bold text-brand">
-            G
-          </span>
-        )}
-        Gmail দিয়ে চালিয়ে যান
-      </button>
+      <button onClick={skipLogin} style={{ width: '100%', marginTop: 10, padding: 12, borderRadius: 999, background: '#f1f1f1', border: 'none', fontWeight: 'bold', fontSize: 13, position: 'relative', zIndex: 1 }}>পরে করবো — এমনি দেখবো</button>
 
-      <div className="my-6 flex items-center gap-3">
-        <div className="h-px flex-1 bg-white/15" />
-        <span className="text-[11px] text-white/40">অথবা</span>
-        <div className="h-px flex-1 bg-white/15" />
-      </div>
-
-      <form onSubmit={createId} className="rounded-2xl border border-white/10 bg-white/5 p-4">
-        <p className="mb-3 text-[14px] font-semibold text-white">নতুন Gmail খুলতে চাই</p>
-        <input
-          value={fullName}
-          onChange={(e) => setFullName(e.target.value)}
-          placeholder="পুরো নাম"
-          className="mb-3 w-full rounded-xl border border-white/10 bg-black px-4 py-3 text-sm text-white outline-none placeholder:text-white/35 focus:border-brand"
-        />
-        <input
-          value={gmailId}
-          onChange={(e) => setGmailId(e.target.value)}
-          placeholder="sottok123"
-          autoCapitalize="none"
-          className="w-full rounded-xl border border-white/10 bg-black px-4 py-3 text-sm text-white outline-none placeholder:text-white/35 focus:border-brand"
-        />
-        <p className="mb-3 mt-1.5 text-[11px] text-white/45">
-          নতুন gmail আইডি লিখুন — আপনার ঠিকানা হবে{" "}
-          <span className="text-gold">{(gmailId || "sottok123").toLowerCase()}@sottok.com</span>
-        </p>
-        <input
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          type="password"
-          placeholder="পাসওয়ার্ড (কমপক্ষে ৬ অক্ষর)"
-          className="mb-4 w-full rounded-xl border border-white/10 bg-black px-4 py-3 text-sm text-white outline-none placeholder:text-white/35 focus:border-brand"
-        />
-        <button
-          type="submit"
-          disabled={creating}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-gold py-3 text-[15px] font-bold text-black disabled:opacity-70"
-        >
-          {creating && <Loader2 className="h-4 w-4 animate-spin" />}
-          নতুন আইডি তৈরি করুন
-        </button>
-      </form>
-
-      <p className="mt-8 text-center text-[11px] text-white/40">
-        <Link to="/login" className="underline-offset-2 hover:underline">
-          Privacy Policy
-        </Link>{" "}
-        •{" "}
-        <Link to="/login" className="underline-offset-2 hover:underline">
-          Terms of Service
-        </Link>
-      </p>
+      <p style={{ fontSize: 11, color: '#aaa', marginTop: 20, position: 'relative', zIndex: 1 }}>SHORT TOK • Sarthak • জলছবি সহ</p>
     </div>
-  );
+  )
 }
