@@ -11,13 +11,14 @@ function Splash() {
 
   useEffect(() => {
     const t = setTimeout(async () => {
-      // আগে লগইন করা আছে কিনা দেখো
+      // আগে লগইন করা আছে কিনা দেখো - পুরনো + নতুন দুটোই চেক
       try {
         const { data } = await supabase.auth.getSession()
         const saved = localStorage.getItem('shorttok_persist_login')
         const loggedOut = localStorage.getItem('shorttok_logged_out')
+        const clerkToken = localStorage.getItem('__clerk_db_jwt')
         // লগইন করা থাকলে সোজা ফিডে, না থাকলে লগইন পেজে
-        if (data?.session?.user || (saved && !loggedOut)) {
+        if (data?.session?.user || (saved && !loggedOut) || clerkToken) {
           navigate({ to: '/feed', replace: true })
         } else {
           navigate({ to: '/login', replace: true })
@@ -31,7 +32,7 @@ function Splash() {
 
   return (
     <div style={{ background: '#000', color: '#fff', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', maxWidth: 480, margin: '0 auto' }}>
-      {/* জলছবি / লোগো — তুমি যেই ছবিটা দিয়েছো ওই স্টাইল */}
+      {/* জলছবি / লোগো — তুমি যেই ছবিটা দিয়েছো ওই স্টাইল - একটুও বদলানো হয়নি */}
       <div style={{ width: 110, height: 110, borderRadius: '50%', background: 'linear-gradient(135deg,#fe2c55,#ff6a00,#7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 62, fontWeight: '900', boxShadow: '0 0 40px rgba(254,44,85,0.6)' }}>S</div>
       <b style={{ fontSize: 30, marginTop: 16 }}>SHORT <span style={{ color: '#fe2c55' }}>TOK</span></b>
       <p style={{ fontSize: 13, color: '#aaa', marginTop: 4 }}>Sarthak's Short Tok • Made in India 🇮🇳</p>
