@@ -3,7 +3,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft, Bell, ChevronRight, Copy, Download, EyeOff, FileText, Globe, HelpCircle,
-  Info, KeyRound, LogOut, MessagesSquare, Share2, Shield, Trash2, User, Wallet, Phone,
+  Info, KeyRound, LogOut, MessagesSquare, Share2, Shield, Trash2, User, Wallet,
 } from "lucide-react";
 import { toast } from "sonner";
 import { PhoneShell } from "@/components/PhoneShell";
@@ -81,8 +81,9 @@ function SettingsPage() {
     },
   });
 
-  // FIXED: শুধু localStorage এ সেভ হবে, Supabase এ phone কলাম নেই তাই ওখানে পাঠাবো না - কোনো এরর আসবে না
-  const linkMobile = () => {
+  // === জোড়া ফর্ম: মোবাইল লিঙ্ক ===
+  const linkMobile = (e?: React.FormEvent) => {
+    e?.preventDefault();
     const m = mobile.trim();
     if (m.length !== 10) { toast.error("সঠিক ১০ সংখ্যার মোবাইল নম্বর দাও"); return; }
     const email = user?.email || "";
@@ -96,13 +97,6 @@ function SettingsPage() {
     } catch {}
     setLinkedMobile(m);
     toast.success("হয়ে গেছে! মোবাইল নম্বর লিঙ্ক হয়ে গেছে ✓");
-  };
-
-  const unlinkMobile = () => {
-    localStorage.removeItem("sottok-linked-mobile");
-    setLinkedMobile("");
-    setMobile("");
-    toast.success("মোবাইল নম্বর আনলিঙ্ক করা হয়েছে");
   };
 
   const toggleNotif = async () => {
@@ -161,30 +155,14 @@ function SettingsPage() {
         </Section>
       )}
 
+      {/* === পুরনো ফর্মের সাথে জোড়া নতুন ফর্ম === */}
       <Section title="মোবাইল লগইন">
-        <div className="px-4 py-4">
-          <div className="flex items-center gap-3">
-            <Phone className="h-5 w-5 text-white/80" />
-            <div className="flex-1">
-              <p className="text-[14px] text-white">Your Mobile Number - Link Mobile Number</p>
-              <p className="text-[11px] text-white/45">{linkedMobile ? `Linked ✓ - ${linkedMobile}` : "এখনো লিঙ্ক করা হয়নি - টাচ করে লিঙ্ক করো"}</p>
-            </div>
-          </div>
-          <input
-            value={mobile}
-            onChange={(e) => setMobile(e.target.value.replace(/\D/g, "").slice(0, 10))}
-            placeholder="১০ সংখ্যার মোবাইল নম্বর লিখো"
-            inputMode="numeric"
-            className="mt-3 w-full rounded-xl bg-white/10 px-4 py-3 text-[14px] text-white outline-none placeholder:text-white/40"
-          />
-          <button onClick={linkMobile} className="mt-3 w-full rounded-full bg-[#fe2c55] py-3 text-[14px] font-bold text-white">
-            {linkedMobile ? "নম্বর আপডেট করো" : "Link করো"}
-          </button>
-          {linkedMobile && (
-            <button onClick={unlinkMobile} className="mt-2 w-full py-2 text-center text-[12px] text-red-400">আনলিঙ্ক করো</button>
-          )}
-          <p className="mt-2 text-[11px] text-white/40">পরে লগআউট হয়ে গেলেও শুধু এই নম্বর দিয়েই এই একই অ্যাকাউন্ট খুলে যাবে।</p>
-        </div>
+        <form onSubmit={linkMobile} className="px-4 py-4">
+          <p className="text-[14px] text-white">Your Mobile Number - Link Mobile Number</p>
+          <p className="text-[11px] text-white/45">{linkedMobile ? `Linked ✓ - ${linkedMobile}` : "এখনো লিঙ্ক করা হয়নি"}</p>
+          <input value={mobile} onChange={(e) => setMobile(e.target.value.replace(/\D/g, "").slice(0, 10))} placeholder="১০ সংখ্যার মোবাইল নম্বর লিখো" inputMode="numeric" required minLength={10} maxLength={10} className="mt-3 w-full rounded-xl bg-white/10 px-4 py-3 text-[14px] text-white outline-none placeholder:text-white/40" />
+          <button type="submit" className="mt-3 w-full rounded-full bg-[#fe2c55] py-3 text-[14px] font-bold text-white">{linkedMobile ? "নম্বর আপডেট করো" : "Link করো"}</button>
+        </form>
       </Section>
 
       <Section title="প্রাইভেসি ও নিরাপত্তা">
