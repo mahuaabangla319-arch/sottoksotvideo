@@ -69,7 +69,7 @@ function SettingsPage() {
     setDataSaver(localStorage.getItem("sottok-datasaver") === "on");
     const saved = localStorage.getItem("sottok-linked-mobile") || "";
     setLinkedMobile(saved);
-    if (saved) setMobile(saved);
+    setMobile(saved);
   }, []);
 
   const { data: profile, refetch } = useQuery({
@@ -81,27 +81,21 @@ function SettingsPage() {
     },
   });
 
-  // --- NEW: Your Mobile Number Link ---
-  const linkMobile = async () => {
+  // FIXED: শুধু localStorage এ সেভ হবে, Supabase এ phone কলাম নেই তাই ওখানে পাঠাবো না - কোনো এরর আসবে না
+  const linkMobile = () => {
     const m = mobile.trim();
-    if (m.length < 10) { toast.error("সঠিক ১০ সংখ্যার মোবাইল নম্বর দাও"); return; }
-    // 1. Save locally - so mobile login works instantly even after logout
+    if (m.length !== 10) { toast.error("সঠিক ১০ সংখ্যার মোবাইল নম্বর দাও"); return; }
+    const email = user?.email || "";
     localStorage.setItem("sottok-linked-mobile", m);
-    // Also save in shorttok_users list for mobile login lookup
     try {
       const users = JSON.parse(localStorage.getItem("shorttok_users") || "[]");
-      const email = user?.email || "";
       const idx = users.findIndex((u: any) => u.email === email);
-      if (idx >= 0) users[idx].mobile = m;
-      else if (email) users.push({ email, name: profile?.username || email.split("@")[0], mobile: m });
+      if (idx >= 0) { users[idx].mobile = m; }
+      else if (email) { users.push({ email, name: profile?.username || email.split("@")[0], mobile: m }); }
       localStorage.setItem("shorttok_users", JSON.stringify(users));
     } catch {}
-    // 2. Try to save in Supabase (if phone column exists, it will save)
-    if (user) {
-      await supabase.from("profiles").update({ phone: m } as any).eq("id", user.id);
-    }
     setLinkedMobile(m);
-    toast.success("হয়ে গেছে! মোবাইল নম্বর লিঙ্ক হয়ে গেছে ✓\nএখন থেকে শুধু এই নম্বর দিয়েই লগইন করতে পারবে");
+    toast.success("হয়ে গেছে! মোবাইল নম্বর লিঙ্ক হয়ে গেছে ✓");
   };
 
   const unlinkMobile = () => {
@@ -116,10 +110,7 @@ function SettingsPage() {
     setNotif(next);
     localStorage.setItem("sottok-notif", next ? "on" : "off");
     if (next && "Notification" in window && Notification.permission === "default") {
-      if (window.top !== window.self) {
-        toast("ফোনে নোটিফিকেশন পেতে অ্যাপটি নতুন ট্যাবে খুলুন");
-        return;
-      }
+      if (window.top !== window.self) { toast("ফোনে নোটিফিকেশন পেতে অ্যাপটি নতুন ট্যাবে খুলুন"); return; }
       const p = await Notification.requestPermission();
       toast(p === "granted" ? "ফোনে নোটিফিকেশন চালু হয়েছে" : "ব্রাউজার সেটিংসে নোটিফিকেশন অনুমতি দিন");
     } else toast.success(next ? "নোটিফিকেশন চালু" : "নোটিফিকেশন বন্ধ");
@@ -170,7 +161,6 @@ function SettingsPage() {
         </Section>
       )}
 
-      {/* === NEW: MOBILE NUMBER LINK - তোমার চাওয়া সিস্টেম === */}
       <Section title="মোবাইল লগইন">
         <div className="px-4 py-4">
           <div className="flex items-center gap-3">
@@ -187,7 +177,7 @@ function SettingsPage() {
             inputMode="numeric"
             className="mt-3 w-full rounded-xl bg-white/10 px-4 py-3 text-[14px] text-white outline-none placeholder:text-white/40"
           />
-          <button onClick={() => void linkMobile()} className="mt-3 w-full rounded-full bg-[#fe2c55] py-3 text-[14px] font-bold text-white">
+          <button onClick={linkMobile} className="mt-3 w-full rounded-full bg-[#fe2c55] py-3 text-[14px] font-bold text-white">
             {linkedMobile ? "নম্বর আপডেট করো" : "Link করো"}
           </button>
           {linkedMobile && (
