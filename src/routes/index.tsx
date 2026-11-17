@@ -1,44 +1,46 @@
-// @ts-nocheck
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useEffect, useState } from 'react'
-import { supabase } from '@/integrations/supabase/client'
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Outlet, Link, createRootRouteWithContext, useRouter, HeadContent, Scripts, type ErrorComponentProps } from "@tanstack/react-router";
+import { useEffect, type ReactNode } from "react";
+import appCss from "../styles.css?url";
+import { reportLovableError } from "../lib/lovable-error-reporting";
+import { AuthProvider } from "@/lib/auth";
+import { Toaster } from "@/components/ui/sonner";
+import { NotificationListener } from "@/components/NotificationListener";
 
-export const Route = createFileRoute('/')({ component: Splash })
-
-function Splash() {
-  const navigate = useNavigate()
-  const [show, setShow] = useState(true)
-
-  useEffect(() => {
-    const t = setTimeout(async () => {
-      // আগে লগইন করা আছে কিনা দেখো - পুরনো + নতুন দুটোই চেক
-      try {
-        const { data } = await supabase.auth.getSession()
-        const saved = localStorage.getItem('shorttok_persist_login')
-        const loggedOut = localStorage.getItem('shorttok_logged_out')
-        const clerkToken = localStorage.getItem('__clerk_db_jwt')
-        // লগইন করা থাকলে সোজা ফিডে, না থাকলে লগইন পেজে
-        if (data?.session?.user || (saved && !loggedOut) || clerkToken) {
-          navigate({ to: '/feed', replace: true })
-        } else {
-          navigate({ to: '/login', replace: true })
-        }
-      } catch {
-        navigate({ to: '/login', replace: true })
-      }
-    }, 2000) // 2 সেকেন্ড জলছবি দেখাবে
-    return () => clearTimeout(t)
-  }, [])
-
+function NotFoundComponent() {
   return (
-    <div style={{ background: '#000', color: '#fff', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', maxWidth: 480, margin: '0 auto' }}>
-      {/* জলছবি / লোগো — তুমি যেই ছবিটা দিয়েছো ওই স্টাইল - একটুও বদলানো হয়নি */}
-      <div style={{ width: 110, height: 110, borderRadius: '50%', background: 'linear-gradient(135deg,#fe2c55,#ff6a00,#7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 62, fontWeight: '900', boxShadow: '0 0 40px rgba(254,44,85,0.6)' }}>S</div>
-      <b style={{ fontSize: 30, marginTop: 16 }}>SHORT <span style={{ color: '#fe2c55' }}>TOK</span></b>
-      <p style={{ fontSize: 13, color: '#aaa', marginTop: 4 }}>Sarthak's Short Tok • Made in India 🇮🇳</p>
-      <p style={{ fontSize: 12, color: '#666', marginTop: 30 }}>লোড হচ্ছে... একটু দাঁড়াও ❤️</p>
-      {/* নিচে হালকা জলছবি লেখা */}
-      <p style={{ position: 'fixed', bottom: 20, fontSize: 11, color: 'rgba(255,255,255,0.25)' }}>SHORT TOK • Sarthak</p>
+    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      <div className="max-w-md text-center"><h1 className="text-7xl font-bold">404</h1><p className="mt-2 text-sm text-muted-foreground">Page not found</p><Link to="/" className="mt-6 inline-flex rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground">Go home</Link></div>
     </div>
-  )
+  );
+}
+function ErrorComponent({ error, reset }: ErrorComponentProps) {
+  console.error(error);
+  const router = useRouter();
+  useEffect(() => { reportLovableError(error, { boundary: "tanstack_root_error_component" }); }, [error]);
+  return (
+    <div className="flex min-h-screen items-center justify-center px-4"><div className="text-center"><h1 className="text-xl font-semibold">This page didn't load</h1><button onClick={() => { router.invalidate(); reset(); }} className="mt-6 rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground">Try again</button></div></div>
+  );
+}
+export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
+  head: () => ({
+    meta: [{ charSet: "utf-8" }, { name: "viewport", content: "width=device-width, initial-scale=1, maximum-scale=1" }, { title: "SOT TOK" }, { name: "description", content: "SOT TOK — ভারতের নাম্বার ওয়ান শর্ট ভিডিও অ্যাপ।" }],
+    links: [{ rel: "stylesheet", href: appCss }, { rel: "manifest", href: "/manifest.json" }, { rel: "icon", href: "/favicon.png", type: "image/png" }],
+  }),
+  shellComponent: RootShell, component: RootComponent, notFoundComponent: NotFoundComponent, errorComponent: ErrorComponent,
+});
+function RootShell({ children }: { children: ReactNode }) {
+  return (<html lang="en"><head><HeadContent /></head><body>{children}<Scripts /></body></html>);
+}
+function RootComponent() {
+  const { queryClient } = Route.useRouteContext();
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <Outlet />
+        <Toaster position="top-center" richColors />
+        <NotificationListener />
+      </AuthProvider>
+    </QueryClientProvider>
+  );
 }
