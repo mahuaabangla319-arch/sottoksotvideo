@@ -1,133 +1,94 @@
-// ---------- VIDEO CREATOR : পুরোপুরি ঠিক করা - গ্যালারি ভিডিও + গ্যালারি গান ----------
-function CreateVideoSheet({ onClose, onPosted, currentUser, user, sounds }: any) {
-  const [step, setStep] = useState(1);
-  const [songName, setSongName] = useState("Original sound - Short Tok Artist");
-  const [songUrl, setSongUrl] = useState("");
-  const [start, setStart] = useState(0);
-  const [duration, setDuration] = useState(15);
-  const [caption, setCaption] = useState("");
-  const [videoFile, setVideoFile] = useState<any>(null);
-  const [videoPreview, setVideoPreview] = useState("");
-  const [isRecording, setIsRecording] = useState(false);
-  const [countdown, setCountdown] = useState(0);
-  const [uploading, setUploading] = useState(false);
-  const audioRef = useRef<any>(null);
-  const mediaRef = useRef<any>(null);
+// ========== SHORT TOK - ALL IN ONE FORM (পুরনো + নতুন) ==========
+// পুরনো ডাটা ডিলিট হবে না - shorttok_my_videos, sottok_videos, shorttok_feed_extra থেকেই নেবে
 
-  const presets = [15, 30, 60];
+// --- 1. DOWNLOAD - SHORT TOK Watermark সহ গ্যালারিতে ---
+export async function downloadWithWatermark(videoUrl:string, caption:string){
+  try{
+    const v=document.createElement("video"); v.src=videoUrl; v.muted=true; v.playsInline=true; await v.play();
+    const c=document.createElement("canvas"); c.width=v.videoWidth||720; c.height=v.videoHeight||1280;
+    const ctx=c.getContext("2d")!;
+    const stream=(c as any).captureStream(30);
+    const rec=new MediaRecorder(stream,{mimeType:"video/webm"}); const chunks:any[]=[];
+    rec.ondataavailable=(e:any)=>{if(e.data.size)chunks.push(e.data)};
+    rec.onstop=()=>{ const blob=new Blob(chunks,{type:"video/webm"}); const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="SHORT-TOK-"+Date.now()+".webm"; a.click(); };
+    rec.start();
+    const draw=()=>{ if(v.paused||v.ended){rec.stop(); return;}
+      ctx.drawImage(v,0,0,c.width,c.height);
+      ctx.fillStyle="rgba(0,0,0,0.55)"; ctx.fillRect(0,c.height-70,c.width,70);
+      ctx.fillStyle="#fff"; ctx.font="bold 28px Arial"; ctx.fillText("SHORT TOK  •  @"+(caption||"shorttok"),20,c.height-25);
+      requestAnimationFrame(draw);
+    }; draw();
+  }catch{ const a=document.createElement("a"); a.href=videoUrl; a.download="SHORT-TOK-"+Date.now()+".mp4"; a.click(); }
+}
 
-  // ফিক্স ১: ফাইলকে পার্মানেন্ট লিঙ্কে বদলানো - রিফ্রেশ করলেও উড়বে না
-  const fileToPermanentUrl = (file: any): Promise<string> => {
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.readAsDataURL(file);
-    });
-  };
+// --- 2. LIKE / FOLLOW / SAVE / COMMENT - সব সত্যি কাজ করবে ---
+export function toggleLike(id:string){ const k="shorttok_likes"; const l=JSON.parse(localStorage.getItem(k)||"[]"); const i=l.indexOf(id); if(i>=0)l.splice(i,1); else l.push(id); localStorage.setItem(k,JSON.stringify(l)); return l.includes(id); }
+export function toggleFollow(id:string){ const k="shorttok_following"; const f=JSON.parse(localStorage.getItem(k)||"[]"); const i=f.indexOf(id); if(i>=0)f.splice(i,1); else f.push(id); localStorage.setItem(k,JSON.stringify(f)); return f.includes(id); }
+export function toggleSave(id:string){ const k="shorttok_saved"; const s=JSON.parse(localStorage.getItem(k)||"[]"); const i=s.indexOf(id); if(i>=0)s.splice(i,1); else s.push(id); localStorage.setItem(k,JSON.stringify(s)); return s.includes(id); }
+export function addComment(vid:string, text:string, name:string){ const k="shorttok_comments"; const c=JSON.parse(localStorage.getItem(k)||"{}"); if(!c[vid])c[vid]=[]; c[vid].push({name,text,at:Date.now()}); localStorage.setItem(k,JSON.stringify(c)); return c[vid]; }
+export function getComments(vid:string){ const c=JSON.parse(localStorage.getItem("shorttok_comments")||"{}"); return c[vid]||[]; }
 
-  const playTrimmed = () => { const a = audioRef.current; if (!a || !songUrl) return toast.error("আগে গ্যালারি থেকে গান চয়েস করো"); a.currentTime = start; a.play(); setTimeout(() => { try { a.pause(); } catch {} }, duration * 1000); };
-
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      setCountdown(3);
-      let c = 3; const iv = setInterval(() => { c--; setCountdown(c); if (c <= 0) { clearInterval(iv); setCountdown(0); doRecord(stream); } }, 1000);
-    } catch { toast.error("ক্যামেরা খুলছে না, অনুমতি দাও"); }
-  };
-  const doRecord = (stream: any) => {
-    setIsRecording(true); if (audioRef.current && songUrl) { audioRef.current.currentTime = start; audioRef.current.play(); }
-    const rec = new MediaRecorder(stream, { mimeType: "video/webm" }); const chunks: any[] = [];
-    rec.ondataavailable = (e: any) => { if (e.data.size) chunks.push(e.data); };
-    rec.onstop = async () => { const blob = new Blob(chunks, { type: "video/webm" }); const f = new File([blob], "lipsync-" + Date.now() + ".webm", { type: "video/webm" }); setVideoFile(f); const perm = await fileToPermanentUrl(f); setVideoPreview(perm); setIsRecording(false); try { stream.getTracks().forEach((t: any) => t.stop()); } catch {} try { audioRef.current?.pause(); } catch {} setStep(3); };
-    rec.start(); mediaRef.current = rec;
-    setTimeout(() => { try { rec.stop(); } catch {} }, duration * 1000);
-  };
-  const stopRecording = () => { try { mediaRef.current?.stop(); } catch {} };
-
-  // ফিক্স ২: পোস্ট - হোম + প্রোফাইল দুই জায়গায়, পুরনো রেখে
-  const doUpload = async () => {
-    if (!videoFile) return toast.error("আগে ভিডিও রেকর্ড করো বা গ্যালারি থেকে নাও");
-    if (!currentUser && !user) return toast.error("আগে লগইন করো");
-    setUploading(true); toast("আপলোড হচ্ছে... সাথে সাথে সবাই দেখবে");
-    try {
-      const uid = user?.id || currentUser?.id || "local-" + Date.now();
-      const path = `${uid}/${Date.now()}-${videoFile.name}`;
-      // পার্মানেন্ট লিঙ্কটাই সেভ হবে, তাই রিফ্রেশের পরেও দেখাবে
-      let publicUrl = videoPreview || await fileToPermanentUrl(videoFile);
-      try { const { error } = await sb.storage.from("videos").upload(path, videoFile); if (!error) { const { data } = sb.storage.from("videos").getPublicUrl(path); publicUrl = data?.publicUrl || publicUrl; await sb.from("videos").insert({ user_id: uid, video_url: path, caption: caption || "নতুন ভিডিও 🎬", sound_name: songName + ` • ${start}s-${start + duration}s`, visibility: "public" } as any); } } catch {}
-      const newItem: FeedItem = { id: "local-" + Date.now(), userId: uid, sotId: currentUser?.name || myName(), username: "@" + (currentUser?.name || myName()), caption: caption || "নতুন ভিডিও 🎬", url: publicUrl, sound: songName, views: 0, likes: 0, comments: 0, avatar: currentUser?.avatar || "" };
-      // ফিক্স ৩: ৩ জায়গায় সেভ - হোম, প্রোফাইল, সব ভিডিও
-      const oldMine = getLocal("shorttok_my_videos", []); setLocal("shorttok_my_videos", [newItem, ...oldMine]);
-      const feedOld = getLocal("shorttok_feed_extra", []); setLocal("shorttok_feed_extra", [newItem, ...feedOld]);
-      const allOld = getLocal("sottok_videos", []); setLocal("sottok_videos", [newItem, ...allOld]);
-      await notifyAllFollowers(uid, currentUser?.name || myName(), newItem.id, newItem.caption);
-      const allN = getLocal("shorttok_notifications_all", []); setLocal("shorttok_notifications_all", [{ id: "nt-" + Date.now(), actor_name: currentUser?.name || myName(), type: "video", video_id: newItem.id, message: `🎬 ${currentUser?.name || myName()} নতুন ভিডিও পোস্ট করেছে`, created_at: Date.now(), is_read: false }, ...allN].slice(0, 100));
-      toast.success("পোস্ট হয়ে গেছে ✅ হোমে আর প্রোফাইলে দেখাবে");
-      onPosted(newItem); onClose();
-    } catch { toast.error("আপলোড হয়নি, আবার চেষ্টা করো"); }
-    setUploading(false);
-  };
-
-  return (<div className="fixed inset-0 z-[150] bg-white text-black overflow-y-auto pb-10"><div className="sticky top-0 bg-white flex items-center gap-2 px-3 py-3 border-b"><button onClick={onClose} className="text-2xl px-1">←</button><b>🎬 ভিডিও বানাও</b><span className="ml-auto text-[11px] bg-[#fe2c55] text-white px-2 py-1 rounded-full">Step {step}/3</span></div>
-  <audio ref={audioRef} src={songUrl} preload="auto" />
-  {step === 1 && (<div className="p-4 space-y-3"><p className="font-bold">🎵 ১. গান চয়েস করো</p><label className="block bg-zinc-100 rounded-2xl p-4 text-center cursor-pointer"><p className="text-3xl">🎵</p><p className="font-bold text-sm mt-1">{songUrl ? "গান চয়েস হয়ে গেছে ✅ - " + songName : "গ্যালারি থেকে গান নাও (MP3)"}</p><input type="file" accept="audio/*" className="hidden" onChange={async (e) => { const f = e.target.files?.[0]; if (f) { const perm = await fileToPermanentUrl(f); setSongUrl(perm); setSongName(f.name.replace(".mp3", "")); } }} /></label><p className="text-[12px] text-zinc-500 text-center">অথবা নিচে থেকে ট্রেন্ডিং গান নাও 👇</p><div className="flex gap-2 overflow-x-auto no-scrollbar">{(sounds || []).map(([s, cnt]: any) => (<button key={s} onClick={() => { setSongName(s); setSongUrl(""); }} className={`shrink-0 rounded-full px-3 py-2 text-[12px] font-bold ${songName === s ? "bg-[#fe2c55] text-white" : "bg-zinc-100"}`}>🎵 {s}</button>))}</div><button onClick={() => setStep(2)} className="w-full bg-[#fe2c55] text-white rounded-full py-3 font-bold">পরের ধাপ → গান কাটো ✂️</button></div>)}
-  {step === 2 && (<div className="p-4 space-y-3"><p className="font-bold">✂️ ২. গান কাটো — কতটুকু নেবে?</p><div className="bg-zinc-100 rounded-2xl p-4"><p className="text-sm font-bold">🎵 {songName}</p><p className="text-[12px] text-zinc-500 mt-1">শুরু: {start} সেকেন্ড থেকে • চলবে: {duration} সেকেন্ড</p><div className="flex gap-2 mt-3">{presets.map((d) => (<button key={d} onClick={() => setDuration(d)} className={`flex-1 py-2 rounded-full font-bold text-sm ${duration === d ? "bg-black text-white" : "bg-white"}`}>{d} sec</button>))}</div><label className="block mt-3 text-[12px] font-bold">শুরু কোথা থেকে? {start}s</label><input type="range" min={0} max={120} value={start} onChange={(e) => setStart(Number(e.target.value))} className="w-full accent-[#fe2c55]" /><label className="block text-[12px] font-bold">কতটুকু? {duration}s</label><input type="range" min={5} max={60} value={duration} onChange={(e) => setDuration(Number(e.target.value))} className="w-full accent-[#fe2c55]" /><button onClick={playTrimmed} className="w-full mt-2 bg-white border rounded-full py-2 font-bold text-sm">▶️ কাটা গানটা শুনে দেখো</button></div><div className="flex gap-2"><button onClick={() => setStep(1)} className="flex-1 bg-zinc-100 rounded-full py-3 font-bold">← পিছে</button><button onClick={() => setStep(3)} className="flex-1 bg-[#fe2c55] text-white rounded-full py-3 font-bold">ভিডিও বানাও → 👄</button></div></div>)}
-  {step === 3 && (<div className="p-4 space-y-3"><p className="font-bold">👄 ৩. ভিডিও বানাও</p><p className="text-[12px] bg-zinc-100 rounded-full px-3 py-2">🎵 {songName} • {start}s থেকে {duration}s পর্যন্ত বাজবে</p>{countdown > 0 && <div className="text-center text-6xl font-black text-[#fe2c55]">{countdown}</div>}{isRecording && <p className="text-center text-red-600 font-bold animate-pulse">🔴 রেকর্ড হচ্ছে... {duration} সেকেন্ড • গান বাজছে</p>}{videoPreview ? <video src={videoPreview} controls className="w-full rounded-2xl bg-black aspect-[9/16] object-cover" /> : <div className="w-full aspect-[9/16] bg-zinc-900 rounded-2xl flex items-center justify-center text-white text-center p-4">📹 ক্যামেরা দিয়ে রেকর্ড করো<br />অথবা গ্যালারি থেকে ভিডিও নাও</div>}<div className="flex gap-2"><button onClick={startRecording} className="flex-1 bg-red-600 text-white rounded-full py-3 font-bold">🔴 ক্যামেরা রেকর্ড</button>{isRecording && <button onClick={stopRecording} className="flex-1 bg-black text-white rounded-full py-3 font-bold">⏹️ থামাও</button>}</div><label className="block bg-zinc-100 rounded-2xl py-3 text-center font-bold text-sm cursor-pointer">📁 গ্যালারি থেকে ভিডিও নাও<input type="file" accept="video/*" className="hidden" onChange={async (e) => { const f = e.target.files?.[0]; if (f) { setVideoFile(f); const perm = await fileToPermanentUrl(f); setVideoPreview(perm); } }} /></label><input value={caption} onChange={(e) => setCaption(e.target.value)} placeholder="ক্যাপশন লিখো... 🎬" className="w-full bg-zinc-100 rounded-2xl px-4 py-3 text-sm outline-none" /><button onClick={doUpload} disabled={uploading} className="w-full bg-[#fe2c55] text-white rounded-full py-3 font-bold">{uploading ? "আপলোড হচ্ছে... ⏳" : "🚀 পোস্ট করো → হোমে আর প্রোফাইলে দেখাবে"}</button><button onClick={() => setStep(2)} className="w-full bg-zinc-100 rounded-full py-2 text-sm font-bold">← গান আবার কাটো</button></div>)}
-  </div>);
-}// ---------- ADD ONLY: SHORT TOK - Instagram Profile + Real Actions ----------
-
-// 1. পোস্ট করলেই Home + Profile দুই জায়গায়
+// --- 3. POST - Home + Profile দুই জায়গায় + Notification ---
 export function postVideoToAll(newItem:any, uid:string, userName:string){
   const get=(k:string)=>JSON.parse(localStorage.getItem(k)||"[]");
   const put=(k:string,v:any)=>localStorage.setItem(k,JSON.stringify(v));
   put("shorttok_my_videos",[newItem,...get("shorttok_my_videos")]);
   put("shorttok_feed_extra",[newItem,...get("shorttok_feed_extra")]);
   put("sottok_videos",[newItem,...get("sottok_videos")]);
-  // 2. Followers দের Notification
   put("shorttok_notifications_all",[{id:"nt-"+Date.now(),actor_name:userName,type:"video",video_id:newItem.id,message:`🎬 ${userName} নতুন ভিডিও পোস্ট করেছে`,created_at:Date.now(),is_read:false},...get("shorttok_notifications_all")].slice(0,100));
 }
 
-// 3. Like / Follow / Save - সত্যি সত্যি কাজ করবে
-export function toggleLike(videoId:string){
-  const k="shorttok_likes"; const l=JSON.parse(localStorage.getItem(k)||"[]");
-  const i=l.indexOf(videoId); if(i>=0) l.splice(i,1); else l.push(videoId);
-  localStorage.setItem(k,JSON.stringify(l)); return l.includes(videoId);
-}
-export function toggleFollow(userId:string){
-  const k="shorttok_following"; const f=JSON.parse(localStorage.getItem(k)||"[]");
-  const i=f.indexOf(userId); if(i>=0) f.splice(i,1); else f.push(userId);
-  localStorage.setItem(k,JSON.stringify(f)); return f.includes(userId);
-}
-export function addComment(videoId:string, text:string, name:string){
-  const k="shorttok_comments"; const c=JSON.parse(localStorage.getItem(k)||"{}");
-  if(!c[videoId]) c[videoId]=[]; c[videoId].push({name,text,at:Date.now()});
-  localStorage.setItem(k,JSON.stringify(c)); return c[videoId];
+// --- 4. PROFILE - পুরো Instagram এর মতো, নাম শুধু SHORT TOK ---
+export function ProfileInstagram({user, myVideos, onOpenVideo}:any){
+  const [tab,setTab]=React.useState("videos");
+  const allOld=[...(JSON.parse(localStorage.getItem("shorttok_my_videos")||"[]")),...(JSON.parse(localStorage.getItem("sottok_videos")||"[]"))];
+  const seen=new Set(); const videos=(myVideos?.length?myVideos:allOld).filter((v:any)=>{if(seen.has(v.id))return false; seen.add(v.id); return true;});
+  const savedIds=JSON.parse(localStorage.getItem("shorttok_saved")||"[]");
+  const saved=videos.filter((v:any)=>savedIds.includes(v.id));
+  const following=JSON.parse(localStorage.getItem("shorttok_following")||"[]");
+  const followers=JSON.parse(localStorage.getItem("shorttok_followers")||"[]");
+  const likes=JSON.parse(localStorage.getItem("shorttok_likes")||"[]");
+  return (
+    <div className="bg-white pb-10">
+      <div className="flex items-center justify-between px-3 py-3 border-b sticky top-0 bg-white z-10"><b className="text-lg">🔒 {user?.name||"shorttok"}</b><b className="text-xl">☰</b></div>
+      <div className="flex items-center gap-4 px-4 pt-4">
+        <div className="w-[85px] h-[85px] rounded-full bg-gradient-to-tr from-[#fe2c55] via-[#ff9a00] to-[#fe2c55] p-[3px] shrink-0"><div className="w-full h-full rounded-full bg-white p-[2px]">{user?.avatar?<img src={user.avatar} className="w-full h-full rounded-full object-cover"/>:<div className="w-full h-full rounded-full bg-[#fe2c55] text-white flex items-center justify-center text-3xl font-black">{(user?.name||"S")[0]}</div>}</div></div>
+        <div className="flex flex-1 justify-around text-center"><div><b className="block">{videos.length}</b><span className="text-[12px]">Posts</span></div><div><b className="block">{followers.length}</b><span className="text-[12px]">Followers</span></div><div><b className="block">{following.length}</b><span className="text-[12px]">Following</span></div></div>
+      </div>
+      <div className="px-4 mt-2"><b className="text-[14px]">{user?.name||"SHORT TOK User"}</b><p className="text-[13px] text-zinc-600">@{user?.username||user?.name||"shorttok"} • নিজের পরিচয় নিজে তৈরি করো</p><p className="text-[12px] text-zinc-500">SHORT TOK • 🎬 ভিডিও • ❤️ পরিচয় • 🌍 নিজের জগৎ</p></div>
+      <div className="flex gap-2 px-4 mt-3"><button className="flex-1 bg-zinc-100 rounded-lg py-2 font-bold text-sm">Edit Profile</button><button className="flex-1 bg-zinc-100 rounded-lg py-2 font-bold text-sm">Share Profile</button></div>
+      <div className="flex border-t mt-4"><button onClick={()=>setTab("videos")} className={`flex-1 py-3 text-center text-lg ${tab==="videos"?"border-t-2 border-black":"text-zinc-400"}`}>▦</button><button onClick={()=>setTab("saved")} className={`flex-1 py-3 text-center text-lg ${tab==="saved"?"border-t-2 border-black":"text-zinc-400"}`}>🔖</button><button onClick={()=>setTab("tagged")} className={`flex-1 py-3 text-center text-lg ${tab==="tagged"?"border-t-2 border-black":"text-zinc-400"}`}>👤</button></div>
+      <div className="grid grid-cols-3 gap-[2px]">{(tab==="videos"?videos:tab==="saved"?saved:[]).map((v:any)=>(<div key={v.id} className="relative aspect-[9/16] bg-black" onClick={()=>onOpenVideo?.(v)}><video src={v.url} className="w-full h-full object-cover" muted playsInline /><span className="absolute bottom-1 left-1 text-white text-[11px] font-bold">▶ {v.views||0}</span><span className="absolute bottom-1 right-1 text-white text-[11px]">❤️ {likes.includes(v.id)?(v.likes||0)+1:v.likes||0}</span><span className="absolute top-1 right-1 text-[10px] bg-black/60 text-white px-1 rounded">SHORT TOK</span></div>))}</div>
+      {videos.length===0 && <p className="text-center text-[13px] text-zinc-500 py-10">এখনো কোনো ভিডিও নেই<br/>+ দিয়ে প্রথম ভিডিও বানাও 🎬</p>}
+    </div>
+  );
 }
 
-// 4. Profile - Instagram এর মতো, নাম শুধু SHORT TOK
-export function ProfileInstagram({user, myVideos}:any){
-  const videos = myVideos || JSON.parse(localStorage.getItem("shorttok_my_videos")||"[]");
-  const following = JSON.parse(localStorage.getItem("shorttok_following")||"[]");
-  const followers = JSON.parse(localStorage.getItem("shorttok_followers")||"[]");
+// --- 5. VIDEO ACTIONS - Like Comment Follow Share Download ---
+export function VideoActions({video, currentUser}:any){
+  const [liked,setLiked]=React.useState(JSON.parse(localStorage.getItem("shorttok_likes")||"[]").includes(video.id));
+  const [saved,setSaved]=React.useState(JSON.parse(localStorage.getItem("shorttok_saved")||"[]").includes(video.id));
+  const [following,setFollowing]=React.useState(JSON.parse(localStorage.getItem("shorttok_following")||"[]").includes(video.userId));
+  const [showC,setShowC]=React.useState(false); const [txt,setTxt]=React.useState("");
+  const [comments,setComments]=React.useState(getComments(video.id));
   return (
-    <div style={{background:"#fff",padding:12}}>
-      <div style={{display:"flex",alignItems:"center",gap:16}}>
-        <div style={{width:80,height:80,borderRadius:99,background:"#fe2c55",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:32,fontWeight:"900"}}>{(user?.name||"S")[0]}</div>
-        <div style={{display:"flex",gap:18,textAlign:"center"}}>
-          <div><b>{videos.length}</b><div style={{fontSize:12}}>Posts</div></div>
-          <div><b>{followers.length}</b><div style={{fontSize:12}}>Followers</div></div>
-          <div><b>{following.length}</b><div style={{fontSize:12}}>Following</div></div>
-        </div>
-      </div>
-      <b style={{display:"block",marginTop:8}}>{user?.name||"SHORT TOK User"}</b>
-      <p style={{fontSize:13,margin:"2px 0"}}>@{user?.username||"shorttok"} • নিজের পরিচয় নিজে তৈরি করো</p>
-      <p style={{fontSize:12,color:"#666"}}>SHORT TOK • ভিডিও • পরিচয় • নিজের জগৎ</p>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:2,marginTop:10}}>
-        {videos.map((v:any)=>(
-          <video key={v.id} src={v.url} style={{width:"100%",aspectRatio:"9/16",objectFit:"cover",background:"#000"}} />
-        ))}
-      </div>
-      {videos.length===0 && <p style={{textAlign:"center",fontSize:13,color:"#888",padding:20}}>এখনো কোনো ভিডিও নেই<br/>+ দিয়ে প্রথম ভিডিও বানাও 🎬</p>}
+    <div className="px-3 py-2">
+      <div className="flex gap-4 text-[22px]"><button onClick={()=>setLiked(toggleLike(video.id))}>{liked?"❤️":"🤍"}</button><button onClick={()=>setShowC(!showC)}>💬 {comments.length}</button><button onClick={()=>{navigator.share?.({title:"SHORT TOK",text:video.caption,url:location.href}).catch(()=>{});}}>↗️</button><button onClick={()=>setSaved(toggleSave(video.id))} className="ml-auto">{saved?"🔖":"📑"}</button><button onClick={()=>downloadWithWatermark(video.url, video.caption)}>⬇️</button></div>
+      <p className="text-sm mt-1"><b>{video.username}</b> {video.caption}</p><p className="text-[12px] text-zinc-500">🎵 {video.sound} • SHORT TOK</p>
+      {!following && <button onClick={()=>setFollowing(toggleFollow(video.userId))} className="mt-1 bg-[#fe2c55] text-white px-4 py-1 rounded-full text-[12px] font-bold">+ Follow</button>}
+      {showC && <div className="mt-2 bg-zinc-50 rounded-xl p-2">{comments.map((c:any,i:number)=><p key={i} className="text-[13px]"><b>{c.name}:</b> {c.text}</p>)}<div className="flex gap-2 mt-2"><input value={txt} onChange={e=>setTxt(e.target.value)} placeholder="Comment লিখো..." className="flex-1 bg-white border rounded-full px-3 py-1 text-sm"/><button onClick={()=>{if(!txt)return; setComments(addComment(video.id,txt,currentUser?.name||"User")); setTxt("");}} className="bg-black text-white px-3 rounded-full text-sm">Post</button></div></div>}
+      <button onClick={()=>downloadWithWatermark(video.url, video.caption)} className="w-full mt-2 bg-zinc-100 rounded-full py-2 text-[12px] font-bold">⬇️ Download • SHORT TOK Watermark সহ গ্যালারিতে যাবে</button>
+    </div>
+  );
+}
+
+// --- 6. GALLERY VIDEO LIST + GALLERY MUSIC LIP-SYNC - সবার জন্য ---
+export function GalleryPicker({onPickVideo, onPickSong}:any){
+  return (
+    <div className="p-3 space-y-3">
+      <label className="block bg-zinc-100 rounded-2xl py-3 text-center font-bold text-sm cursor-pointer">📁 গ্যালারি থেকে ভিডিও নাও - লিস্ট থেকে চয়েস করো<input type="file" accept="video/*" multiple className="hidden" onChange={(e)=>{const f=e.target.files?.[0]; if(f) onPickVideo?.(f);}} /></label>
+      <label className="block bg-zinc-100 rounded-2xl py-3 text-center font-bold text-sm cursor-pointer">🎵 গ্যালারি থেকে গান নাও - Lip-sync ভিডিও বানাও<input type="file" accept="audio/*" multiple className="hidden" onChange={(e)=>{const f=e.target.files?.[0]; if(f) onPickSong?.(f);}} /></label>
+      <p className="text-[11px] text-center text-zinc-500">গ্যালারির ভিডিও + গ্যালারির গান দিয়ে সবাই ভিডিও করতে পারবে • SHORT TOK</p>
     </div>
   );
 }
