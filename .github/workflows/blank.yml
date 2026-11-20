@@ -4,18 +4,17 @@ name: SOT TOK Android APK
 on:
   workflow_dispatch:
   push:
-    branches:
-      - main
+    branches: [main]
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout SOT TOK
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -26,7 +25,11 @@ jobs:
           distribution: temurin
           java-version: 21
 
-      - name: Install and prepare Android
+      - name: Extract SOT TOK package
+        run: |
+          unzip -o SOT-TOK-Android-APK-Starter.zip -d .
+
+      - name: Install Android project
         working-directory: android-shell
         run: |
           npm install
@@ -39,7 +42,7 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon
 
-      - name: Upload SOT TOK APK
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: SOT-TOK-APK
