@@ -12,96 +12,49 @@ body{background:#000;color:#fff;padding-bottom:70px}
 .top-btn{font-size:20px}
 .post{margin-top:55px;border-bottom:1px solid #222;padding-bottom:10px}
 .post-head{display:flex;align-items:center;gap:10px;padding:10px}
-.avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(45deg,#ff0050,#a855f7);display:flex;align-items:center;justify-content:center;font-weight:bold}
-.post video,.post img{width:100%;max-height:500px;object-fit:cover;background:#111}
+.avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(45deg,#ff0050,#a855f7);display:flex;align-items:center;justify-content:center;font-weight:900}
+.post-name{font-weight:700}
+.post-user{font-size:12px;color:#aaa}
+.post-video{width:100%;background:#111;aspect-ratio:9/12;display:flex;align-items:center;justify-content:center;font-size:40px}
 .actions{display:flex;gap:18px;padding:10px;font-size:22px}
-.caption{padding:0 10px;font-size:14px}
-.nav{position:fixed;bottom:0;width:100%;background:#000;display:flex;justify-content:space-around;padding:12px 0;border-top:1px solid #222;font-size:22px;z-index:20}
-.nav span{cursor:pointer}
-.page{display:none}
-.page.active{display:block}
-.upload-box{margin-top:70px;padding:20px;text-align:center}
-input,textarea{width:100%;padding:12px;margin:10px 0;border-radius:10px;border:none;background:#222;color:#fff}
-.btn{background:linear-gradient(45deg,#ff0050,#a855f7);color:#fff;padding:13px;border:none;width:100%;border-radius:10px;font-weight:bold;font-size:16px}
-.profile-top{margin-top:60px;text-align:center;padding:20px}
-.profile-pic{width:90px;height:90px;border-radius:50%;background:linear-gradient(45deg,#ff0050,#a855f7);margin:auto;display:flex;align-items:center;justify-content:center;font-size:35px}
-.stats{display:flex;justify-content:space-around;margin:15px 0}
-.grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px}
-.grid div{background:#222;height:120px;display:flex;align-items:center;justify-content:center;font-size:30px}
+.post-text{padding:0 10px 5px;font-size:14px}
+.bottom{position:fixed;bottom:0;width:100%;background:#000;display:flex;justify-content:space-around;padding:10px 0;border-top:1px solid #222}
+.bottom a{color:#fff;text-decoration:none;font-size:12px;text-align:center;display:block}
 </style>
 </head>
 <body>
 
-<div class="header"><div class="logo">SOT TOK</div><div class="top-btn">🔍 ❤️ 💬</div></div>
-
-<!-- HOME / FEED -->
-<div id="home" class="page active">
-  <div id="feed"></div>
+<div class="header">
+  <div class="logo">SOT TOK</div>
+  <div class="top-btn">🔍 ✉️</div>
 </div>
 
-<!-- REELS / VIGO -->
-<div id="reels" class="page">
-  <div id="reelsFeed" style="margin-top:55px"></div>
-</div>
-
-<!-- UPLOAD -->
-<div id="upload" class="page">
-  <div class="upload-box">
-    <h2>ভিডিও আপলোড করো 🎬</h2>
-    <input type="file" id="videoInput" accept="video/*,image/*">
-    <input type="text" id="userName" placeholder="তোমার নাম লেখো">
-    <textarea id="captionInput" placeholder="ক্যাপশন লেখো... #SOTTOK"></textarea>
-    <button class="btn" onclick="uploadPost()">পোস্ট করো</button>
-    <p style="margin-top:10px;font-size:13px;color:#aaa">ভিডিও আর অ্যাকাউন্ট থাকলেই হবে, আর কিছু লাগবে না।</p>
+<div class="post">
+  <div class="post-head">
+    <div class="avatar">S</div>
+    <div><div class="post-name">SOT TOK BANGLA</div><div class="post-user">@sottokbangla</div></div>
   </div>
+  <div class="post-video">▶️</div>
+  <div class="actions">❤️ 💬 ↗️</div>
+  <div class="post-text">সত্য ঘটনা, সত্য ভিডিও! Follow করে দাও ❤️</div>
 </div>
 
-<!-- PROFILE -->
-<div id="profile" class="page">
-  <div class="profile-top">
-    <div class="profile-pic">S</div>
-    <h2 style="margin-top:10px">SOT TOK BANGLA</h2>
-    <p style="color:#aaa">@sottokbangla • বাংলা শর্ট ভিডিও</p>
-    <div class="stats"><div><b id="postCount">0</b><br>Posts</div><div><b>1.2K</b><br>Followers</div><div><b>120</b><br>Following</div></div>
-    <button class="btn">Edit Profile</button>
+<div class="post">
+  <div class="post-head">
+    <div class="avatar">P</div>
+    <div><div class="post-name">PUTU ROY</div><div class="post-user">@puturoy7001</div></div>
   </div>
-  <div class="grid" id="profileGrid"></div>
+  <div class="post-video">▶️</div>
+  <div class="actions">❤️ 💬 ↗️</div>
+  <div class="post-text">নতুন ভিডিও চলে এসেছে 🔥</div>
 </div>
 
-<div class="nav">
-  <span onclick="show('home')">🏠</span>
-  <span onclick="show('reels')">▶️</span>
-  <span onclick="show('upload')">➕</span>
-  <span onclick="show('profile')">👤</span>
+<div class="bottom">
+  <a href="#">🏠<br>Home</a>
+  <a href="#">📩<br>Inbox</a>
+  <a href="#">🔭<br>Explore</a>
+  <a href="#">🤖<br>Copilot</a>
 </div>
 
-<script>
-let posts = JSON.parse(localStorage.getItem('sottok_posts')||'[]');
-if(posts.length==0){
- posts=[
-  {name:'SOT TOK BANGLA',user:'sottokbangla',caption:'SOT TOK এ স্বাগতম! ভিডিও দেখো, ভিডিও বানাও 🔥 #SOTTOK',likes:125,emoji:'🎬',type:'video'},
-  {name:'Putu Roy',user:'puturoy7001',caption:'নতুন ভিডিও চলে এসেছে ❤️',likes:89,emoji:'🎥',type:'video'},
- ];
-}
-function render(){
- let f=document.getElementById('feed'); f.innerHTML='';
- let r=document.getElementById('reelsFeed'); r.innerHTML='';
- let g=document.getElementById('profileGrid'); g.innerHTML='';
- document.getElementById('postCount').innerText=posts.length;
- posts.forEach((p,i)=>{
-  let html=`<div class="post"><div class="post-head"><div class="avatar">${p.name[0]}</div><div><b>${p.name}</b><br><small>@${p.user}</small></div></div><div style="height:380px;background:#111;display:flex;align-items:center;justify-content:center;font-size:80px">${p.emoji||'🎬'}</div><div class="actions"><span onclick="like(${i},this)">❤️ ${p.likes}</span><span>💬</span><span>↗️</span></div><div class="caption"><b>${p.user}</b> ${p.caption}</div></div>`;
-  f.innerHTML+=html; r.innerHTML+=html; g.innerHTML+=`<div>${p.emoji||'🎬'}</div>`;
- });
-}
-function like(i,el){ posts[i].likes++; localStorage.setItem('sottok_posts',JSON.stringify(posts)); render(); }
-function show(id){ document.querySelectorAll('.page').forEach(p=>p.classList.remove('active')); document.getElementById(id).classList.add('active'); }
-function uploadPost(){
- let name=document.getElementById('userName').value||'SOT TOK User';
- let cap=document.getElementById('captionInput').value||'নতুন ভিডিও #SOTTOK';
- posts.unshift({name:name,user:name.toLowerCase().replace(/ /g,''),caption:cap,likes:0,emoji:'🎬',type:'video'});
- localStorage.setItem('sottok_posts',JSON.stringify(posts)); render(); show('home'); alert('পোস্ট হয়ে গেছে! ✅');
-}
-render();
-</script>
 </body>
 </html>
